@@ -20,4 +20,5 @@ package atomic
 func (v *Value) Swap(new interface{}) (old interface{}) {
 	old = v.Value.Load()
 	v.Value.Store(new)
+	return
 }
