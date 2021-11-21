@@ -212,7 +212,12 @@ func (r *Router) AddRuleRoute(priority int, name, rule string, h http.Handler) e
 
 // Name returns a route builder with the name.
 func (r *Router) Name(name string) RouteBuilder {
-	return RouteBuilder{router: r}.Name(name)
+	return RouteBuilder{router: r, panic: true}.Name(name)
+}
+
+// Rule returns a route builder with the matcher rule.
+func (r *Router) Rule(matchRule string) RouteBuilder {
+	return RouteBuilder{router: r, panic: true}.Rule(matchRule)
 }
 
 // RouteBuilder is used to build the route.
@@ -222,6 +227,15 @@ type RouteBuilder struct {
 	rule     string
 	matcher  matcher.Matcher
 	priority int
+	panic    bool
+}
+
+// SetPanic sets the flag to panic when failing to add the route.
+//
+// Default: true
+func (b RouteBuilder) SetPanic(panic bool) RouteBuilder {
+	b.panic = panic
+	return b
 }
 
 // Name sets the name of the route.
@@ -243,15 +257,44 @@ func (b RouteBuilder) Rule(rule string) RouteBuilder {
 }
 
 // Match sets the matcher of the route.
-func (b RouteBuilder) Match(matcher matcher.Matcher) RouteBuilder {
-	b.matcher = matcher
+func (b RouteBuilder) Match(matchers ...matcher.Matcher) RouteBuilder {
+	if len(matchers) > 0 {
+		b.matcher = matcher.And(matchers...)
+	}
 	return b
+}
+
+// HandlerFunc adds the route with the handler functions.
+func (b RouteBuilder) HandlerFunc(handler http.HandlerFunc) error {
+	return b.Handler(handler)
 }
 
 // Handler adds the route with the handler.
 func (b RouteBuilder) Handler(handler http.Handler) error {
-	if b.matcher != nil {
-		return b.router.AddRoute(NewRoute(b.name, b.priority, b.matcher, handler))
+	err := b.addRoute(handler)
+	if err != nil && b.panic {
+		panic(err)
 	}
-	return b.router.AddRuleRoute(b.priority, b.name, b.rule, handler)
+	return err
+}
+
+func (b RouteBuilder) addRoute(handler http.Handler) error {
+	rule := b.rule
+	if b.matcher != nil {
+		rule = b.matcher.String()
+	}
+	if rule == "" {
+		return fmt.Errorf("missing the route matcher")
+	}
+
+	name := b.name
+	if name == "" {
+		name = rule
+	}
+
+	if b.matcher != nil {
+		return b.router.AddRoute(NewRoute(name, b.priority, b.matcher, handler))
+	}
+
+	return b.router.AddRuleRoute(b.priority, name, b.rule, handler)
 }

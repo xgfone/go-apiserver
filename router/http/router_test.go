@@ -25,20 +25,18 @@ import (
 func TestPriorityRoute(t *testing.T) {
 	router := NewRouter()
 
-	matcher1, _ := matcher.Host("127.0.0.1")
-	router.AddRoute(NewRoute("route1", 0, matcher1,
-		http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+	hostMatcher, _ := matcher.Host("127.0.0.1")
+	router.Name("route1").Match(hostMatcher).
+		HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			rw.WriteHeader(201)
 			rw.Write([]byte(`route1`))
-		})))
+		})
 
-	methodMatcher, _ := matcher.Method("GET")
-	matcher2 := matcher.And(matcher1, methodMatcher)
-	router.AddRoute(NewRoute("route2", 0, matcher2,
-		http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+	router.Rule("Host(`127.0.0.1`) && Method(`GET`)").Name("route2").
+		HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			rw.WriteHeader(202)
 			rw.Write([]byte(`route2`))
-		})))
+		})
 
 	routes := router.GetRoutes()
 	if _len := len(routes); _len != 2 {

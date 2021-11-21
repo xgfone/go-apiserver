@@ -24,15 +24,15 @@ import (
 
 // Pre-define some http handlers.
 var (
-	Handler200 = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	Handler200 http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
 
-	Handler400 = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	Handler400 http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(400)
 	})
 
-	Handler404 = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	Handler404 http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Connection", "close")
 		w.WriteHeader(404)
 	})
