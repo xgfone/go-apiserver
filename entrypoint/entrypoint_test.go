@@ -82,18 +82,11 @@ func TestEntryPoint(t *testing.T) {
 	if len(eps) != 2 {
 		t.Errorf("expect %d entrypoints, but got %d", 2, len(eps))
 	} else {
-		for i := 0; i < 2; i++ {
-			switch i {
-			case 0:
-				if eps[i].Name != ep1.Name {
-					t.Errorf("expect the entrypoint '%s', but got '%s'", ep1.Name, eps[i].Name)
-				}
-
-			case 1:
-				if eps[i].Name != ep2.Name {
-					t.Errorf("expect the entrypoint '%s', but got '%s'", ep2.Name, eps[i].Name)
-				}
-
+		for _, ep := range eps {
+			switch ep.Name {
+			case eps[0].Name, eps[1].Name:
+			default:
+				t.Errorf("unexpected entrypoint '%s'", ep.Name)
 			}
 		}
 	}
