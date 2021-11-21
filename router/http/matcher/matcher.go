@@ -267,7 +267,7 @@ func Query(key, value string) (Matcher, error) {
 	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
 		var ok bool
 		if value == "" {
-			ok = r.URL.Query().Has(key)
+			_, ok = r.URL.Query()[key]
 		} else {
 			ok = r.URL.Query().Get(key) == value
 		}
@@ -285,7 +285,7 @@ func Header(key, value string) (Matcher, error) {
 	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
 		var ok bool
 		if value == "" {
-			ok = url.Values(r.Header).Has(key)
+			_, ok = url.Values(r.Header)[key]
 		} else {
 			ok = url.Values(r.Header).Get(key) == value
 		}
