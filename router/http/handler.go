@@ -63,6 +63,46 @@ func NewNamedHandler(name string, handler http.Handler) NamedHandler {
 
 /// ----------------------------------------------------------------------- ///
 
+// WrappedHandlerFunc is the function to handle the request with the wrapped handler.
+type WrappedHandlerFunc func(http.Handler, http.ResponseWriter, *http.Request)
+
+// WrappedHandler is a http handler which wraps and returns the inner handler.
+type WrappedHandler interface {
+	WrappedHandler() http.Handler
+	http.Handler
+}
+
+type wrappedHandler struct {
+	Handler http.Handler
+	Handle  WrappedHandlerFunc
+}
+
+func (wh wrappedHandler) WrappedHandler() http.Handler { return wh.Handler }
+func (wh wrappedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	wh.Handle(wh.Handler, w, r)
+}
+
+// WrapHandler returns a new WrappedHandler with the wrapped handler
+// and the handling function.
+func WrapHandler(handler http.Handler, handlerFunc WrappedHandlerFunc) WrappedHandler {
+	return wrappedHandler{Handler: handler, Handle: handlerFunc}
+}
+
+// UnwrapHandler unwraps the wrapped innest http handler from handler if it has
+// implemented the interface WrappedHandler. Or return the original handler.
+func UnwrapHandler(handler http.Handler) http.Handler {
+	for {
+		if wh, ok := handler.(WrappedHandler); ok {
+			handler = wh.WrappedHandler()
+		} else {
+			break
+		}
+	}
+	return handler
+}
+
+/// ----------------------------------------------------------------------- ///
+
 type httpHandlerWrapper struct{ http.Handler }
 
 // SwitchHandler is a HTTP handler that is used to switch the real handler.

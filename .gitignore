@@ -42,3 +42,7 @@ debug_test
 
 # Mac
 .DS_Store
+
+# hidden files
+.*
+_*
