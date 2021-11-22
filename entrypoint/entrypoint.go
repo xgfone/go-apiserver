@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"strings"
 
-	routerhttp "github.com/xgfone/go-apiserver/router/http"
-	"github.com/xgfone/go-apiserver/server/tcp"
+	ghttp "github.com/xgfone/go-apiserver/http"
+	"github.com/xgfone/go-apiserver/tcp"
 )
 
 type server interface {
@@ -71,7 +71,7 @@ func NewEntryPoint(name, addr string) (*EntryPoint, error) {
 			return nil, err
 		}
 
-		ep.httpHandler = tcp.NewHTTPServerHandler(ln.Addr(), routerhttp.Handler404)
+		ep.httpHandler = tcp.NewHTTPServerHandler(ln.Addr(), ghttp.Handler404)
 		ep.mwHandler = tcp.NewMiddlewareHandler(ep.httpHandler)
 		ep.server = tcp.NewServer(ln, ep.mwHandler, nil)
 

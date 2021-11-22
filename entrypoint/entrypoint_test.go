@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
+	ghttp "github.com/xgfone/go-apiserver/http"
 	"github.com/xgfone/go-apiserver/log"
-	routerhttp "github.com/xgfone/go-apiserver/router/http"
 )
 
 func init() { log.SetNothingWriter() }
@@ -32,13 +32,13 @@ func TestEntryPoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ep1.SwitchHTTPHandler(routerhttp.Handler200)
+	ep1.SwitchHTTPHandler(ghttp.Handler200)
 
 	ep2, err := NewEntryPoint("http8002", "127.0.0.1:8002")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ep2.SwitchHTTPHandler(routerhttp.Handler200)
+	ep2.SwitchHTTPHandler(ghttp.Handler200)
 
 	go ep1.Start()
 	go ep2.Start()
