@@ -16,6 +16,7 @@
 package router
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -54,23 +55,33 @@ func (r *Route) Use(mws ...Middleware) {
 	}
 }
 
-// NewRoute returns a new Route.
+// NewRoute is the same as NewRouteWithError, but panics if returning an error.
+func NewRoute(name string, priority int, m matcher.Matcher, h http.Handler) Route {
+	route, err := NewRouteWithError(name, priority, m, h)
+	if err != nil {
+		panic(err)
+	}
+	return route
+}
+
+// NewRouteWithError returns a new Route.
 //
 // If priority is ZERO, it is equal to the priority of the matcher.
-func NewRoute(name string, priority int, m matcher.Matcher, h http.Handler) Route {
+func NewRouteWithError(name string, priority int, m matcher.Matcher,
+	h http.Handler) (Route, error) {
 	if name == "" {
-		panic("the route name is empty")
+		return Route{}, errors.New("the route name is empty")
 	}
 	if m == nil {
-		panic("the route matcher is nil")
+		return Route{}, errors.New("the route matcher is nil")
 	}
 	if h == nil {
-		panic("the route handler is nil")
+		return Route{}, errors.New("the route handler is nil")
 	}
 	if priority == 0 {
 		priority = m.Priority()
 	}
-	return Route{Name: name, Priority: priority, Matcher: m, Handler: h}
+	return Route{Name: name, Priority: priority, Matcher: m, Handler: h}, nil
 }
 
 // Routes is a group of Routes.
@@ -87,9 +98,12 @@ type routesWrapper struct{ Routes }
 type Router struct {
 	NotFound http.Handler
 	builder  *ruler.Builder
+	handler  ghttp.SwitchHandler
+	glock    sync.Mutex
+	gmdws    []Middleware
 
-	lock   sync.RWMutex
-	mws    []Middleware
+	rlock  sync.RWMutex
+	rmdws  []Middleware
 	origs  map[string]Route
 	routes Routes
 	router atomic.Value
@@ -102,20 +116,56 @@ func NewRouter() *Router {
 		builder:  ruler.NewBuilder(),
 		origs:    make(map[string]Route, 16),
 	}
+	r.handler.Set(http.HandlerFunc(r.serveHTTP))
 	r.router.Store(routesWrapper{})
 	return r
 }
 
-// Use adds the http handler middlewars and uses them to act on the route handler
-// when adding the route.
+// Use appends the http handler middlewars and uses them to act on the route
+// handler when adding the route.
+//
+// Notice: the middlewares will be executed after routing the request.
 func (r *Router) Use(mws ...Middleware) {
-	r.lock.Lock()
-	r.mws = append(r.mws, mws...)
-	r.lock.Unlock()
+	r.rlock.Lock()
+	r.rmdws = append(r.rmdws, mws...)
+	r.rlock.Unlock()
 }
 
-// ServeHTTP implements the interface http.Handler.
-func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+// UseReset is the same as Use, but resets the route middlewares.
+func (r *Router) UseReset(mws ...Middleware) {
+	r.rlock.Lock()
+	r.rmdws = append([]Middleware{}, mws...)
+	r.rlock.Unlock()
+}
+
+// Global appends the http handler middlewares and uses them to act on the route
+// handler.
+//
+// Notice: the middlewares will be executed before the routing the request.
+func (r *Router) Global(mws ...Middleware) {
+	r.glock.Lock()
+	defer r.glock.Unlock()
+	r.gmdws = append(r.gmdws, mws...)
+	r.updateHandler()
+}
+
+// GlobalReset is the same as Global, but resets the global middlewares.
+func (r *Router) GlobalReset(mws ...Middleware) {
+	r.glock.Lock()
+	defer r.glock.Unlock()
+	r.gmdws = append([]Middleware{}, mws...)
+	r.updateHandler()
+}
+
+func (r *Router) updateHandler() {
+	var handler http.Handler = http.HandlerFunc(r.serveHTTP)
+	for _len := len(r.gmdws) - 1; _len >= 0; _len-- {
+		handler = r.gmdws[_len](handler)
+	}
+	r.handler.Set(handler)
+}
+
+func (r *Router) serveHTTP(w http.ResponseWriter, req *http.Request) {
 	routes := r.router.Load().(routesWrapper).Routes
 	for i, _len := 0, len(routes); i < _len; i++ {
 		if nreq, ok := routes[i].Matcher.Match(req); ok {
@@ -124,6 +174,11 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	r.NotFound.ServeHTTP(w, req)
+}
+
+// ServeHTTP implements the interface http.Handler.
+func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.handler.ServeHTTP(w, req)
 }
 
 func (r *Router) updateRoutes() {
@@ -138,55 +193,55 @@ func (r *Router) updateRoutes() {
 
 // GetRoutes returns all the routes.
 func (r *Router) GetRoutes() (routes Routes) {
-	r.lock.RLock()
+	r.rlock.RLock()
 	routes = make(Routes, len(r.routes))
 	copy(routes, r.routes)
-	r.lock.RUnlock()
+	r.rlock.RUnlock()
 	return
 }
 
 // GetRoute returns the route by the name.
 func (r *Router) GetRoute(name string) (route Route, ok bool) {
-	r.lock.RLock()
+	r.rlock.RLock()
 	route, ok = r.origs[name]
-	r.lock.RUnlock()
+	r.rlock.RUnlock()
 	return
 }
 
 // AddRoute adds the new route.
 func (r *Router) AddRoute(route Route) (err error) {
-	r.lock.Lock()
+	r.rlock.Lock()
 	if _, ok := r.origs[route.Name]; ok {
 		err = fmt.Errorf("the route named '%s' has been added", route.Name)
 	} else {
-		route.Use(r.mws...)
+		route.Use(r.rmdws...)
 		r.origs[route.Name] = route
 		r.updateRoutes()
 	}
-	r.lock.Unlock()
+	r.rlock.Unlock()
 	return
 }
 
 // DelRoute deletes and returns the route by the name.
 func (r *Router) DelRoute(name string) (route Route, ok bool) {
-	r.lock.Lock()
+	r.rlock.Lock()
 	if route, ok = r.origs[name]; ok {
 		delete(r.origs, name)
 		r.updateRoutes()
 	}
-	r.lock.Unlock()
+	r.rlock.Unlock()
 	return
 }
 
 // DelRoutes deletes all the routes by the names.
 func (r *Router) DelRoutes(names ...string) {
 	if _len := len(names); _len > 0 {
-		r.lock.Lock()
+		r.rlock.Lock()
 		for i := 0; i < _len; i++ {
 			delete(r.origs, names[i])
 		}
 		r.updateRoutes()
-		r.lock.Unlock()
+		r.rlock.Unlock()
 	}
 }
 
@@ -194,14 +249,14 @@ func (r *Router) DelRoutes(names ...string) {
 // if it does not exist, or update it to the new.
 func (r *Router) UpdateRoutes(routes ...Route) {
 	if _len := len(routes); _len > 0 {
-		r.lock.Lock()
+		r.rlock.Lock()
 		for i := 0; i < _len; i++ {
 			route := routes[i]
-			route.Use(r.mws...)
+			route.Use(r.rmdws...)
 			r.origs[route.Name] = route
 		}
 		r.updateRoutes()
-		r.lock.Unlock()
+		r.rlock.Unlock()
 	}
 }
 
@@ -211,94 +266,11 @@ func (r *Router) AddRuleRoute(priority int, name, rule string, h http.Handler) e
 	if err != nil {
 		return err
 	}
-	return r.AddRoute(NewRoute(name, priority, matcher, h))
-}
 
-// Name returns a route builder with the name.
-func (r *Router) Name(name string) RouteBuilder {
-	return RouteBuilder{router: r, panic: true}.Name(name)
-}
-
-// Rule returns a route builder with the matcher rule.
-func (r *Router) Rule(matchRule string) RouteBuilder {
-	return RouteBuilder{router: r, panic: true}.Rule(matchRule)
-}
-
-// RouteBuilder is used to build the route.
-type RouteBuilder struct {
-	router   *Router
-	name     string
-	rule     string
-	matcher  matcher.Matcher
-	priority int
-	panic    bool
-}
-
-// SetPanic sets the flag to panic when failing to add the route.
-//
-// Default: true
-func (b RouteBuilder) SetPanic(panic bool) RouteBuilder {
-	b.panic = panic
-	return b
-}
-
-// Name sets the name of the route.
-func (b RouteBuilder) Name(name string) RouteBuilder {
-	b.name = name
-	return b
-}
-
-// Priority sets the priority of the route.
-func (b RouteBuilder) Priority(priority int) RouteBuilder {
-	b.priority = priority
-	return b
-}
-
-// Rule sets the matcher rule of the route.
-func (b RouteBuilder) Rule(rule string) RouteBuilder {
-	b.rule = rule
-	return b
-}
-
-// Match sets the matcher of the route.
-func (b RouteBuilder) Match(matchers ...matcher.Matcher) RouteBuilder {
-	if len(matchers) > 0 {
-		b.matcher = matcher.And(matchers...)
-	}
-	return b
-}
-
-// HandlerFunc adds the route with the handler functions.
-func (b RouteBuilder) HandlerFunc(handler http.HandlerFunc) error {
-	return b.Handler(handler)
-}
-
-// Handler adds the route with the handler.
-func (b RouteBuilder) Handler(handler http.Handler) error {
-	err := b.addRoute(handler)
-	if err != nil && b.panic {
-		panic(err)
-	}
-	return err
-}
-
-func (b RouteBuilder) addRoute(handler http.Handler) error {
-	rule := b.rule
-	if b.matcher != nil {
-		rule = b.matcher.String()
-	}
-	if rule == "" {
-		return fmt.Errorf("missing the route matcher")
+	route, err := NewRouteWithError(name, priority, matcher, h)
+	if err != nil {
+		return err
 	}
 
-	name := b.name
-	if name == "" {
-		name = rule
-	}
-
-	if b.matcher != nil {
-		return b.router.AddRoute(NewRoute(name, b.priority, b.matcher, handler))
-	}
-
-	return b.router.AddRuleRoute(b.priority, name, b.rule, handler)
+	return r.AddRoute(route)
 }
