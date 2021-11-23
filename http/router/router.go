@@ -122,26 +122,35 @@ func NewRouter() *Router {
 }
 
 // Use appends the http handler middlewars and uses them to act on the route
-// handler when adding the route.
+// handlers when to add the route later.
 //
-// Notice: the middlewares will be executed after routing the request.
+// Notice:
+//   - The middlewares will be executed after routing the request.
+//   - The middlewares only acts on the routes that will be added later,
+//     not the added routes.
+//
 func (r *Router) Use(mws ...Middleware) {
 	r.rlock.Lock()
 	r.rmdws = append(r.rmdws, mws...)
 	r.rlock.Unlock()
 }
 
-// UseReset is the same as Use, but resets the route middlewares.
+// UseReset is the same as Use, but resets the route middlewares to mws.
 func (r *Router) UseReset(mws ...Middleware) {
 	r.rlock.Lock()
 	r.rmdws = append([]Middleware{}, mws...)
 	r.rlock.Unlock()
 }
 
-// Global appends the http handler middlewares and uses them to act on the route
-// handler.
+// Global appends the http handler middlewares and uses them to act on
+// all the route handlers.
 //
-// Notice: the middlewares will be executed before the routing the request.
+// Notice:
+//   - The middlewares will be executed before the routing the request.
+//   - The middlewares will act on not only the added routes,
+//     but also those will be added later.
+//
+// For example, the log middleware may be used as the global middleware.
 func (r *Router) Global(mws ...Middleware) {
 	r.glock.Lock()
 	defer r.glock.Unlock()
@@ -149,7 +158,7 @@ func (r *Router) Global(mws ...Middleware) {
 	r.updateHandler()
 }
 
-// GlobalReset is the same as Global, but resets the global middlewares.
+// GlobalReset is the same as Global, but resets the global middlewares to mws.
 func (r *Router) GlobalReset(mws ...Middleware) {
 	r.glock.Lock()
 	defer r.glock.Unlock()

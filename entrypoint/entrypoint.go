@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"strings"
 
-	ghttp "github.com/xgfone/go-apiserver/http"
+	"github.com/xgfone/go-apiserver/http/router"
 	"github.com/xgfone/go-apiserver/tcp"
 )
 
@@ -33,8 +33,6 @@ type server interface {
 }
 
 var _ server = &EntryPoint{}
-
-// var nothing = http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 
 // EntryPoint represents an entrypoint of the services.
 type EntryPoint struct {
@@ -71,7 +69,7 @@ func NewEntryPoint(name, addr string) (*EntryPoint, error) {
 			return nil, err
 		}
 
-		ep.httpHandler = tcp.NewHTTPServerHandler(ln.Addr(), ghttp.Handler404)
+		ep.httpHandler = tcp.NewHTTPServerHandler(ln.Addr(), router.NewRouter())
 		ep.mwHandler = tcp.NewMiddlewareHandler(ep.httpHandler)
 		ep.server = tcp.NewServer(ln, ep.mwHandler, nil)
 
