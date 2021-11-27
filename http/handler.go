@@ -15,6 +15,7 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -37,6 +38,9 @@ var (
 		w.WriteHeader(404)
 	})
 )
+
+// Middleware is the http handler middleware.
+type Middleware func(http.Handler) http.Handler
 
 /// ----------------------------------------------------------------------- ///
 
@@ -119,6 +123,87 @@ func (sh *SwitchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sh.handler.Load().(httpHandlerWrapper).Handler.ServeHTTP(w, r)
 }
 
+// WrappedHandler implements the interface WrappedHandler.
+func (sh *SwitchHandler) WrappedHandler() http.Handler { return sh.Get() }
+
+/// ----------------------------------------------------------------------- ///
+
+// MiddlewareHandler is the HTTP handler with the middlewares, that's,
+// the middlewares will handle the request before the http handler.
+type MiddlewareHandler struct {
+	handler SwitchHandler
+	orig    SwitchHandler
+
+	lock sync.RWMutex
+	mdws []Middleware
+}
+
+// NewMiddlewareHandler returns a new the HTTP handler based on the middlewares.
+func NewMiddlewareHandler(handler http.Handler, mdws ...Middleware) *MiddlewareHandler {
+	var mh MiddlewareHandler
+	mh.orig.Set(handler)
+	mh.Use(mdws...)
+	return &mh
+}
+
+// WrappedHandler implements the interface WrappedHandler.
+func (mh *MiddlewareHandler) WrappedHandler() http.Handler { return mh.Get() }
+
+// ServeHTTP implements the interface http.Handler.
+func (mh *MiddlewareHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	mh.handler.ServeHTTP(w, r)
+}
+
+// Get returns the original handler.
+func (mh *MiddlewareHandler) Get() http.Handler { return mh.orig.Get() }
+
+// Swap stores the new handler as the original handler and returns the old.
+func (mh *MiddlewareHandler) Swap(new http.Handler) (old http.Handler) {
+	if new == nil {
+		panic("MiddlewareHandler.Swap(): the new http handler is nil")
+	}
+
+	old = mh.orig.Swap(new)
+	mh.lock.RLock()
+	defer mh.lock.RUnlock()
+	mh.updateHandler()
+	return
+}
+
+// Handler returns a new http handler which is decorated by the middlewares.
+func (mh *MiddlewareHandler) Handler(handler http.Handler) http.Handler {
+	mh.lock.Lock()
+	defer mh.lock.Unlock()
+	return mh.applyMiddleware(handler)
+}
+
+// Use appends the http handler middlewars and uses them to the http handler.
+func (mh *MiddlewareHandler) Use(mws ...Middleware) {
+	mh.lock.Lock()
+	defer mh.lock.Unlock()
+	mh.mdws = append(mh.mdws, mws...)
+	mh.updateHandler()
+}
+
+// UseReset is the same as Use, but resets the route middlewares to mws.
+func (mh *MiddlewareHandler) UseReset(mws ...Middleware) {
+	mh.lock.Lock()
+	defer mh.lock.Unlock()
+	mh.mdws = append([]Middleware{}, mws...)
+	mh.updateHandler()
+}
+
+func (mh *MiddlewareHandler) applyMiddleware(h http.Handler) http.Handler {
+	for _len := len(mh.mdws) - 1; _len >= 0; _len-- {
+		h = mh.mdws[_len](h)
+	}
+	return h
+}
+
+func (mh *MiddlewareHandler) updateHandler() {
+	mh.handler.Set(mh.applyMiddleware(mh.Get()))
+}
+
 /// ----------------------------------------------------------------------- ///
 
 // HandlerManager is used to manage the http handler.
@@ -135,9 +220,9 @@ func NewHandlerManager() *HandlerManager {
 // AddHandler adds the named http handler.
 func (m *HandlerManager) AddHandler(name string, handler http.Handler) (err error) {
 	if name == "" {
-		panic("the http handler name is empty")
+		return errors.New("the http handler name is empty")
 	} else if handler == nil {
-		panic("the http handler is nil")
+		return errors.New("the http handler is nil")
 	}
 
 	m.lock.Lock()
@@ -146,6 +231,7 @@ func (m *HandlerManager) AddHandler(name string, handler http.Handler) (err erro
 	} else {
 		m.handlers[name] = handler
 	}
+	m.lock.Unlock()
 
 	return
 }

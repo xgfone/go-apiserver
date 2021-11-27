@@ -29,7 +29,7 @@ import (
 )
 
 // Middleware is the http handler middleware.
-type Middleware func(http.Handler) http.Handler
+type Middleware = ghttp.Middleware
 
 // Route is a http request route.
 type Route struct {
