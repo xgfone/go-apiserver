@@ -31,8 +31,8 @@ func testHandler(key string) http.Handler {
 }
 
 func TestUpstream(t *testing.T) {
-	up := NewUpstream(nil)
-	up.SwapForwarder(roundRobin(0))
+	up := NewUpstream("test", nil)
+	up.SwapForwarder(Retry(roundRobin(0)))
 
 	go func() {
 		server := http.Server{Addr: "127.0.0.1:8101", Handler: testHandler("8101")}

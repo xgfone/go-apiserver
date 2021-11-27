@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/internal/atomic"
+	"github.com/xgfone/go-apiserver/log"
 )
 
 // ErrNoAvailableServers is used to represents no available servers.
@@ -51,6 +52,7 @@ type serversWrapper struct{ Servers }
 
 // Upstream is used to route the request to one of a group of the backend servers.
 type Upstream struct {
+	name      string
 	forwarder atomic.Value
 
 	// Health Check
@@ -64,19 +66,22 @@ type Upstream struct {
 
 // NewUpstream returns a new upstream with the forwarder.
 //
-// If forwarder is nil, use RoundRobin() by default.
+// If forwarder is nil, use Retry(RoundRobin()) by default.
 //
 // TODO: Add the retry when failed to forward the request.
-func NewUpstream(forwarder Forwarder) *Upstream {
+func NewUpstream(name string, forwarder Forwarder) *Upstream {
 	if forwarder == nil {
-		forwarder = RoundRobin()
+		forwarder = Retry(RoundRobin())
 	}
 
-	up := &Upstream{servers: make(map[string]*ServerInfo, 8)}
+	up := &Upstream{name: name, servers: make(map[string]*ServerInfo, 8)}
 	up.server.Store(serversWrapper{})
 	up.forwarder.Store(forwarder)
 	return up
 }
+
+// Name reutrns the name of the upstream.
+func (u *Upstream) Name() string { return u.name }
 
 // GetForwarder returns the forwarder.
 func (u *Upstream) GetForwarder() Forwarder {
@@ -99,10 +104,14 @@ func (u *Upstream) HandleHTTP(w http.ResponseWriter, r *http.Request) error {
 
 // ServeHTTP implements the interface http.Handler.
 func (u *Upstream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch err := u.HandleHTTP(w, r); err {
+	err := u.HandleHTTP(w, r)
+	switch err {
 	case nil:
+		return
+
 	case ErrNoAvailableServers:
 		w.WriteHeader(503) // Service Unavailable
+
 	default:
 		var netErr net.Error
 		if errors.As(err, &netErr) && netErr.Timeout() {
@@ -110,9 +119,16 @@ func (u *Upstream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else {
 			w.WriteHeader(502) // Bad Gateway
 		}
-
-		// TODO: Log the error.
 	}
+
+	log.Error("fail to forward the http request",
+		log.F("upstream", u.name),
+		log.F("policy", u.GetForwarder().Policy()),
+		log.F("clientaddr", r.RemoteAddr),
+		log.F("reqhost", r.Host),
+		log.F("reqmethod", r.Method),
+		log.F("reqpath", r.URL.Path),
+		log.E(err))
 }
 
 func (u *Upstream) updateServers() {

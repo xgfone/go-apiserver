@@ -45,6 +45,27 @@ func NewForwarder(policy string, forward ForwardFunc) Forwarder {
 	return forwarder{forward: forward, policy: policy}
 }
 
+type retry struct{ Forwarder }
+
+func (f retry) WrappedForwarder() Forwarder { return f.Forwarder }
+func (f retry) Forward(w http.ResponseWriter, r *http.Request, s Servers) (err error) {
+	for _len := len(s); _len > 0; _len-- {
+		if err = f.Forwarder.Forward(w, r, s); err == nil {
+			break
+		}
+	}
+	return
+}
+
+// Retry returns a new forwarder to retry the rest servers when failing to
+// forward the request.
+func Retry(forwarder Forwarder) Forwarder {
+	if forwarder == nil {
+		panic("RetryForwarder: the wrapped forwarder is nil")
+	}
+	return retry{Forwarder: forwarder}
+}
+
 // RoundRobin returns a new forwarder based on the roundrobin.
 //
 // The policy name is "round_robin".
