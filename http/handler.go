@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/internal/atomic"
 )
 
@@ -58,6 +59,7 @@ type wrappedHandler struct {
 	Handle  WrappedHandlerFunc
 }
 
+func (wh wrappedHandler) Close() error                 { return helper.Close(wh.Handler) }
 func (wh wrappedHandler) WrappedHandler() http.Handler { return wh.Handler }
 func (wh wrappedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	wh.Handle(wh.Handler, w, r)
@@ -99,6 +101,9 @@ func NewSwitchHandler(handler http.Handler) *SwitchHandler {
 	sh.handler.Store(httpHandlerWrapper{handler})
 	return sh
 }
+
+// Close implements the interface io.Closer.
+func (sh *SwitchHandler) Close() error { return helper.Close(sh.Get()) }
 
 // Set sets the http handler to new.
 func (sh *SwitchHandler) Set(new http.Handler) {
@@ -145,6 +150,9 @@ func NewMiddlewareHandler(handler http.Handler, mdws ...Middleware) *MiddlewareH
 	mh.Use(mdws...)
 	return &mh
 }
+
+// Close implements the interface io.Closer.
+func (mh *MiddlewareHandler) Close() error { return mh.orig.Close() }
 
 // WrappedHandler implements the interface WrappedHandler.
 func (mh *MiddlewareHandler) WrappedHandler() http.Handler { return mh.Get() }
