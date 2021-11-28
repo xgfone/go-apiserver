@@ -131,7 +131,7 @@ func TestMiddlewareHandler(t *testing.T) {
 	}
 
 	buf.Reset()
-	mh.Unuse("mh3", "mh4")
+	mh.Unuse("mw3", "mw4")
 	mh.ServeHTTP(rec, req)
 	expects = []string{
 		"middleware 'mw1' before",
