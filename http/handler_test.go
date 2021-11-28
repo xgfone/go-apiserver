@@ -58,13 +58,13 @@ func TestWrappedHandler(t *testing.T) {
 }
 
 func logMiddleware(buf *bytes.Buffer, name string) Middleware {
-	return func(h http.Handler) http.Handler {
+	return NewMiddleware(name, func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(buf, "middleware '%s' before\n", name)
 			h.ServeHTTP(rw, r)
 			fmt.Fprintf(buf, "middleware '%s' after\n", name)
 		})
-	}
+	})
 }
 
 func TestMiddlewareHandler(t *testing.T) {
@@ -115,6 +115,28 @@ func TestMiddlewareHandler(t *testing.T) {
 		"h2",
 		"middleware 'mw4' after",
 		"middleware 'mw3' after",
+		"middleware 'mw2' after",
+		"middleware 'mw1' after",
+		"",
+	}
+	results = strings.Split(buf.String(), "\n")
+	if len(results) != len(expects) {
+		t.Errorf("expect %d lines, but got %d", len(expects), len(results))
+	} else {
+		for i := 0; i < len(results); i++ {
+			if results[i] != expects[i] {
+				t.Errorf("expect '%s', but got '%s'", expects[i], results[i])
+			}
+		}
+	}
+
+	buf.Reset()
+	mh.Unuse("mh3", "mh4")
+	mh.ServeHTTP(rec, req)
+	expects = []string{
+		"middleware 'mw1' before",
+		"middleware 'mw2' before",
+		"h2",
 		"middleware 'mw2' after",
 		"middleware 'mw1' after",
 		"",

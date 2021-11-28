@@ -41,7 +41,83 @@ var (
 )
 
 // Middleware is the http handler middleware.
-type Middleware func(http.Handler) http.Handler
+type Middleware interface {
+	Name() string
+	Handler(http.Handler) http.Handler
+}
+
+// Middlewares is a group of the http handler middlewares.
+type Middlewares []Middleware
+
+// Append appends the middlewares into itself.
+func (ms *Middlewares) Append(mwds ...Middleware) {
+	*ms = append(*ms, mwds...)
+}
+
+// Remove removes the middlewares by the names from itself.
+func (ms *Middlewares) Remove(names ...string) {
+	nameslen := len(names)
+	if nameslen == 0 {
+		return
+	}
+
+	mslen := len(*ms)
+	_len := mslen - nameslen
+	if _len < 0 {
+		_len = mslen
+	}
+
+	mdws := make(Middlewares, 0, _len)
+	for i := 0; i < mslen; i++ {
+		if mw := (*ms)[i]; !helper.InStrings(mw.Name(), names) {
+			mdws = append(mdws, mw)
+		}
+	}
+	*ms = mdws
+}
+
+// Clone clones itself to a new one.
+func (ms Middlewares) Clone() Middlewares {
+	return append(Middlewares{}, ms...)
+}
+
+// Handler wraps the http handler with the middlewares and returns a new one.
+func (ms Middlewares) Handler(handler http.Handler) http.Handler {
+	for _len := len(ms) - 1; _len >= 0; _len-- {
+		handler = ms[_len].Handler(handler)
+	}
+	return handler
+}
+
+// Index returns the index position where the middleware named name in ms.
+//
+// If there is not the middleware, return -1.
+func (ms Middlewares) Index(name string) int {
+	for _len := len(ms) - 1; _len >= 0; _len-- {
+		if ms[_len].Name() == name {
+			return _len
+		}
+	}
+	return -1
+}
+
+// Contains reports whether the middlewares contains the middleware named name.
+func (ms Middlewares) Contains(name string) bool {
+	return ms.Index(name) > -1
+}
+
+type middleware struct {
+	name    string
+	handler func(http.Handler) http.Handler
+}
+
+func (m middleware) Name() string                        { return m.name }
+func (m middleware) Handler(h http.Handler) http.Handler { return m.handler(h) }
+
+// NewMiddleware returns a new HTTP handler middleware.
+func NewMiddleware(name string, m func(http.Handler) http.Handler) Middleware {
+	return middleware{name: name, handler: m}
+}
 
 /// ----------------------------------------------------------------------- ///
 
@@ -140,7 +216,7 @@ type MiddlewareHandler struct {
 	orig    SwitchHandler
 
 	lock sync.RWMutex
-	mdws []Middleware
+	mdws Middlewares
 }
 
 // NewMiddlewareHandler returns a new the HTTP handler based on the middlewares.
@@ -182,14 +258,14 @@ func (mh *MiddlewareHandler) Swap(new http.Handler) (old http.Handler) {
 func (mh *MiddlewareHandler) Handler(handler http.Handler) http.Handler {
 	mh.lock.Lock()
 	defer mh.lock.Unlock()
-	return mh.applyMiddleware(handler)
+	return mh.mdws.Handler(handler)
 }
 
 // Use appends the http handler middlewars and uses them to the http handler.
 func (mh *MiddlewareHandler) Use(mws ...Middleware) {
 	mh.lock.Lock()
 	defer mh.lock.Unlock()
-	mh.mdws = append(mh.mdws, mws...)
+	mh.mdws.Append(mws...)
 	mh.updateHandler()
 }
 
@@ -197,19 +273,20 @@ func (mh *MiddlewareHandler) Use(mws ...Middleware) {
 func (mh *MiddlewareHandler) UseReset(mws ...Middleware) {
 	mh.lock.Lock()
 	defer mh.lock.Unlock()
-	mh.mdws = append([]Middleware{}, mws...)
+	mh.mdws = append(Middlewares{}, mws...)
 	mh.updateHandler()
 }
 
-func (mh *MiddlewareHandler) applyMiddleware(h http.Handler) http.Handler {
-	for _len := len(mh.mdws) - 1; _len >= 0; _len-- {
-		h = mh.mdws[_len](h)
-	}
-	return h
+// Unuse removes the http handler middlewares by the names.
+func (mh *MiddlewareHandler) Unuse(names ...string) {
+	mh.lock.Lock()
+	defer mh.lock.Unlock()
+	mh.mdws.Remove(names...)
+	mh.updateHandler()
 }
 
 func (mh *MiddlewareHandler) updateHandler() {
-	mh.handler.Set(mh.applyMiddleware(mh.Get()))
+	mh.handler.Set(mh.mdws.Handler(mh.Get()))
 }
 
 /// ----------------------------------------------------------------------- ///

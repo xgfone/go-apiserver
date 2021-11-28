@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	ghttp "github.com/xgfone/go-apiserver/http"
 	"github.com/xgfone/go-apiserver/http/matcher"
 )
 
@@ -77,26 +78,27 @@ func TestPriorityRoute(t *testing.T) {
 }
 
 func logMiddleware(buf *bytes.Buffer, name string) Middleware {
-	return func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			fmt.Fprintf(buf, "middleware '%s' before\n", name)
-			h.ServeHTTP(rw, r)
-			fmt.Fprintf(buf, "middleware '%s' after\n", name)
-		})
-	}
+	return ghttp.NewMiddleware(name, func(h http.Handler) http.Handler {
+		return ghttp.WrapHandler(h,
+			func(h http.Handler, rw http.ResponseWriter, r *http.Request) {
+				fmt.Fprintf(buf, "middleware '%s' before\n", name)
+				h.ServeHTTP(rw, r)
+				fmt.Fprintf(buf, "middleware '%s' after\n", name)
+			})
+	})
 }
 
 func TestRouteMiddleware(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
+	handler := func(rw http.ResponseWriter, r *http.Request) {
+		rw.WriteHeader(200)
+		buf.WriteString("handler\n")
+	}
+
 	router := NewRouter()
 	router.Global(logMiddleware(buf, "log1"), logMiddleware(buf, "log2"))
 	router.Use(logMiddleware(buf, "log3"), logMiddleware(buf, "log4"))
-
-	router.Rule("Host(`127.0.0.1`) && Method(`GET`)").Name("route").
-		HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			rw.WriteHeader(200)
-			buf.WriteString("handler\n")
-		})
+	router.Rule("Host(`127.0.0.1`) && Method(`GET`)").Name("route").HandlerFunc(handler)
 
 	req, _ := http.NewRequest("GET", "http://127.0.0.1", nil)
 	rec := httptest.NewRecorder()
@@ -121,6 +123,58 @@ func TestRouteMiddleware(t *testing.T) {
 	results := strings.Split(buf.String(), "\n")
 	if len(results) != len(expects) {
 		t.Errorf("expect %d lines, but got %d", len(expects), len(results))
+	} else {
+		for i := 0; i < len(results); i++ {
+			if results[i] != expects[i] {
+				t.Errorf("expect '%s', but got '%s'", expects[i], results[i])
+			}
+		}
+	}
+
+	buf.Reset()
+	router.UseCancel("log3")
+	router.GlobalCancel("log1")
+	router.ServeHTTP(rec, req)
+
+	expects = []string{
+		"middleware 'log2' before",
+		"middleware 'log3' before",
+		"middleware 'log4' before",
+		"handler",
+		"middleware 'log4' after",
+		"middleware 'log3' after",
+		"middleware 'log2' after",
+		"",
+	}
+	results = strings.Split(buf.String(), "\n")
+	if len(results) != len(expects) {
+		t.Errorf("expect %d lines, but got %d: %v", len(expects), len(results), results)
+	} else {
+		for i := 0; i < len(results); i++ {
+			if results[i] != expects[i] {
+				t.Errorf("expect '%s', but got '%s'", expects[i], results[i])
+			}
+		}
+	}
+
+	buf.Reset()
+	router.UseCancel("log3")
+	route, _ := router.GetRoute("route")
+	route.Handler = ghttp.UnwrapHandler(route.Handler)
+	router.UpdateRoutes(route)
+	router.ServeHTTP(rec, req)
+
+	expects = []string{
+		"middleware 'log2' before",
+		"middleware 'log4' before",
+		"handler",
+		"middleware 'log4' after",
+		"middleware 'log2' after",
+		"",
+	}
+	results = strings.Split(buf.String(), "\n")
+	if len(results) != len(expects) {
+		t.Errorf("expect %d lines, but got %d: %v", len(expects), len(results), results)
 	} else {
 		for i := 0; i < len(results); i++ {
 			if results[i] != expects[i] {

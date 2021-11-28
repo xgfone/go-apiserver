@@ -46,12 +46,19 @@ type Route struct {
 
 	// Handler is the handler of the route.
 	http.Handler
+
+	handler http.Handler
 }
 
 // Use uses the given middlewares to act on the handler.
 func (r *Route) Use(mws ...Middleware) {
+	if r.Handler == nil {
+		panic("the route handler is nil")
+	}
+
+	r.handler = r.Handler
 	for _len := len(mws) - 1; _len >= 0; _len-- {
-		r.Handler = mws[_len](r.Handler)
+		r.handler = mws[_len].Handler(r.handler)
 	}
 }
 
@@ -100,10 +107,10 @@ type Router struct {
 	builder  *ruler.Builder
 	handler  ghttp.SwitchHandler
 	glock    sync.Mutex
-	gmdws    []Middleware
+	gmdws    ghttp.Middlewares
 
 	rlock  sync.RWMutex
-	rmdws  []Middleware
+	rmdws  ghttp.Middlewares
 	origs  map[string]Route
 	routes Routes
 	router atomic.Value
@@ -131,14 +138,21 @@ func NewRouter() *Router {
 //
 func (r *Router) Use(mws ...Middleware) {
 	r.rlock.Lock()
-	r.rmdws = append(r.rmdws, mws...)
+	r.rmdws.Append(mws...)
 	r.rlock.Unlock()
 }
 
 // UseReset is the same as Use, but resets the route middlewares to mws.
 func (r *Router) UseReset(mws ...Middleware) {
 	r.rlock.Lock()
-	r.rmdws = append([]Middleware{}, mws...)
+	r.rmdws = append(ghttp.Middlewares{}, mws...)
+	r.rlock.Unlock()
+}
+
+// UseCancel removes the http handler middlewares added by Use.
+func (r *Router) UseCancel(names ...string) {
+	r.rlock.Lock()
+	r.rmdws.Remove(names...)
 	r.rlock.Unlock()
 }
 
@@ -154,7 +168,7 @@ func (r *Router) UseReset(mws ...Middleware) {
 func (r *Router) Global(mws ...Middleware) {
 	r.glock.Lock()
 	defer r.glock.Unlock()
-	r.gmdws = append(r.gmdws, mws...)
+	r.gmdws.Append(mws...)
 	r.updateHandler()
 }
 
@@ -162,23 +176,27 @@ func (r *Router) Global(mws ...Middleware) {
 func (r *Router) GlobalReset(mws ...Middleware) {
 	r.glock.Lock()
 	defer r.glock.Unlock()
-	r.gmdws = append([]Middleware{}, mws...)
+	r.gmdws = append(ghttp.Middlewares{}, mws...)
+	r.updateHandler()
+}
+
+// GlobalCancel removes the http handler middlewares added by Global.
+func (r *Router) GlobalCancel(names ...string) {
+	r.rlock.Lock()
+	defer r.rlock.Unlock()
+	r.gmdws.Remove(names...)
 	r.updateHandler()
 }
 
 func (r *Router) updateHandler() {
-	var handler http.Handler = http.HandlerFunc(r.serveHTTP)
-	for _len := len(r.gmdws) - 1; _len >= 0; _len-- {
-		handler = r.gmdws[_len](handler)
-	}
-	r.handler.Set(handler)
+	r.handler.Set(r.gmdws.Handler(http.HandlerFunc(r.serveHTTP)))
 }
 
 func (r *Router) serveHTTP(w http.ResponseWriter, req *http.Request) {
 	routes := r.router.Load().(routesWrapper).Routes
 	for i, _len := 0, len(routes); i < _len; i++ {
 		if nreq, ok := routes[i].Matcher.Match(req); ok {
-			routes[i].Handler.ServeHTTP(w, nreq)
+			routes[i].handler.ServeHTTP(w, nreq)
 			return
 		}
 	}
