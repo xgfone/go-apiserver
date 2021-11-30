@@ -22,21 +22,20 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
-	"time"
 
 	"github.com/xgfone/go-apiserver/nets"
 )
 
 // URL is the metadata information of the http endpoint.
 type URL struct {
-	Method  string // Such as "GET"
-	Scheme  string // Such as "http" or "https"
-	Domain  string // Such as "www.example.com"
-	IP      string // Such as "1.2.3.4"
-	Port    uint16 // Such as 80 or 443
-	Path    string // Such as "/"
-	Queries map[string]string
-	Headers map[string]string
+	Method  string            `json:"method" yaml:"method"` // Such as "GET"
+	Scheme  string            `json:"scheme" yaml:"scheme"` // Such as "http" or "https"
+	Domain  string            `json:"domain" yaml:"domain"` // Such as "www.example.com"
+	IP      string            `json:"ip" yaml:"ip"`         // Such as "1.2.3.4"
+	Port    uint16            `json:"port" yaml:"port"`     // Such as 80 or 443
+	Path    string            `json:"path" yaml:"path"`     // Such as "/"
+	Queries map[string]string `json:"queries" yaml:"queries"`
+	Headers map[string]string `json:"headers" yaml:"headers"`
 }
 
 // Equal reports whether the url is equal to other.
@@ -170,15 +169,10 @@ type ServerConfig struct {
 	//
 	ID string
 
-	// Set the HTTP client and the timeout to handle the request.
-	//
-	// Optional
-	HTTPClient *http.Client         // Default: http.DefaultClient
-	GetTimeout func() time.Duration // Default: nil, no timeout
-
 	// Handle the request or response.
 	//
 	// Optional
+	HTTPClient     *http.Client // Default: http.DefaultClient
 	HandleRequest  func(*http.Client, *http.Request) (*http.Response, error)
 	HandleResponse func(http.ResponseWriter, *http.Response) error
 
@@ -285,16 +279,7 @@ func (s *httpServer) HandleHTTP(w http.ResponseWriter, r *http.Request) (err err
 		}
 	}()
 
-	var cancel func()
-	ctx := r.Context()
-	if s.conf.GetTimeout != nil {
-		if timeout := s.conf.GetTimeout(); timeout > 0 {
-			ctx, cancel = context.WithTimeout(ctx, timeout)
-			defer cancel()
-		}
-	}
-
-	r = r.Clone(ctx)
+	r = r.Clone(r.Context())
 	r.RequestURI = ""   // Pretend to be a client request.
 	r.URL.Host = s.addr // Dial to the upstream backend server.
 	r.URL.Scheme = s.conf.Scheme

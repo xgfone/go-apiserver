@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"sort"
 	"sync"
+	stdatomic "sync/atomic"
 	"time"
 
 	"github.com/xgfone/go-apiserver/internal/atomic"
@@ -54,6 +55,7 @@ type serversWrapper struct{ Servers }
 type Upstream struct {
 	name      string
 	forwarder atomic.Value
+	timeout   int64
 
 	// Health Check
 	hclock sync.RWMutex
@@ -93,12 +95,29 @@ func (u *Upstream) SwapForwarder(new Forwarder) (old Forwarder) {
 	return u.forwarder.Swap(new).(Forwarder)
 }
 
+// GetTimeout returns the maximum timeout.
+func (u *Upstream) GetTimeout() time.Duration {
+	return time.Duration(stdatomic.LoadInt64(&u.timeout))
+}
+
+// SetTimeout sets the maximum timeout.
+func (u *Upstream) SetTimeout(timeout time.Duration) {
+	stdatomic.StoreInt64(&u.timeout, int64(timeout))
+}
+
 // HandleHTTP implements the interface Server.
 func (u *Upstream) HandleHTTP(w http.ResponseWriter, r *http.Request) error {
 	servers := u.server.Load().(serversWrapper).Servers
 	if len(servers) == 0 {
 		return ErrNoAvailableServers
 	}
+
+	if timeout := u.GetTimeout(); timeout > 0 {
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
+		r = r.WithContext(ctx)
+		defer cancel()
+	}
+
 	return u.GetForwarder().Forward(w, r, servers)
 }
 
@@ -244,9 +263,9 @@ func (u *Upstream) SetServerStatuses(statuses map[string]bool) {
 type HealthCheckInfo struct {
 	URL
 
-	Failure  int
-	Timeout  time.Duration
-	Interval time.Duration
+	Failure  int           `json:"failure" yaml:"failure"`
+	Timeout  time.Duration `json:"timeout" yaml:"timeout"`
+	Interval time.Duration `json:"interval" yaml:"interval"`
 }
 
 // IsZero reports whether the health check information is ZERO.
@@ -341,6 +360,10 @@ func (u *Upstream) checkServers(hci HealthCheckInfo) {
 		if online := u.checkServer(hci, si.Server); online {
 			if si.updateStatus(online) && !changed {
 				changed = true
+			}
+
+			if si.failure > 0 {
+				si.failure = 0
 			}
 		} else if si.failure++; si.failure >= hci.Failure {
 			if si.updateStatus(false) && !changed {
