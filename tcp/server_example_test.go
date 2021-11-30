@@ -20,8 +20,8 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/cert"
 	"github.com/xgfone/go-apiserver/internal/test"
+	"github.com/xgfone/go-apiserver/tlscert"
 )
 
 type logHandler struct {
@@ -55,7 +55,7 @@ func newLogMiddleware(name string) Middleware {
 
 func ExampleServer() {
 	// Create the certificate.
-	cert, err := cert.NewCertificate([]byte(test.Ca), []byte(test.Key), []byte(test.Cert))
+	cert, err := tlscert.NewCertificate([]byte(test.Ca), []byte(test.Key), []byte(test.Cert))
 	if err != nil {
 		log.Fatal(err)
 	}

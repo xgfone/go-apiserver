@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package cert is used to manage the certificates and the providers.
-package cert
+// Package tlscert is used to manage the certificates and the providers.
+package tlscert

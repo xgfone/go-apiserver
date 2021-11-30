@@ -19,15 +19,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xgfone/go-apiserver/cert"
 	"github.com/xgfone/go-apiserver/internal/test"
 	"github.com/xgfone/go-apiserver/log"
+	"github.com/xgfone/go-apiserver/tlscert"
 )
 
 func init() { log.SetNothingWriter() }
 
 func TestServer(t *testing.T) {
-	cert, err := cert.NewCertificate([]byte(test.Ca), []byte(test.Key), []byte(test.Cert))
+	cert, err := tlscert.NewCertificate([]byte(test.Ca), []byte(test.Key), []byte(test.Cert))
 	if err != nil {
 		t.Fatal(err)
 	}
