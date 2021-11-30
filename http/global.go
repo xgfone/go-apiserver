@@ -38,3 +38,58 @@ func GetHandler(name string) http.Handler {
 func GetHandlers() map[string]http.Handler {
 	return DefaultHandlerManager.GetHandlers()
 }
+
+/// ----------------------------------------------------------------------- ///
+
+// DefaultMiddlewareManager is the default global middleware manager.
+var DefaultMiddlewareManager = NewMiddlewareManager()
+
+// AddMiddleware is equal to DefaultMiddlewareManager.AddMiddleware(mw).
+func AddMiddleware(mw Middleware) (err error) {
+	return DefaultMiddlewareManager.AddMiddleware(mw)
+}
+
+// DelMiddleware is equal to DefaultMiddlewareManager.DelMiddleware(name).
+func DelMiddleware(name string) Middleware {
+	return DefaultMiddlewareManager.DelMiddleware(name)
+}
+
+// GetMiddleware is equal to DefaultMiddlewareManager.GetMiddleware(name).
+func GetMiddleware(name string) Middleware {
+	return DefaultMiddlewareManager.GetMiddleware(name)
+}
+
+// GetMiddlewares is equal to DefaultMiddlewareManager.GetMiddlewares().
+func GetMiddlewares() Middlewares {
+	return DefaultMiddlewareManager.GetMiddlewares()
+}
+
+/// ----------------------------------------------------------------------- ///
+
+// DefaultMiddlewareBuilderManager is the default global middleware buidler manager.
+var DefaultMiddlewareBuilderManager = NewMiddlewareBuilderManager()
+
+// BuildMiddleware is equal to DefaultMiddlewareBuilderManager.Build(typ, name, conf).
+func BuildMiddleware(typ, name string, conf map[string]interface{}) (Middleware, error) {
+	return DefaultMiddlewareBuilderManager.Build(typ, name, conf)
+}
+
+// AddMiddlewareBuilder is equal to DefaultMiddlewareBuilderManager.AddBuilder(b).
+func AddMiddlewareBuilder(b MiddlewareBuilder) (err error) {
+	return DefaultMiddlewareBuilderManager.AddBuilder(b)
+}
+
+// DelMiddlewareBuilder is equal to DefaultMiddlewareBuilderManager.DelBuilder(name).
+func DelMiddlewareBuilder(name string) MiddlewareBuilder {
+	return DefaultMiddlewareBuilderManager.DelBuilder(name)
+}
+
+// GetMiddlewareBuilder is equal to DefaultMiddlewareBuilderManager.GetBuilder(name).
+func GetMiddlewareBuilder(name string) MiddlewareBuilder {
+	return DefaultMiddlewareBuilderManager.GetBuilder(name)
+}
+
+// GetMiddlewareBuilders is equal to DefaultMiddlewareBuilderManager.GetBuilders().
+func GetMiddlewareBuilders() []MiddlewareBuilder {
+	return DefaultMiddlewareBuilderManager.GetBuilders()
+}
