@@ -238,6 +238,7 @@ func (r *Router) GetRoute(name string) (route Route, ok bool) {
 // AddRoute adds the new route.
 func (r *Router) AddRoute(route Route) (err error) {
 	r.rlock.Lock()
+	defer r.rlock.Unlock()
 	if _, ok := r.origs[route.Name]; ok {
 		err = fmt.Errorf("the route named '%s' has been added", route.Name)
 	} else {
@@ -245,7 +246,6 @@ func (r *Router) AddRoute(route Route) (err error) {
 		r.origs[route.Name] = route
 		r.updateRoutes()
 	}
-	r.rlock.Unlock()
 	return
 }
 
@@ -277,14 +277,29 @@ func (r *Router) DelRoutes(names ...string) {
 func (r *Router) UpdateRoutes(routes ...Route) {
 	if _len := len(routes); _len > 0 {
 		r.rlock.Lock()
+		defer r.rlock.Unlock()
+
 		for i := 0; i < _len; i++ {
 			route := routes[i]
 			route.Use(r.rmdws...)
 			r.origs[route.Name] = route
 		}
 		r.updateRoutes()
-		r.rlock.Unlock()
 	}
+}
+
+// ResetRoutes discards all the original routes and resets them to the newest.
+func (r *Router) ResetRoutes(routes ...Route) {
+	_len := len(routes)
+	r.rlock.Lock()
+	defer r.rlock.Unlock()
+
+	for i := 0; i < _len; i++ {
+		route := routes[i]
+		route.Use(r.rmdws...)
+		r.origs[route.Name] = route
+	}
+	r.updateRoutes()
 }
 
 // AddRuleRoute adds the route based on the rule.
