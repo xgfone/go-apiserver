@@ -84,17 +84,40 @@ func (g *CertManagerGroup) GetCertManagers() []*CertManager {
 	return cms
 }
 
+// AddGroupCertificate adds the named certificate into the group certificate manager.
+func (g *CertManagerGroup) AddGroupCertificate(group, name string, cert Certificate) {
+	if cm := g.GetCertManager(group); cm != nil {
+		cm.AddCertificate(name, cert)
+	}
+}
+
+// DelGroupCertificate deletes the named certificate from the group certificate manager.
+func (g *CertManagerGroup) DelGroupCertificate(group, name string) {
+	if cm := g.GetCertManager(group); cm != nil {
+		cm.DelCertificate(name)
+	}
+}
+
+func (g *CertManagerGroup) getCertManager(name string) (*CertManager, string) {
+	certName := name
+	var cm *CertManager
+	if index := strings.IndexByte(name, '@'); index > -1 {
+		certName = name[index+1:]
+		cm = g.GetCertManager(name[:index])
+	}
+	return cm, certName
+}
+
 // AddCertificate implements the interface CertUpdater.
 //
-// If the name contains the character ':', the front part is the name of
+// If the name contains the character '@', the front part is the name of
 // the certifcate manager and the back part is the real name of the certificate.
 // Now, the certificate is only been added into the specific certificate manager.
 // Or, it will be added into all the certificate managers.
 func (g *CertManagerGroup) AddCertificate(name string, cert Certificate) {
-	if index := strings.IndexByte(name, ':'); index > -1 {
-		if cm := g.GetCertManager(name[:index]); cm != nil {
-			cm.AddCertificate(name[index+1:], cert)
-		}
+	cm, name := g.getCertManager(name)
+	if cm != nil {
+		cm.AddCertificate(name, cert)
 		return
 	}
 
@@ -107,15 +130,14 @@ func (g *CertManagerGroup) AddCertificate(name string, cert Certificate) {
 
 // DelCertificate implements the interface CertUpdater.
 //
-// If the name contains the character ':', the front part is the name of
+// If the name contains the character '@', the front part is the name of
 // the certifcate manager and the back part is the real name of the certificate.
 // Now, the certificate is only been deleted from the specific certificate manager.
 // Or, it will be deleted from all the certificate managers.
 func (g *CertManagerGroup) DelCertificate(name string) {
-	if index := strings.IndexByte(name, ':'); index > -1 {
-		if cm := g.GetCertManager(name[:index]); cm != nil {
-			cm.DelCertificate(name[index+1:])
-		}
+	cm, name := g.getCertManager(name)
+	if cm != nil {
+		cm.DelCertificate(name)
 		return
 	}
 
