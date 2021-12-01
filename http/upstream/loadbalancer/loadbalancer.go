@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package upstream provides the http request forwarder to the upstream servers.
-package upstream
+// Package loadbalancer implements an upstream forwarder based on loadbalancer.
+package loadbalancer
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 	stdatomic "sync/atomic"
 	"time"
 
+	"github.com/xgfone/go-apiserver/http/upstream"
 	"github.com/xgfone/go-apiserver/internal/atomic"
 	"github.com/xgfone/go-apiserver/log"
 )
@@ -36,7 +37,7 @@ var ErrNoAvailableServers = errors.New("no available servers")
 type ServerInfo struct {
 	failure int
 	online  bool
-	Server
+	upstream.Server
 }
 
 // Online reports whether the server is online.
@@ -49,10 +50,10 @@ func (si *ServerInfo) updateStatus(online bool) (ok bool) {
 	return
 }
 
-type serversWrapper struct{ Servers }
+type serversWrapper struct{ upstream.Servers }
 
-// Upstream is used to route the request to one of a group of the backend servers.
-type Upstream struct {
+// LoadBalancer is used to forward the http request to one of the backend servers.
+type LoadBalancer struct {
 	name      string
 	forwarder atomic.Value
 	timeout   int64
@@ -66,64 +67,64 @@ type Upstream struct {
 	server  atomic.Value // For serversWrapper
 }
 
-// NewUpstream returns a new upstream with the forwarder.
+// NewLoadBalancer returns a new LoadBalancer to forward the http request.
 //
 // If forwarder is nil, use Retry(RoundRobin()) by default.
 //
 // TODO: Add the retry when failed to forward the request.
-func NewUpstream(name string, forwarder Forwarder) *Upstream {
+func NewLoadBalancer(name string, forwarder Forwarder) *LoadBalancer {
 	if forwarder == nil {
 		forwarder = Retry(RoundRobin())
 	}
 
-	up := &Upstream{name: name, servers: make(map[string]*ServerInfo, 8)}
+	up := &LoadBalancer{name: name, servers: make(map[string]*ServerInfo, 8)}
 	up.server.Store(serversWrapper{})
 	up.forwarder.Store(forwarder)
 	return up
 }
 
 // Name reutrns the name of the upstream.
-func (u *Upstream) Name() string { return u.name }
+func (lb *LoadBalancer) Name() string { return lb.name }
 
 // GetForwarder returns the forwarder.
-func (u *Upstream) GetForwarder() Forwarder {
-	return u.forwarder.Load().(Forwarder)
+func (lb *LoadBalancer) GetForwarder() Forwarder {
+	return lb.forwarder.Load().(Forwarder)
 }
 
 // SwapForwarder swaps the old forwarder with the new.
-func (u *Upstream) SwapForwarder(new Forwarder) (old Forwarder) {
-	return u.forwarder.Swap(new).(Forwarder)
+func (lb *LoadBalancer) SwapForwarder(new Forwarder) (old Forwarder) {
+	return lb.forwarder.Swap(new).(Forwarder)
 }
 
 // GetTimeout returns the maximum timeout.
-func (u *Upstream) GetTimeout() time.Duration {
-	return time.Duration(stdatomic.LoadInt64(&u.timeout))
+func (lb *LoadBalancer) GetTimeout() time.Duration {
+	return time.Duration(stdatomic.LoadInt64(&lb.timeout))
 }
 
 // SetTimeout sets the maximum timeout.
-func (u *Upstream) SetTimeout(timeout time.Duration) {
-	stdatomic.StoreInt64(&u.timeout, int64(timeout))
+func (lb *LoadBalancer) SetTimeout(timeout time.Duration) {
+	stdatomic.StoreInt64(&lb.timeout, int64(timeout))
 }
 
 // HandleHTTP implements the interface Server.
-func (u *Upstream) HandleHTTP(w http.ResponseWriter, r *http.Request) error {
-	servers := u.server.Load().(serversWrapper).Servers
+func (lb *LoadBalancer) HandleHTTP(w http.ResponseWriter, r *http.Request) error {
+	servers := lb.server.Load().(serversWrapper).Servers
 	if len(servers) == 0 {
 		return ErrNoAvailableServers
 	}
 
-	if timeout := u.GetTimeout(); timeout > 0 {
+	if timeout := lb.GetTimeout(); timeout > 0 {
 		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		r = r.WithContext(ctx)
 		defer cancel()
 	}
 
-	return u.GetForwarder().Forward(w, r, servers)
+	return lb.GetForwarder().Forward(w, r, servers)
 }
 
 // ServeHTTP implements the interface http.Handler.
-func (u *Upstream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	err := u.HandleHTTP(w, r)
+func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	err := lb.HandleHTTP(w, r)
 	switch err {
 	case nil:
 		return
@@ -141,8 +142,8 @@ func (u *Upstream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Error("fail to forward the http request",
-		log.F("upstream", u.name),
-		log.F("policy", u.GetForwarder().Policy()),
+		log.F("upstream", lb.name),
+		log.F("policy", lb.GetForwarder().Policy()),
 		log.F("clientaddr", r.RemoteAddr),
 		log.F("reqhost", r.Host),
 		log.F("reqmethod", r.Method),
@@ -150,96 +151,96 @@ func (u *Upstream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.E(err))
 }
 
-func (u *Upstream) updateServers() {
-	servers := make(Servers, 0, len(u.servers))
-	for _, si := range u.servers {
+func (lb *LoadBalancer) updateServers() {
+	servers := make(upstream.Servers, 0, len(lb.servers))
+	for _, si := range lb.servers {
 		if si.online {
 			servers = append(servers, si.Server)
 		}
 	}
 	sort.Stable(servers)
-	u.server.Store(serversWrapper{servers})
+	lb.server.Store(serversWrapper{servers})
 }
 
 // ResetServers resets all the servers.
-func (u *Upstream) ResetServers(servers ...Server) {
-	u.slock.Lock()
-	defer u.slock.Unlock()
+func (lb *LoadBalancer) ResetServers(servers ...upstream.Server) {
+	lb.slock.Lock()
+	defer lb.slock.Unlock()
 
-	u.servers = make(map[string]*ServerInfo, len(servers))
+	lb.servers = make(map[string]*ServerInfo, len(servers))
 	for _len := len(servers) - 1; _len >= 0; _len-- {
 		server := servers[_len]
 		id := server.ID()
-		u.servers[id] = &ServerInfo{Server: server, online: true}
+		lb.servers[id] = &ServerInfo{Server: server, online: true}
 	}
-	u.updateServers()
+	lb.updateServers()
 }
 
 // UpsertServers adds or updates the servers.
-func (u *Upstream) UpsertServers(servers ...Server) {
-	u.slock.Lock()
-	defer u.slock.Unlock()
+func (lb *LoadBalancer) UpsertServers(servers ...upstream.Server) {
+	lb.slock.Lock()
+	defer lb.slock.Unlock()
 
 	for _len := len(servers) - 1; _len >= 0; _len-- {
 		server := servers[_len]
 		id := server.ID()
-		if si, ok := u.servers[id]; ok {
+		if si, ok := lb.servers[id]; ok {
 			si.Server = server
 			si.online = true
 		} else {
-			u.servers[id] = &ServerInfo{Server: server, online: true}
+			lb.servers[id] = &ServerInfo{Server: server, online: true}
 		}
 	}
-	u.updateServers()
+	lb.updateServers()
 }
 
 // RemoveServer removes and returns the server by the server id.
 //
 // If the server does not exist, do nothing and return nil.
-func (u *Upstream) RemoveServer(id string) (server Server) {
-	u.slock.Lock()
-	if si, ok := u.servers[id]; ok {
-		delete(u.servers, id)
-		u.updateServers()
+func (lb *LoadBalancer) RemoveServer(id string) (server upstream.Server) {
+	lb.slock.Lock()
+	if si, ok := lb.servers[id]; ok {
+		delete(lb.servers, id)
+		lb.updateServers()
 		server = si.Server
 	}
-	u.slock.Unlock()
+	lb.slock.Unlock()
 	return
 }
 
 // GetServer returns the server by the server id.
-func (u *Upstream) GetServer(id string) (server ServerInfo, ok bool) {
-	u.slock.RLock()
-	si, ok := u.servers[id]
+func (lb *LoadBalancer) GetServer(id string) (server ServerInfo, ok bool) {
+	lb.slock.RLock()
+	si, ok := lb.servers[id]
 	if ok {
 		server = *si
 	}
-	u.slock.RUnlock()
+	lb.slock.RUnlock()
 	return
 }
 
 // GetServers returns all the servers.
-func (u *Upstream) GetServers() []ServerInfo {
-	u.slock.RLock()
-	servers := make([]ServerInfo, 0, len(u.servers))
-	for _, si := range u.servers {
+func (lb *LoadBalancer) GetServers() []ServerInfo {
+	lb.slock.RLock()
+	servers := make([]ServerInfo, 0, len(lb.servers))
+	for _, si := range lb.servers {
 		servers = append(servers, *si)
 	}
-	u.slock.RUnlock()
+	lb.slock.RUnlock()
 	return servers
 }
 
 // SetServerStatus sets the online status of the server and return true.
 // If the server does not exist, do nothing and return false.
-func (u *Upstream) SetServerStatus(id string, online bool) (ok bool) {
-	u.slock.Lock()
-	ok = u.setServerStatus(id, online)
-	u.slock.Unlock()
+func (lb *LoadBalancer) SetServerStatus(id string, online bool) (ok bool) {
+	lb.slock.Lock()
+	ok = lb.setServerStatus(id, online)
+	lb.slock.Unlock()
 	return
 }
 
-func (u *Upstream) setServerStatus(id string, online bool) (ok bool) {
-	si, ok := u.servers[id]
+func (lb *LoadBalancer) setServerStatus(id string, online bool) (ok bool) {
+	si, ok := lb.servers[id]
 	if ok {
 		si.updateStatus(online)
 	}
@@ -247,21 +248,21 @@ func (u *Upstream) setServerStatus(id string, online bool) (ok bool) {
 }
 
 // SetServerStatuses sets the online status of the servers.
-func (u *Upstream) SetServerStatuses(statuses map[string]bool) {
-	u.slock.Lock()
+func (lb *LoadBalancer) SetServerStatuses(statuses map[string]bool) {
+	lb.slock.Lock()
 	for id, online := range statuses {
-		if si, ok := u.servers[id]; ok && si.online != online {
+		if si, ok := lb.servers[id]; ok && si.online != online {
 			si.online = online
 		}
 	}
-	u.slock.Unlock()
+	lb.slock.Unlock()
 }
 
 /// ---------------------------------------------------------------------- ///
 
 // HealthCheckInfo is the information of the health checker.
 type HealthCheckInfo struct {
-	URL
+	upstream.URL
 
 	Failure  int           `json:"failure" yaml:"failure"`
 	Timeout  time.Duration `json:"timeout" yaml:"timeout"`
@@ -289,75 +290,75 @@ type healthCheckInfoWrapper struct {
 }
 
 // Close implements the interface io.Closer.
-func (u *Upstream) Close() error {
-	u.SetHealthCheck(HealthCheckInfo{})
+func (lb *LoadBalancer) Close() error {
+	lb.SetHealthCheck(HealthCheckInfo{})
 	return nil
 }
 
 // GetHealthCheck returns the information of the health checker.
-func (u *Upstream) GetHealthCheck() HealthCheckInfo {
-	u.hclock.RLock()
-	info := u.hcinfo.HealthCheckInfo
-	u.hclock.RUnlock()
+func (lb *LoadBalancer) GetHealthCheck() HealthCheckInfo {
+	lb.hclock.RLock()
+	info := lb.hcinfo.HealthCheckInfo
+	lb.hclock.RUnlock()
 	return info
 }
 
 // SetHealthCheck resets the health check.
 //
 // If HealthCheckInfo is ZERO, it will clear the health check.
-func (u *Upstream) SetHealthCheck(hci HealthCheckInfo) {
-	u.hclock.Lock()
-	defer u.hclock.Unlock()
+func (lb *LoadBalancer) SetHealthCheck(hci HealthCheckInfo) {
+	lb.hclock.Lock()
+	defer lb.hclock.Unlock()
 
 	if hci.IsZero() {
-		if u.hcinfo.stop != nil { // The health check is running.
+		if lb.hcinfo.stop != nil { // The health check is running.
 			// Stop the health check and reset the health check to ZERO.
-			close(u.hcinfo.stop)
-			u.hcinfo.ticker.Stop()
-			u.hcinfo = healthCheckInfoWrapper{}
+			close(lb.hcinfo.stop)
+			lb.hcinfo.ticker.Stop()
+			lb.hcinfo = healthCheckInfoWrapper{}
 		}
-	} else if !u.hcinfo.HealthCheckInfo.Equal(hci) {
+	} else if !lb.hcinfo.HealthCheckInfo.Equal(hci) {
 		interval := hci.Interval
 		if interval <= 0 {
 			interval = time.Minute
 		}
 
-		u.hcinfo.HealthCheckInfo = hci
-		if u.hcinfo.interval != interval {
-			u.hcinfo.interval = interval
-			if u.hcinfo.stop == nil {
-				u.hcinfo.stop = make(chan struct{})
-				u.hcinfo.ticker = time.NewTicker(interval)
-				go u.healthCheckLoop(u.hcinfo.stop, u.hcinfo.ticker)
+		lb.hcinfo.HealthCheckInfo = hci
+		if lb.hcinfo.interval != interval {
+			lb.hcinfo.interval = interval
+			if lb.hcinfo.stop == nil {
+				lb.hcinfo.stop = make(chan struct{})
+				lb.hcinfo.ticker = time.NewTicker(interval)
+				go lb.healthCheckLoop(lb.hcinfo.stop, lb.hcinfo.ticker)
 			} else {
-				u.hcinfo.ticker.Reset(interval)
+				lb.hcinfo.ticker.Reset(interval)
 			}
 		}
 	}
 }
 
-func (u *Upstream) healthCheckLoop(stop <-chan struct{}, ticker *time.Ticker) {
+func (lb *LoadBalancer) healthCheckLoop(stop <-chan struct{}, ticker *time.Ticker) {
 	for {
 		select {
 		case <-stop:
 			return
 
 		case <-ticker.C:
-			u.hclock.RLock()
-			hci := u.hcinfo.HealthCheckInfo
-			u.hclock.RUnlock()
-			u.checkServers(hci)
+			lb.hclock.RLock()
+			hci := lb.hcinfo.HealthCheckInfo
+			lb.hclock.RUnlock()
+			lb.checkServers(hci)
 		}
 	}
 }
 
-func (u *Upstream) checkServers(hci HealthCheckInfo) {
-	u.slock.Lock()
-	defer u.slock.Unlock()
+func (lb *LoadBalancer) checkServers(hci HealthCheckInfo) {
+	lb.slock.Lock()
+	defer lb.slock.Unlock()
 
 	var changed bool
-	for _, si := range u.servers {
-		if online := u.checkServer(hci, si.Server); online {
+	for _, si := range lb.servers {
+		if online := lb.checkServer(hci, si.Server); online {
 			if si.updateStatus(online) && !changed {
 				changed = true
 			}
@@ -373,11 +374,11 @@ func (u *Upstream) checkServers(hci HealthCheckInfo) {
 	}
 
 	if changed {
-		u.updateServers()
+		lb.updateServers()
 	}
 }
 
-func (u *Upstream) checkServer(hci HealthCheckInfo, server Server) (ok bool) {
+func (lb *LoadBalancer) checkServer(hci HealthCheckInfo, server upstream.Server) (ok bool) {
 	ctx := context.Background()
 	if hci.Timeout > 0 {
 		var cancel context.CancelFunc

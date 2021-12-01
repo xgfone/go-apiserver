@@ -12,23 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package upstream
+package loadbalancer
 
 import (
 	"math/rand"
 	"net/http"
 	"sync/atomic"
 	"time"
+
+	"github.com/xgfone/go-apiserver/http/upstream"
 )
 
 // Forwarder is used to forward the request to one of the backend servers.
 type Forwarder interface {
+	Forward(http.ResponseWriter, *http.Request, upstream.Servers) error
 	Policy() string
-	Forward(http.ResponseWriter, *http.Request, Servers) error
 }
 
 // ForwardFunc is the function to forward the request to one of the servers.
-type ForwardFunc func(http.ResponseWriter, *http.Request, Servers) error
+type ForwardFunc func(http.ResponseWriter, *http.Request, upstream.Servers) error
 
 type forwarder struct {
 	forward ForwardFunc
@@ -36,7 +38,7 @@ type forwarder struct {
 }
 
 func (f forwarder) Policy() string { return f.policy }
-func (f forwarder) Forward(w http.ResponseWriter, r *http.Request, s Servers) error {
+func (f forwarder) Forward(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
 	return f.forward(w, r, s)
 }
 
@@ -48,7 +50,7 @@ func NewForwarder(policy string, forward ForwardFunc) Forwarder {
 type retry struct{ Forwarder }
 
 func (f retry) WrappedForwarder() Forwarder { return f.Forwarder }
-func (f retry) Forward(w http.ResponseWriter, r *http.Request, s Servers) (err error) {
+func (f retry) Forward(w http.ResponseWriter, r *http.Request, s upstream.Servers) (err error) {
 	for _len := len(s); _len > 0; _len-- {
 		if err = f.Forwarder.Forward(w, r, s); err == nil {
 			break
@@ -74,7 +76,7 @@ func RoundRobin() Forwarder { return roundRobin(int(time.Now().UnixNano())) }
 func roundRobin(start int) Forwarder {
 	last := uint64(start)
 	return NewForwarder("round_robin",
-		func(w http.ResponseWriter, r *http.Request, s Servers) error {
+		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
 			pos := atomic.AddUint64(&last, 1)
 			return s[pos%uint64(len(s))].HandleHTTP(w, r)
 		})
@@ -85,15 +87,15 @@ func roundRobin(start int) Forwarder {
 // The policy name is "weight".
 func Weight() Forwarder {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	getWeight := func(server Server) (weight int) {
-		if ws, ok := server.(WeightServer); ok {
+	getWeight := func(server upstream.Server) (weight int) {
+		if ws, ok := server.(upstream.WeightServer); ok {
 			weight = ws.Weight()
 		}
 		return
 	}
 
 	return NewForwarder("weight",
-		func(w http.ResponseWriter, r *http.Request, servers Servers) error {
+		func(w http.ResponseWriter, r *http.Request, servers upstream.Servers) error {
 			length := len(servers)
 			sameWeight := true
 			firstWeight := getWeight(servers[0])

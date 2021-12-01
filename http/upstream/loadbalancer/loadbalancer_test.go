@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package upstream
+package loadbalancer
 
 import (
 	"context"
@@ -22,6 +22,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/xgfone/go-apiserver/http/upstream"
 )
 
 func testHandler(key string) http.Handler {
@@ -30,8 +32,8 @@ func testHandler(key string) http.Handler {
 	})
 }
 
-func TestUpstream(t *testing.T) {
-	up := NewUpstream("test", nil)
+func TestLoadBalancer(t *testing.T) {
+	up := NewLoadBalancer("test", nil)
 	up.SwapForwarder(Retry(roundRobin(0)))
 
 	go func() {
@@ -48,15 +50,15 @@ func TestUpstream(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	server1, err := NewServer(ServerConfig{
-		URL: URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8101},
+	server1, err := upstream.NewServer(upstream.ServerConfig{
+		URL: upstream.URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8101},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	server2, err := NewServer(ServerConfig{
-		URL: URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8102},
+	server2, err := upstream.NewServer(upstream.ServerConfig{
+		URL: upstream.URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8102},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -65,7 +67,7 @@ func TestUpstream(t *testing.T) {
 	if url := server1.URL().String(); url != "http://127.0.0.1:8101" {
 		t.Errorf("expect url '%s', but got '%s'", "http://127.0.0.1:8101", url)
 	}
-	if err := server1.Check(context.Background(), URL{}); err != nil {
+	if err := server1.Check(context.Background(), upstream.URL{}); err != nil {
 		t.Errorf("health check failed: %s", err)
 	}
 
@@ -96,8 +98,8 @@ func TestUpstream(t *testing.T) {
 		}
 	}
 
-	server3, err := NewServer(ServerConfig{
-		URL: URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8103},
+	server3, err := upstream.NewServer(upstream.ServerConfig{
+		URL: upstream.URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8103},
 	})
 	if err != nil {
 		t.Fatal(err)
