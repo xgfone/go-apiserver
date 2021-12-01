@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"sort"
 	"testing"
+	"time"
 )
 
 func TestServers(t *testing.T) {
@@ -52,6 +53,7 @@ func TestURL(t *testing.T) {
 	})
 
 	go http.ListenAndServe("127.0.0.1:8200", handler)
+	time.Sleep(time.Millisecond * 100)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
