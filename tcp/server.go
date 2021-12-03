@@ -76,11 +76,13 @@ func (s *Server) Start() {
 	for {
 		conn, err := s.Listener.Accept()
 		if err != nil {
-			log.Error("failed to accept the new connection", addr, log.E(err))
-
 			var netErr net.Error
 			if errors.As(err, &netErr) && netErr.Temporary() {
 				continue
+			}
+
+			if !errors.Is(err, net.ErrClosed) {
+				log.Error("fail to accept the new connection", addr, log.E(err))
 			}
 
 			s.Handler.OnServerExit(err)

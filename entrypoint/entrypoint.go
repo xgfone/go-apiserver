@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/xgfone/go-apiserver/http/router"
+	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/tcp"
 )
 
@@ -111,12 +112,25 @@ func (ep *EntryPoint) Start() {
 		panic("unknown the entrypoint server type")
 	}
 
+	log.Info(fmt.Sprintf("start the %s server", ep.protocol),
+		log.F("name", ep.Name), log.F("addr", ep.Addr))
+
 	go ep.httpHandler.Start()
 	ep.server.Start()
 }
 
 // Stop stops the entrypoint and waits until all the connections are closed.
-func (ep EntryPoint) Stop() { ep.server.Stop() }
+func (ep *EntryPoint) Stop() {
+	ep.server.Stop()
+	ep.logShutdown()
+}
 
 // Shutdown shuts down the entrypoint gracefully.
-func (ep EntryPoint) Shutdown(c context.Context) { ep.server.Shutdown(c) }
+func (ep *EntryPoint) Shutdown(c context.Context) {
+	ep.server.Shutdown(c)
+	ep.logShutdown()
+}
+
+func (ep *EntryPoint) logShutdown() {
+	log.Info(fmt.Sprintf("stop the %s server", ep.protocol), log.F("name", ep.Name))
+}
