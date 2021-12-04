@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/log"
 )
@@ -53,6 +54,9 @@ type Server struct {
 	Handler   Handler
 	Listener  net.Listener
 	TLSConfig *tls.Config
+
+	stopped int32
+	stops   []func()
 }
 
 // NewServer returns a new Server.
@@ -60,13 +64,28 @@ func NewServer(ln net.Listener, handler Handler, config *tls.Config) *Server {
 	return &Server{Listener: ln, Handler: handler, TLSConfig: config}
 }
 
+func (s *Server) shutdown(ctx context.Context) {
+	s.Listener.Close()
+	s.Handler.OnShutdown(ctx)
+	for _len := len(s.stops) - 1; _len >= 0; _len-- {
+		s.stops[_len]()
+	}
+}
+
 // Stop stops the server and waits until all the connections are closed.
 func (s *Server) Stop() { s.Shutdown(context.Background()) }
 
 // Shutdown shuts down the server gracefully.
 func (s *Server) Shutdown(ctx context.Context) {
-	s.Listener.Close()
-	s.Handler.OnShutdown(ctx)
+	if atomic.CompareAndSwapInt32(&s.stopped, 0, 1) {
+		s.shutdown(ctx)
+	}
+}
+
+// OnShutdown registers the callback functions, which are called
+// when the server is shut down.
+func (s *Server) OnShutdown(callbacks ...func()) {
+	s.stops = append(s.stops, callbacks...)
 }
 
 // Start starts the TCP server.

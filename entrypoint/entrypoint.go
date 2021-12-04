@@ -28,6 +28,7 @@ import (
 )
 
 type server interface {
+	OnShutdown(...func())
 	Shutdown(context.Context)
 	Start()
 	Stop()
@@ -101,6 +102,12 @@ func (ep *EntryPoint) AppendTCPHandlerMiddlewares(mws ...tcp.Middleware) {
 	ep.mwHandler.Append(mws...)
 }
 
+// OnShutdown registers the callback functions, which are called
+// when the entrypoint is shut down.
+func (ep *EntryPoint) OnShutdown(callbacks ...func()) {
+	ep.server.OnShutdown(callbacks...)
+}
+
 // Start starts the entrypoint.
 func (ep *EntryPoint) Start() {
 	switch server := ep.server.(type) {
@@ -112,25 +119,17 @@ func (ep *EntryPoint) Start() {
 		panic("unknown the entrypoint server type")
 	}
 
-	log.Info(fmt.Sprintf("start the %s server", ep.protocol),
-		log.F("name", ep.Name), log.F("addr", ep.Addr))
+	fields := []log.Field{log.F("name", ep.Name), log.F("addr", ep.Addr)}
+	log.Info(fmt.Sprintf("start the %s server", ep.protocol), fields...)
 
 	go ep.httpHandler.Start()
 	ep.server.Start()
+
+	log.Info(fmt.Sprintf("stop the %s server", ep.protocol), fields...)
 }
 
 // Stop stops the entrypoint and waits until all the connections are closed.
-func (ep *EntryPoint) Stop() {
-	ep.server.Stop()
-	ep.logShutdown()
-}
+func (ep *EntryPoint) Stop() { ep.server.Stop() }
 
 // Shutdown shuts down the entrypoint gracefully.
-func (ep *EntryPoint) Shutdown(c context.Context) {
-	ep.server.Shutdown(c)
-	ep.logShutdown()
-}
-
-func (ep *EntryPoint) logShutdown() {
-	log.Info(fmt.Sprintf("stop the %s server", ep.protocol), log.F("name", ep.Name))
-}
+func (ep *EntryPoint) Shutdown(c context.Context) { ep.server.Shutdown(c) }
