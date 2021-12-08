@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/http/upstream"
+	"github.com/xgfone/go-apiserver/log"
 )
 
 func testHandler(key string) http.Handler {
@@ -33,6 +34,7 @@ func testHandler(key string) http.Handler {
 }
 
 func TestLoadBalancer(t *testing.T) {
+	log.SetNothingWriter()
 	up := NewLoadBalancer("test", nil)
 	up.SwapForwarder(Retry(roundRobin(0)))
 
@@ -51,14 +53,16 @@ func TestLoadBalancer(t *testing.T) {
 	time.Sleep(time.Millisecond * 100)
 
 	server1, err := upstream.NewServer(upstream.ServerConfig{
-		URL: upstream.URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8101},
+		URL:          upstream.URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8101},
+		StaticWeight: 1,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	server2, err := upstream.NewServer(upstream.ServerConfig{
-		URL: upstream.URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8102},
+		URL:          upstream.URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8102},
+		StaticWeight: 2,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -98,48 +102,11 @@ func TestLoadBalancer(t *testing.T) {
 		}
 	}
 
-	server3, err := upstream.NewServer(upstream.ServerConfig{
-		URL: upstream.URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8103},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	up.UpsertServers(server3)
-	up.SetHealthCheck(HealthCheckInfo{
-		Interval: time.Millisecond * 100,
-		Timeout:  time.Millisecond * 100,
-	})
-
-	time.Sleep(time.Millisecond * 500)
-	rec.Body.Reset()
-	up.ServeHTTP(rec, req)
-	up.ServeHTTP(rec, req)
-	up.ServeHTTP(rec, req)
-	up.ServeHTTP(rec, req)
-
-	expects = []string{
-		"8102",
-		"8101",
-		"8102",
-		"8101",
-		"",
-	}
-	results = strings.Split(rec.Body.String(), "\n")
-	if len(expects) != len(results) {
-		t.Errorf("expect %d lines, but got %d", len(expects), len(results))
-	} else {
-		for i, line := range results {
-			if line != expects[i] {
-				t.Errorf("%d line: expect '%s', but got '%s'", i, expects[i], line)
-			}
-		}
-	}
-
 	state := server1.State()
-	if state.Total != 4 {
+	if state.Total != 2 {
 		t.Errorf("expect %d total requests, but got %d", 4, state.Total)
 	}
-	if state.Success != 4 {
+	if state.Success != 2 {
 		t.Errorf("expect %d success requests, but got %d", 4, state.Total)
 	}
 }

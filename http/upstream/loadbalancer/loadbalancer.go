@@ -33,37 +33,34 @@ import (
 // ErrNoAvailableServers is used to represents no available servers.
 var ErrNoAvailableServers = errors.New("no available servers")
 
-// ServerInfo is the information of the upstream server.
-type ServerInfo struct {
-	failure int
-	online  bool
-	upstream.Server
+// ErrorHandler is used to handle the error to respond to the original client.
+//
+// Notice: if the error is nil, it represents no error.
+type ErrorHandler func(http.ResponseWriter, *http.Request, error)
+
+// ServerDiscovery is used to discover the servers.
+type ServerDiscovery interface {
+	Servers() upstream.Servers
+	ID() string
 }
 
-// Online reports whether the server is online.
-func (si ServerInfo) Online() bool { return si.online }
-
-func (si *ServerInfo) updateStatus(online bool) (ok bool) {
-	if ok = si.online != online; ok {
-		si.online = online
-	}
-	return
-}
-
-type serversWrapper struct{ upstream.Servers }
+type (
+	serversWrapper   struct{ upstream.Servers }
+	discoveryWrapper struct{ ServerDiscovery }
+	forwarderWrapper struct{ Forwarder }
+)
 
 // LoadBalancer is used to forward the http request to one of the backend servers.
 type LoadBalancer struct {
 	name      string
+	discovery atomic.Value
 	forwarder atomic.Value
 	timeout   int64
 
-	// Health Check
-	hclock sync.RWMutex
-	hcinfo healthCheckInfoWrapper
+	handleError ErrorHandler
 
 	slock   sync.RWMutex
-	servers map[string]*ServerInfo
+	servers map[string]upstream.Server
 	server  atomic.Value // For serversWrapper
 }
 
@@ -77,10 +74,12 @@ func NewLoadBalancer(name string, forwarder Forwarder) *LoadBalancer {
 		forwarder = Retry(RoundRobin())
 	}
 
-	up := &LoadBalancer{name: name, servers: make(map[string]*ServerInfo, 8)}
-	up.server.Store(serversWrapper{})
-	up.forwarder.Store(forwarder)
-	return up
+	lb := &LoadBalancer{name: name, servers: make(map[string]upstream.Server, 8)}
+	lb.server.Store(serversWrapper{})
+	lb.forwarder.Store(forwarderWrapper{})
+	lb.discovery.Store(discoveryWrapper{})
+	lb.SetErrorHandler(nil)
+	return lb
 }
 
 // Name reutrns the name of the upstream.
@@ -88,12 +87,12 @@ func (lb *LoadBalancer) Name() string { return lb.name }
 
 // GetForwarder returns the forwarder.
 func (lb *LoadBalancer) GetForwarder() Forwarder {
-	return lb.forwarder.Load().(Forwarder)
+	return lb.forwarder.Load().(forwarderWrapper).Forwarder
 }
 
 // SwapForwarder swaps the old forwarder with the new.
 func (lb *LoadBalancer) SwapForwarder(new Forwarder) (old Forwarder) {
-	return lb.forwarder.Swap(new).(Forwarder)
+	return lb.forwarder.Swap(forwarderWrapper{new}).(forwarderWrapper).Forwarder
 }
 
 // GetTimeout returns the maximum timeout.
@@ -106,27 +105,27 @@ func (lb *LoadBalancer) SetTimeout(timeout time.Duration) {
 	stdatomic.StoreInt64(&lb.timeout, int64(timeout))
 }
 
-// HandleHTTP implements the interface Server.
-func (lb *LoadBalancer) HandleHTTP(w http.ResponseWriter, r *http.Request) error {
-	servers := lb.server.Load().(serversWrapper).Servers
-	if len(servers) == 0 {
-		return ErrNoAvailableServers
+// SetErrorHandler sets the error handler to respond to the original client.
+//
+// If handleError is equal to nil, reset it to the default.
+func (lb *LoadBalancer) SetErrorHandler(handleError ErrorHandler) {
+	if handleError == nil {
+		lb.handleError = lb.errorHandler
+	} else {
+		lb.handleError = handleError
 	}
-
-	if timeout := lb.GetTimeout(); timeout > 0 {
-		ctx, cancel := context.WithTimeout(r.Context(), timeout)
-		r = r.WithContext(ctx)
-		defer cancel()
-	}
-
-	return lb.GetForwarder().Forward(w, r, servers)
 }
 
-// ServeHTTP implements the interface http.Handler.
-func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	err := lb.HandleHTTP(w, r)
+func (lb *LoadBalancer) errorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	switch err {
 	case nil:
+		log.Info("forward the http request",
+			log.F("upstream", lb.name),
+			log.F("policy", lb.GetForwarder().Policy()),
+			log.F("clientaddr", r.RemoteAddr),
+			log.F("reqhost", r.Host),
+			log.F("reqmethod", r.Method),
+			log.F("reqpath", r.URL.Path))
 		return
 
 	case ErrNoAvailableServers:
@@ -151,12 +150,55 @@ func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.E(err))
 }
 
+// HandleHTTP implements the interface Server.
+func (lb *LoadBalancer) HandleHTTP(w http.ResponseWriter, r *http.Request) error {
+	var servers upstream.Servers
+	if sd := lb.GetServerDiscovery(); sd != nil {
+		servers = sd.Servers()
+	} else {
+		servers = lb.server.Load().(serversWrapper).Servers
+	}
+
+	if len(servers) == 0 {
+		return ErrNoAvailableServers
+	}
+
+	if timeout := lb.GetTimeout(); timeout > 0 {
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
+		r = r.WithContext(ctx)
+		defer cancel()
+	}
+
+	return lb.GetForwarder().Forward(w, r, servers)
+}
+
+// ServeHTTP implements the interface http.Handler.
+func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	lb.handleError(w, r, lb.HandleHTTP(w, r))
+}
+
+// GetServerDiscovery returns the server discovery.
+//
+// If not set the server discovery, return nil.
+func (lb *LoadBalancer) GetServerDiscovery() (sd ServerDiscovery) {
+	return lb.discovery.Load().(discoveryWrapper).ServerDiscovery
+}
+
+// SwapServerDiscovery sets the server discovery to discover the servers,
+// and returns the old one.
+//
+// If sd is equal to nil, it will cancel the server discovery.
+// Or use the server discovery instead of the direct servers.
+func (lb *LoadBalancer) SwapServerDiscovery(new ServerDiscovery) (old ServerDiscovery) {
+	old = lb.discovery.Swap(discoveryWrapper{new}).(discoveryWrapper).ServerDiscovery
+	lb.ResetServers()
+	return
+}
+
 func (lb *LoadBalancer) updateServers() {
 	servers := make(upstream.Servers, 0, len(lb.servers))
-	for _, si := range lb.servers {
-		if si.online {
-			servers = append(servers, si.Server)
-		}
+	for _, server := range lb.servers {
+		servers = append(servers, server)
 	}
 	sort.Stable(servers)
 	lb.server.Store(serversWrapper{servers})
@@ -167,12 +209,13 @@ func (lb *LoadBalancer) ResetServers(servers ...upstream.Server) {
 	lb.slock.Lock()
 	defer lb.slock.Unlock()
 
-	lb.servers = make(map[string]*ServerInfo, len(servers))
+	servermaps := make(map[string]upstream.Server, len(servers))
 	for _len := len(servers) - 1; _len >= 0; _len-- {
 		server := servers[_len]
-		id := server.ID()
-		lb.servers[id] = &ServerInfo{Server: server, online: true}
+		servermaps[server.ID()] = server
 	}
+
+	lb.servers = servermaps
 	lb.updateServers()
 }
 
@@ -183,13 +226,7 @@ func (lb *LoadBalancer) UpsertServers(servers ...upstream.Server) {
 
 	for _len := len(servers) - 1; _len >= 0; _len-- {
 		server := servers[_len]
-		id := server.ID()
-		if si, ok := lb.servers[id]; ok {
-			si.Server = server
-			si.online = true
-		} else {
-			lb.servers[id] = &ServerInfo{Server: server, online: true}
-		}
+		lb.servers[server.ID()] = server
 	}
 	lb.updateServers()
 }
@@ -199,191 +236,27 @@ func (lb *LoadBalancer) UpsertServers(servers ...upstream.Server) {
 // If the server does not exist, do nothing and return nil.
 func (lb *LoadBalancer) RemoveServer(id string) (server upstream.Server) {
 	lb.slock.Lock()
-	if si, ok := lb.servers[id]; ok {
+	server, ok := lb.servers[id]
+	if ok {
 		delete(lb.servers, id)
 		lb.updateServers()
-		server = si.Server
 	}
 	lb.slock.Unlock()
 	return
 }
 
 // GetServer returns the server by the server id.
-func (lb *LoadBalancer) GetServer(id string) (server ServerInfo, ok bool) {
+func (lb *LoadBalancer) GetServer(id string) (server upstream.Server, ok bool) {
 	lb.slock.RLock()
-	si, ok := lb.servers[id]
-	if ok {
-		server = *si
-	}
+	server, ok = lb.servers[id]
 	lb.slock.RUnlock()
 	return
 }
 
 // GetServers returns all the servers.
-func (lb *LoadBalancer) GetServers() []ServerInfo {
-	lb.slock.RLock()
-	servers := make([]ServerInfo, 0, len(lb.servers))
-	for _, si := range lb.servers {
-		servers = append(servers, *si)
-	}
-	lb.slock.RUnlock()
-	return servers
-}
-
-// SetServerStatus sets the online status of the server and return true.
-// If the server does not exist, do nothing and return false.
-func (lb *LoadBalancer) SetServerStatus(id string, online bool) (ok bool) {
-	lb.slock.Lock()
-	ok = lb.setServerStatus(id, online)
-	lb.slock.Unlock()
-	return
-}
-
-func (lb *LoadBalancer) setServerStatus(id string, online bool) (ok bool) {
-	si, ok := lb.servers[id]
-	if ok {
-		si.updateStatus(online)
-	}
-	return
-}
-
-// SetServerStatuses sets the online status of the servers.
-func (lb *LoadBalancer) SetServerStatuses(statuses map[string]bool) {
-	lb.slock.Lock()
-	for id, online := range statuses {
-		if si, ok := lb.servers[id]; ok && si.online != online {
-			si.online = online
-		}
-	}
-	lb.slock.Unlock()
-}
-
-/// ---------------------------------------------------------------------- ///
-
-// HealthCheckInfo is the information of the health checker.
-type HealthCheckInfo struct {
-	upstream.URL
-
-	Failure  int           `json:"failure" yaml:"failure"`
-	Timeout  time.Duration `json:"timeout" yaml:"timeout"`
-	Interval time.Duration `json:"interval" yaml:"interval"`
-}
-
-// IsZero reports whether the health check information is ZERO.
-func (hci HealthCheckInfo) IsZero() bool {
-	return hci.URL.IsZero() && hci.Failure == 0 && hci.Timeout == 0 && hci.Interval == 0
-}
-
-// Equal reports whether the health check information is equal to other.
-func (hci HealthCheckInfo) Equal(other HealthCheckInfo) bool {
-	return hci.Failure == other.Failure &&
-		hci.Timeout == other.Timeout &&
-		hci.Interval == other.Interval &&
-		hci.URL.Equal(other.URL)
-}
-
-type healthCheckInfoWrapper struct {
-	stop     chan struct{}
-	ticker   *time.Ticker
-	interval time.Duration
-	HealthCheckInfo
-}
-
-// Close implements the interface io.Closer.
-func (lb *LoadBalancer) Close() error {
-	lb.SetHealthCheck(HealthCheckInfo{})
-	return nil
-}
-
-// GetHealthCheck returns the information of the health checker.
-func (lb *LoadBalancer) GetHealthCheck() HealthCheckInfo {
-	lb.hclock.RLock()
-	info := lb.hcinfo.HealthCheckInfo
-	lb.hclock.RUnlock()
-	return info
-}
-
-// SetHealthCheck resets the health check.
-//
-// If HealthCheckInfo is ZERO, it will clear the health check.
-func (lb *LoadBalancer) SetHealthCheck(hci HealthCheckInfo) {
-	lb.hclock.Lock()
-	defer lb.hclock.Unlock()
-
-	if hci.IsZero() {
-		if lb.hcinfo.stop != nil { // The health check is running.
-			// Stop the health check and reset the health check to ZERO.
-			close(lb.hcinfo.stop)
-			lb.hcinfo.ticker.Stop()
-			lb.hcinfo = healthCheckInfoWrapper{}
-		}
-	} else if !lb.hcinfo.HealthCheckInfo.Equal(hci) {
-		interval := hci.Interval
-		if interval <= 0 {
-			interval = time.Minute
-		}
-
-		lb.hcinfo.HealthCheckInfo = hci
-		if lb.hcinfo.interval != interval {
-			lb.hcinfo.interval = interval
-			if lb.hcinfo.stop == nil {
-				lb.hcinfo.stop = make(chan struct{})
-				lb.hcinfo.ticker = time.NewTicker(interval)
-				go lb.healthCheckLoop(lb.hcinfo.stop, lb.hcinfo.ticker)
-			} else {
-				lb.hcinfo.ticker.Reset(interval)
-			}
-		}
-	}
-}
-
-func (lb *LoadBalancer) healthCheckLoop(stop <-chan struct{}, ticker *time.Ticker) {
-	for {
-		select {
-		case <-stop:
-			return
-
-		case <-ticker.C:
-			lb.hclock.RLock()
-			hci := lb.hcinfo.HealthCheckInfo
-			lb.hclock.RUnlock()
-			lb.checkServers(hci)
-		}
-	}
-}
-
-func (lb *LoadBalancer) checkServers(hci HealthCheckInfo) {
-	lb.slock.Lock()
-	defer lb.slock.Unlock()
-
-	var changed bool
-	for _, si := range lb.servers {
-		if online := lb.checkServer(hci, si.Server); online {
-			if si.updateStatus(online) && !changed {
-				changed = true
-			}
-
-			if si.failure > 0 {
-				si.failure = 0
-			}
-		} else if si.failure++; si.failure >= hci.Failure {
-			if si.updateStatus(false) && !changed {
-				changed = true
-			}
-		}
-	}
-
-	if changed {
-		lb.updateServers()
-	}
-}
-
-func (lb *LoadBalancer) checkServer(hci HealthCheckInfo, server upstream.Server) (ok bool) {
-	ctx := context.Background()
-	if hci.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, hci.Timeout)
-		defer cancel()
-	}
-	return server.Check(ctx, hci.URL) == nil
+func (lb *LoadBalancer) GetServers() upstream.Servers {
+	servers := lb.server.Load().(serversWrapper).Servers
+	newservers := make(upstream.Servers, len(servers))
+	copy(newservers, servers)
+	return newservers
 }
