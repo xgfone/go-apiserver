@@ -117,6 +117,16 @@ func GetReqCtx(req *http.Request) *ReqCtx {
 	return nil
 }
 
+// GetOrNewReqCtx is the same as GetOrNewReqCtx, but create a new one
+// if the request context does not exist.
+func GetOrNewReqCtx(req *http.Request) (reqCtx *ReqCtx, new bool) {
+	if reqCtx = GetReqCtx(req); reqCtx == nil {
+		reqCtx = NewReqCtx(req)
+		new = true
+	}
+	return
+}
+
 // GetReqDatas returns the all request parameters from the http request context.
 func GetReqDatas(req *http.Request) (datas map[string]interface{}) {
 	if reqCtx := GetReqCtx(req); reqCtx != nil {
