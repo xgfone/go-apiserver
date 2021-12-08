@@ -60,7 +60,7 @@ func TestRequestParams(t *testing.T) {
 		}
 	}
 
-	ReleaseReqCtx(GetReqCtx(req))
+	ReleaseContext(GetContext(req))
 }
 
 func BenchmarkRequestSetDataGetData(b *testing.B) {

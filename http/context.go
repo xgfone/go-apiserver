@@ -25,8 +25,8 @@ const reqParamCtx reqParam = 0
 
 type reqParam int8
 
-// ReqCtx is used to represents the context information of the request.
-type ReqCtx struct {
+// Context is used to represents the context information of the request.
+type Context struct {
 	// Req is the original http request.
 	Req *http.Request
 
@@ -38,90 +38,91 @@ type ReqCtx struct {
 }
 
 // Queries parses and returns the query parameters.
-func (r *ReqCtx) Queries() (query url.Values, err error) {
-	if r.Query != nil {
-		return r.Query, nil
+func (c *Context) Queries() (query url.Values, err error) {
+	if c.Query != nil {
+		return c.Query, nil
 	}
 
-	if query, err = url.ParseQuery(r.Req.URL.RawQuery); err == nil {
-		r.Query = query
+	if query, err = url.ParseQuery(c.Req.URL.RawQuery); err == nil {
+		c.Query = query
 	}
 
 	return
 }
 
 // GetQueries is the same as Queries, but ingores the error.
-func (r *ReqCtx) GetQueries() (query url.Values) {
-	query, _ = r.Queries()
+func (c *Context) GetQueries() (query url.Values) {
+	query, _ = c.Queries()
 	return
 }
 
 // GetQuery parses the query parameters and return the value of the parameter
 // by the key.
-func (r *ReqCtx) GetQuery(key string) (value string) {
-	return r.GetQueries().Get(key)
+func (c *Context) GetQuery(key string) (value string) {
+	return c.GetQueries().Get(key)
 }
 
-var reqCtxPool = sync.Pool{New: func() interface{} { return new(ReqCtx) }}
+var ctxPool = sync.Pool{New: func() interface{} { return new(Context) }}
 
-// NewReqCtx is used to creates the request context.
-var NewReqCtx = AcquireReqCtx
+// NewContext is used to creates the request context.
+var NewContext = AcquireContext
 
-// AcquireReqCtx acquires a request context from the pool.
-func AcquireReqCtx(req *http.Request) *ReqCtx {
-	reqCtx := reqCtxPool.Get().(*ReqCtx)
-	reqCtx.Req = req
-	return reqCtx
+// AcquireContext acquires a request context from the pool.
+func AcquireContext(req *http.Request) *Context {
+	c := ctxPool.Get().(*Context)
+	c.Req = req
+	return c
 }
 
-// ReleaseReqCtx releases the request context into the pool.
+// ReleaseContext releases the request context into the pool.
 //
-// If reqCtx is equal to nil, do nothing.
-// If reqCtx.Any has implemented the interface { Reset() }, it will be called.
-func ReleaseReqCtx(reqCtx *ReqCtx) {
-	if reqCtx != nil {
+// If c is equal to nil, do nothing.
+// If c.Any has implemented the interface { Reset() }, it will be called.
+func ReleaseContext(c *Context) {
+	if c != nil {
 		// Clean the datas.
-		if len(reqCtx.Datas) > 0 {
-			for key := range reqCtx.Datas {
-				delete(reqCtx.Datas, key)
+		if len(c.Datas) > 0 {
+			for key := range c.Datas {
+				delete(c.Datas, key)
 			}
 		}
 
 		// Reset the any data.
-		if reset, ok := reqCtx.Any.(interface{ Reset() }); ok {
+		if reset, ok := c.Any.(interface{ Reset() }); ok {
 			reset.Reset()
 		}
 
-		*reqCtx = ReqCtx{Datas: reqCtx.Datas, Any: reqCtx.Any}
-		reqCtxPool.Put(reqCtx)
+		*c = Context{Datas: c.Datas, Any: c.Any}
+		ctxPool.Put(c)
 	}
 }
 
-// SetReqCtx sets the request context into the request and returns a new one.
+// SetContext sets the request context into the request and returns a new one.
 //
-// If reqCtx is equal to nil, use NewReqCtx to create a new one.
-func SetReqCtx(req *http.Request, reqCtx *ReqCtx) (newreq *http.Request) {
-	if reqCtx == nil {
-		reqCtx = NewReqCtx(req)
+// If c is equal to nil, do nothing and return the original http request.
+func SetContext(req *http.Request, c *Context) (newreq *http.Request) {
+	if c == nil {
+		return req
 	}
-	return req.WithContext(context.WithValue(req.Context(), reqParamCtx, reqCtx))
+
+	return req.WithContext(context.WithValue(req.Context(), reqParamCtx, c))
 }
 
-// GetReqCtx gets and returns the request context from the request.
+// GetContext gets and returns the request context from the request.
 //
 // If the request context does not exist, reutrn nil.
-func GetReqCtx(req *http.Request) *ReqCtx {
-	if reqCtx, ok := req.Context().Value(reqParamCtx).(*ReqCtx); ok {
-		return reqCtx
+func GetContext(req *http.Request) *Context {
+	if c, ok := req.Context().Value(reqParamCtx).(*Context); ok {
+		return c
 	}
 	return nil
 }
 
-// GetOrNewReqCtx is the same as GetOrNewReqCtx, but create a new one
+// GetOrNewContext is the same as GetContext, but create a new one
 // if the request context does not exist.
-func GetOrNewReqCtx(req *http.Request) (reqCtx *ReqCtx, new bool) {
-	if reqCtx = GetReqCtx(req); reqCtx == nil {
-		reqCtx = NewReqCtx(req)
+func GetOrNewContext(req *http.Request) (c *Context, new bool) {
+	if c = GetContext(req); c == nil {
+		c = NewContext(req)
 		new = true
 	}
 	return
@@ -129,8 +130,8 @@ func GetOrNewReqCtx(req *http.Request) (reqCtx *ReqCtx, new bool) {
 
 // GetReqDatas returns the all request parameters from the http request context.
 func GetReqDatas(req *http.Request) (datas map[string]interface{}) {
-	if reqCtx := GetReqCtx(req); reqCtx != nil {
-		datas = reqCtx.Datas
+	if c := GetContext(req); c != nil {
+		datas = c.Datas
 	}
 	return
 }
@@ -140,8 +141,8 @@ func GetReqDatas(req *http.Request) (datas map[string]interface{}) {
 //
 // If the key does not exist, return nil.
 func GetReqData(req *http.Request, key string) (value interface{}) {
-	if reqCtx := GetReqCtx(req); reqCtx != nil && reqCtx.Datas != nil {
-		value = reqCtx.Datas[key]
+	if c := GetContext(req); c != nil && c.Datas != nil {
+		value = c.Datas[key]
 	}
 	return
 }
@@ -149,7 +150,7 @@ func GetReqData(req *http.Request, key string) (value interface{}) {
 // SetReqData stores the any key-value request parameter into the http request
 // context, and returns the new http request.
 //
-// If no request context is not set, use NewReqCtx to create a new one
+// If no request context is not set, use NewContext to create a new one
 // and store it into the new http request.
 func SetReqData(req *http.Request, key string, value interface{}) (newreq *http.Request) {
 	if key == "" {
@@ -159,16 +160,16 @@ func SetReqData(req *http.Request, key string, value interface{}) (newreq *http.
 		panic("the request parameter value is nil")
 	}
 
-	reqCtx := GetReqCtx(req)
-	if reqCtx == nil {
-		reqCtx = NewReqCtx(req)
-		req = SetReqCtx(req, reqCtx)
+	c := GetContext(req)
+	if c == nil {
+		c = NewContext(req)
+		req = SetContext(req, c)
 	}
 
-	if reqCtx.Datas == nil {
-		reqCtx.Datas = make(map[string]interface{}, 8)
+	if c.Datas == nil {
+		c.Datas = make(map[string]interface{}, 8)
 	}
-	reqCtx.Datas[key] = value
+	c.Datas[key] = value
 
 	return req
 }
@@ -179,18 +180,18 @@ func SetReqDatas(req *http.Request, datas map[string]interface{}) (newreq *http.
 		return req
 	}
 
-	reqCtx := GetReqCtx(req)
-	if reqCtx == nil {
-		reqCtx = NewReqCtx(req)
-		req = SetReqCtx(req, reqCtx)
+	c := GetContext(req)
+	if c == nil {
+		c = NewContext(req)
+		req = SetContext(req, c)
 	}
 
-	if reqCtx.Datas == nil {
-		reqCtx.Datas = make(map[string]interface{}, 8+len(datas))
+	if c.Datas == nil {
+		c.Datas = make(map[string]interface{}, 8+len(datas))
 	}
 
 	for key, value := range datas {
-		reqCtx.Datas[key] = value
+		c.Datas[key] = value
 	}
 
 	return req
@@ -207,18 +208,18 @@ func SetReqParams(req *http.Request, params map[string]string) (newreq *http.Req
 		return req
 	}
 
-	reqCtx := GetReqCtx(req)
-	if reqCtx == nil {
-		reqCtx = NewReqCtx(req)
-		req = SetReqCtx(req, reqCtx)
+	c := GetContext(req)
+	if c == nil {
+		c = NewContext(req)
+		req = SetContext(req, c)
 	}
 
-	if reqCtx.Datas == nil {
-		reqCtx.Datas = make(map[string]interface{}, 8+len(params))
+	if c.Datas == nil {
+		c.Datas = make(map[string]interface{}, 8+len(params))
 	}
 
 	for key, value := range params {
-		reqCtx.Datas[key] = value
+		c.Datas[key] = value
 	}
 
 	return req
@@ -234,9 +235,9 @@ func GetReqParam(req *http.Request, key string) (value string, ok bool) {
 //
 // Suggest to use GetReqDatas instead of GetReqParams.
 func GetReqParams(req *http.Request) (params map[string]string) {
-	if reqCtx := GetReqCtx(req); reqCtx != nil {
-		params = make(map[string]string, len(reqCtx.Datas))
-		for key, value := range reqCtx.Datas {
+	if c := GetContext(req); c != nil {
+		params = make(map[string]string, len(c.Datas))
+		for key, value := range c.Datas {
 			if v, ok := value.(string); ok {
 				params[key] = v
 			}
