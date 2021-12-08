@@ -74,13 +74,25 @@ func AcquireReqCtx(req *http.Request) *ReqCtx {
 	return reqCtx
 }
 
-// ReleaseReqCtx releases the request context into the pool, which will reset
-// all the fields of the request context to ZERO.
+// ReleaseReqCtx releases the request context into the pool.
 //
 // If reqCtx is equal to nil, do nothing.
+// If reqCtx.Any has implemented the interface { Reset() }, it will be called.
 func ReleaseReqCtx(reqCtx *ReqCtx) {
 	if reqCtx != nil {
-		*reqCtx = ReqCtx{}
+		// Clean the datas.
+		if len(reqCtx.Datas) > 0 {
+			for key := range reqCtx.Datas {
+				delete(reqCtx.Datas, key)
+			}
+		}
+
+		// Reset the any data.
+		if reset, ok := reqCtx.Any.(interface{ Reset() }); ok {
+			reset.Reset()
+		}
+
+		*reqCtx = ReqCtx{Datas: reqCtx.Datas, Any: reqCtx.Any}
 		reqCtxPool.Put(reqCtx)
 	}
 }
