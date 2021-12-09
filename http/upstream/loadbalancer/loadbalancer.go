@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/http/upstream"
+	"github.com/xgfone/go-apiserver/http/upstream/balancer"
 	"github.com/xgfone/go-apiserver/internal/atomic"
 	"github.com/xgfone/go-apiserver/log"
 )
@@ -46,8 +47,8 @@ type ServerDiscovery interface {
 
 type (
 	serversWrapper   struct{ upstream.Servers }
+	balancerWrapper  struct{ balancer.Balancer }
 	discoveryWrapper struct{ ServerDiscovery }
-	forwarderWrapper struct{ Forwarder }
 )
 
 type upserver struct {
@@ -75,8 +76,8 @@ func (s *upserver) SetOnline(online bool) (ok bool) {
 // LoadBalancer is used to forward the http request to one of the backend servers.
 type LoadBalancer struct {
 	name      string
+	balancer  atomic.Value
 	discovery atomic.Value
-	forwarder atomic.Value
 	timeout   int64
 
 	handleError ErrorHandler
@@ -87,32 +88,33 @@ type LoadBalancer struct {
 }
 
 // NewLoadBalancer returns a new LoadBalancer to forward the http request.
-//
-// If forwarder is nil, use Retry(RoundRobin()) by default.
-func NewLoadBalancer(name string, forwarder Forwarder) *LoadBalancer {
-	if forwarder == nil {
-		forwarder = Retry(RoundRobin())
+func NewLoadBalancer(name string, balancer balancer.Balancer) *LoadBalancer {
+	if balancer == nil {
+		panic("the balancer is nil")
 	}
 
 	lb := &LoadBalancer{name: name, servers: make(map[string]*upserver, 8)}
 	lb.server.Store(serversWrapper{})
-	lb.forwarder.Store(forwarderWrapper{})
+	lb.balancer.Store(balancerWrapper{})
 	lb.discovery.Store(discoveryWrapper{})
 	lb.SetErrorHandler(nil)
 	return lb
 }
 
-// Name reutrns the name of the upstream.
+// Name reutrns the name of the loadbalander upstream.
 func (lb *LoadBalancer) Name() string { return lb.name }
 
-// GetForwarder returns the forwarder.
-func (lb *LoadBalancer) GetForwarder() Forwarder {
-	return lb.forwarder.Load().(forwarderWrapper).Forwarder
+// Type reutrns the type of the loadbalander upstream.
+func (lb *LoadBalancer) Type() string { return "loadbalancer" }
+
+// GetBalancer returns the balancer.
+func (lb *LoadBalancer) GetBalancer() balancer.Balancer {
+	return lb.balancer.Load().(balancerWrapper).Balancer
 }
 
-// SwapForwarder swaps the old forwarder with the new.
-func (lb *LoadBalancer) SwapForwarder(new Forwarder) (old Forwarder) {
-	return lb.forwarder.Swap(forwarderWrapper{new}).(forwarderWrapper).Forwarder
+// SwapBalancer swaps the old balancer with the new.
+func (lb *LoadBalancer) SwapBalancer(new balancer.Balancer) (old balancer.Balancer) {
+	return lb.balancer.Swap(balancerWrapper{new}).(balancerWrapper).Balancer
 }
 
 // GetTimeout returns the maximum timeout.
@@ -159,7 +161,7 @@ func (lb *LoadBalancer) errorHandler(w http.ResponseWriter, r *http.Request, err
 	case nil:
 		log.Debug("forward the http request",
 			log.F("upstream", lb.name),
-			log.F("policy", lb.GetForwarder().Policy()),
+			log.F("balancer", lb.GetBalancer().Policy()),
 			log.F("clientaddr", r.RemoteAddr),
 			log.F("reqhost", r.Host),
 			log.F("reqmethod", r.Method),
@@ -180,7 +182,7 @@ func (lb *LoadBalancer) errorHandler(w http.ResponseWriter, r *http.Request, err
 
 	log.Error("fail to forward the http request",
 		log.F("upstream", lb.name),
-		log.F("policy", lb.GetForwarder().Policy()),
+		log.F("balancer", lb.GetBalancer().Policy()),
 		log.F("clientaddr", r.RemoteAddr),
 		log.F("reqhost", r.Host),
 		log.F("reqmethod", r.Method),
@@ -207,7 +209,7 @@ func (lb *LoadBalancer) HandleHTTP(w http.ResponseWriter, r *http.Request) error
 		defer cancel()
 	}
 
-	return lb.GetForwarder().Forward(w, r, servers)
+	return lb.GetBalancer().Forward(w, r, servers)
 }
 
 // ServeHTTP implements the interface http.Handler.
@@ -267,14 +269,16 @@ func (lb *LoadBalancer) ServerIsOnline(serverID string) (online, ok bool) {
 }
 
 func (lb *LoadBalancer) updateServers() {
-	servers := make(upstream.Servers, 0, len(lb.servers))
+	servers := upstream.DefaultServersPool.Acquire()
 	for _, server := range lb.servers {
 		if server.IsOnline() {
 			servers = append(servers, server.Server)
 		}
 	}
 	sort.Stable(servers)
-	lb.server.Store(serversWrapper{servers})
+
+	old := lb.server.Swap(serversWrapper{servers})
+	upstream.DefaultServersPool.Release(old.(serversWrapper).Servers)
 }
 
 // ResetServers resets all the servers.

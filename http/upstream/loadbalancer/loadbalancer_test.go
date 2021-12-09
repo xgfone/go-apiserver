@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/http/upstream"
+	"github.com/xgfone/go-apiserver/http/upstream/balancer"
 	"github.com/xgfone/go-apiserver/log"
 )
 
@@ -35,8 +36,8 @@ func testHandler(key string) http.Handler {
 
 func TestLoadBalancer(t *testing.T) {
 	log.SetNothingWriter()
-	up := NewLoadBalancer("test", nil)
-	up.SwapForwarder(Retry(roundRobin(0)))
+	lb := NewLoadBalancer("test", balancer.RoundRobin())
+	lb.SwapBalancer(balancer.Retry(balancer.RoundRobin()))
 
 	go func() {
 		server := http.Server{Addr: "127.0.0.1:8101", Handler: testHandler("8101")}
@@ -75,20 +76,20 @@ func TestLoadBalancer(t *testing.T) {
 		t.Errorf("health check failed: %s", err)
 	}
 
-	up.ResetServers(server1, server2)
+	lb.ResetServers(server1, server2)
 
 	rec := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1", nil)
-	up.ServeHTTP(rec, req)
-	up.ServeHTTP(rec, req)
-	up.ServeHTTP(rec, req)
-	up.ServeHTTP(rec, req)
+	lb.ServeHTTP(rec, req)
+	lb.ServeHTTP(rec, req)
+	lb.ServeHTTP(rec, req)
+	lb.ServeHTTP(rec, req)
 
 	expects := []string{
-		"8102",
 		"8101",
 		"8102",
 		"8101",
+		"8102",
 		"",
 	}
 	results := strings.Split(rec.Body.String(), "\n")
@@ -112,17 +113,17 @@ func TestLoadBalancer(t *testing.T) {
 
 	/// ------------------------------------------------------------------ ///
 
-	up.SetServerOnline(server1.ID(), false)
-	if online, ok := up.ServerIsOnline(server1.ID()); !ok || online {
+	lb.SetServerOnline(server1.ID(), false)
+	if online, ok := lb.ServerIsOnline(server1.ID()); !ok || online {
 		t.Errorf("invalid the server1 online status: online=%v, ok=%v", online, ok)
 	}
-	if online, ok := up.ServerIsOnline(server2.ID()); !ok || !online {
+	if online, ok := lb.ServerIsOnline(server2.ID()); !ok || !online {
 		t.Errorf("invalid the server2 online status: online=%v, ok=%v", online, ok)
 	}
 
 	rec.Body.Reset()
-	up.ServeHTTP(rec, req)
-	up.ServeHTTP(rec, req)
+	lb.ServeHTTP(rec, req)
+	lb.ServeHTTP(rec, req)
 	expects = []string{
 		"8102",
 		"8102",
@@ -141,12 +142,12 @@ func TestLoadBalancer(t *testing.T) {
 
 	/// ------------------------------------------------------------------ ///
 
-	up.SetServerOnlines(map[string]bool{server2.ID(): false})
-	if online, ok := up.ServerIsOnline(server2.ID()); !ok || online {
+	lb.SetServerOnlines(map[string]bool{server2.ID(): false})
+	if online, ok := lb.ServerIsOnline(server2.ID()); !ok || online {
 		t.Errorf("invalid the server2 online status: online=%v, ok=%v", online, ok)
 	}
 
-	servers := up.GetServers()
+	servers := lb.GetServers()
 	if len(servers) != 2 {
 		t.Errorf("expect %d servers, but got %d", 2, len(servers))
 	}
@@ -164,7 +165,7 @@ func TestLoadBalancer(t *testing.T) {
 	}
 
 	rec = httptest.NewRecorder()
-	up.ServeHTTP(rec, req)
+	lb.ServeHTTP(rec, req)
 	if rec.Code != 503 {
 		t.Errorf("unexpected response: statuscode=%d, body=%s", rec.Code, rec.Body.String())
 	}
