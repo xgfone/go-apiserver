@@ -60,7 +60,7 @@ func TestRequestParams(t *testing.T) {
 		}
 	}
 
-	ReleaseContext(GetContext(req))
+	DefaultContextAllocator.Release(GetContext(req))
 }
 
 func BenchmarkRequestSetDataGetData(b *testing.B) {

@@ -21,10 +21,6 @@ import (
 	"sync"
 )
 
-const reqParamCtx reqParam = 0
-
-type reqParam int8
-
 // Context is used to represents the context information of the request.
 type Context struct {
 	// Req is the original http request.
@@ -33,12 +29,16 @@ type Context struct {
 	Any   interface{}            // any single-value data
 	Datas map[string]interface{} // a set of any key-value datas
 
-	// Query are used to cache the parsed the form and the query.
+	// For route information
+	RouteName    string
+	UpstreamName string
+
+	// Query are used to cache the parsed request query.
 	Query url.Values
 }
 
-// Queries parses and returns the query parameters.
-func (c *Context) Queries() (query url.Values, err error) {
+// ParseQuery parses the query parameters, caches and returns the parsed query.
+func (c *Context) ParseQuery() (query url.Values, err error) {
 	if c.Query != nil {
 		return c.Query, nil
 	}
@@ -52,7 +52,7 @@ func (c *Context) Queries() (query url.Values, err error) {
 
 // GetQueries is the same as Queries, but ingores the error.
 func (c *Context) GetQueries() (query url.Values) {
-	query, _ = c.Queries()
+	query, _ = c.ParseQuery()
 	return
 }
 
@@ -62,23 +62,21 @@ func (c *Context) GetQuery(key string) (value string) {
 	return c.GetQueries().Get(key)
 }
 
-var ctxPool = sync.Pool{New: func() interface{} { return new(Context) }}
-
-// NewContext is used to creates the request context.
-var NewContext = AcquireContext
-
-// AcquireContext acquires a request context from the pool.
-func AcquireContext(req *http.Request) *Context {
-	c := ctxPool.Get().(*Context)
-	c.Req = req
-	return c
+// ContextAllocator is used to allocate or release the request context.
+type ContextAllocator interface {
+	Acquire(*http.Request) *Context
+	Release(*Context)
 }
 
-// ReleaseContext releases the request context into the pool.
-//
-// If c is equal to nil, do nothing.
-// If c.Any has implemented the interface { Reset() }, it will be called.
-func ReleaseContext(c *Context) {
+type contextAllocator struct{ ctxPool sync.Pool }
+
+func (a *contextAllocator) Acquire(req *http.Request) (c *Context) {
+	c = a.ctxPool.Get().(*Context)
+	c.Req = req
+	return
+}
+
+func (a *contextAllocator) Release(c *Context) {
 	if c != nil {
 		// Clean the datas.
 		if len(c.Datas) > 0 {
@@ -93,9 +91,27 @@ func ReleaseContext(c *Context) {
 		}
 
 		*c = Context{Datas: c.Datas, Any: c.Any}
-		ctxPool.Put(c)
+		a.ctxPool.Put(c)
 	}
 }
+
+// DefaultContextAllocator is the default request context allocator.
+var DefaultContextAllocator = NewContextAllocator()
+
+// NewContextAllocator returns a new ContextAllocator, which acquires a request
+// context from the pool and releases the request context into the pool.
+//
+// Notice: if Context.Any has implemented the interface { Reset() },
+// it will be called when releasing the request context.
+func NewContextAllocator() ContextAllocator {
+	var alloc contextAllocator
+	alloc.ctxPool.New = func() interface{} { return new(Context) }
+	return &alloc
+}
+
+const reqParamCtx reqParam = 0
+
+type reqParam int8
 
 // SetContext sets the request context into the request and returns a new one.
 //
@@ -122,7 +138,7 @@ func GetContext(req *http.Request) *Context {
 // if the request context does not exist.
 func GetOrNewContext(req *http.Request) (c *Context, new bool) {
 	if c = GetContext(req); c == nil {
-		c = NewContext(req)
+		c = DefaultContextAllocator.Acquire(req)
 		new = true
 	}
 	return
@@ -150,8 +166,8 @@ func GetReqData(req *http.Request, key string) (value interface{}) {
 // SetReqData stores the any key-value request parameter into the http request
 // context, and returns the new http request.
 //
-// If no request context is not set, use NewContext to create a new one
-// and store it into the new http request.
+// If no request context is not set, use DefaultContextAllocator to create
+// a new one and store it into the new http request.
 func SetReqData(req *http.Request, key string, value interface{}) (newreq *http.Request) {
 	if key == "" {
 		panic("the request parameter key is empty")
@@ -162,7 +178,7 @@ func SetReqData(req *http.Request, key string, value interface{}) (newreq *http.
 
 	c := GetContext(req)
 	if c == nil {
-		c = NewContext(req)
+		c = DefaultContextAllocator.Acquire(req)
 		req = SetContext(req, c)
 	}
 
@@ -182,7 +198,7 @@ func SetReqDatas(req *http.Request, datas map[string]interface{}) (newreq *http.
 
 	c := GetContext(req)
 	if c == nil {
-		c = NewContext(req)
+		c = DefaultContextAllocator.Acquire(req)
 		req = SetContext(req, c)
 	}
 
@@ -210,7 +226,7 @@ func SetReqParams(req *http.Request, params map[string]string) (newreq *http.Req
 
 	c := GetContext(req)
 	if c == nil {
-		c = NewContext(req)
+		c = DefaultContextAllocator.Acquire(req)
 		req = SetContext(req, c)
 	}
 
