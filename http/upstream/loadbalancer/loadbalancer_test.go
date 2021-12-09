@@ -109,4 +109,63 @@ func TestLoadBalancer(t *testing.T) {
 	if state.Success != 2 {
 		t.Errorf("expect %d success requests, but got %d", 4, state.Total)
 	}
+
+	/// ------------------------------------------------------------------ ///
+
+	up.SetServerOnline(server1.ID(), false)
+	if online, ok := up.ServerIsOnline(server1.ID()); !ok || online {
+		t.Errorf("invalid the server1 online status: online=%v, ok=%v", online, ok)
+	}
+	if online, ok := up.ServerIsOnline(server2.ID()); !ok || !online {
+		t.Errorf("invalid the server2 online status: online=%v, ok=%v", online, ok)
+	}
+
+	rec.Body.Reset()
+	up.ServeHTTP(rec, req)
+	up.ServeHTTP(rec, req)
+	expects = []string{
+		"8102",
+		"8102",
+		"",
+	}
+	results = strings.Split(rec.Body.String(), "\n")
+	if len(expects) != len(results) {
+		t.Errorf("expect %d lines, but got %d", len(expects), len(results))
+	} else {
+		for i, line := range results {
+			if line != expects[i] {
+				t.Errorf("%d line: expect '%s', but got '%s'", i, expects[i], line)
+			}
+		}
+	}
+
+	/// ------------------------------------------------------------------ ///
+
+	up.SetServerOnlines(map[string]bool{server2.ID(): false})
+	if online, ok := up.ServerIsOnline(server2.ID()); !ok || online {
+		t.Errorf("invalid the server2 online status: online=%v, ok=%v", online, ok)
+	}
+
+	servers := up.GetServers()
+	if len(servers) != 2 {
+		t.Errorf("expect %d servers, but got %d", 2, len(servers))
+	}
+	for server, online := range servers {
+		id := server.ID()
+		switch id {
+		case server1.ID(), server2.ID():
+		default:
+			t.Errorf("unknown server id '%s'", id)
+		}
+
+		if online {
+			t.Errorf("expect server '%s' online is false, but got true", id)
+		}
+	}
+
+	rec = httptest.NewRecorder()
+	up.ServeHTTP(rec, req)
+	if rec.Code != 503 {
+		t.Errorf("unexpected response: statuscode=%d, body=%s", rec.Code, rec.Body.String())
+	}
 }

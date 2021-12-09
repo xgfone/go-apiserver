@@ -50,6 +50,28 @@ type (
 	forwarderWrapper struct{ Forwarder }
 )
 
+type upserver struct {
+	Server upstream.Server
+	online int32
+}
+
+func newUpServer(server upstream.Server) *upserver {
+	return &upserver{Server: server, online: 1}
+}
+
+func (s *upserver) IsOnline() bool {
+	return stdatomic.LoadInt32(&s.online) == 1
+}
+
+func (s *upserver) SetOnline(online bool) (ok bool) {
+	if online {
+		ok = stdatomic.CompareAndSwapInt32(&s.online, 0, 1)
+	} else {
+		ok = stdatomic.CompareAndSwapInt32(&s.online, 1, 0)
+	}
+	return
+}
+
 // LoadBalancer is used to forward the http request to one of the backend servers.
 type LoadBalancer struct {
 	name      string
@@ -60,21 +82,19 @@ type LoadBalancer struct {
 	handleError ErrorHandler
 
 	slock   sync.RWMutex
-	servers map[string]upstream.Server
+	servers map[string]*upserver
 	server  atomic.Value // For serversWrapper
 }
 
 // NewLoadBalancer returns a new LoadBalancer to forward the http request.
 //
 // If forwarder is nil, use Retry(RoundRobin()) by default.
-//
-// TODO: Add the retry when failed to forward the request.
 func NewLoadBalancer(name string, forwarder Forwarder) *LoadBalancer {
 	if forwarder == nil {
 		forwarder = Retry(RoundRobin())
 	}
 
-	lb := &LoadBalancer{name: name, servers: make(map[string]upstream.Server, 8)}
+	lb := &LoadBalancer{name: name, servers: make(map[string]*upserver, 8)}
 	lb.server.Store(serversWrapper{})
 	lb.forwarder.Store(forwarderWrapper{})
 	lb.discovery.Store(discoveryWrapper{})
@@ -105,6 +125,24 @@ func (lb *LoadBalancer) SetTimeout(timeout time.Duration) {
 	stdatomic.StoreInt64(&lb.timeout, int64(timeout))
 }
 
+// GetServerDiscovery returns the server discovery.
+//
+// If not set the server discovery, return nil.
+func (lb *LoadBalancer) GetServerDiscovery() (sd ServerDiscovery) {
+	return lb.discovery.Load().(discoveryWrapper).ServerDiscovery
+}
+
+// SwapServerDiscovery sets the server discovery to discover the servers,
+// and returns the old one.
+//
+// If sd is equal to nil, it will cancel the server discovery.
+// Or use the server discovery instead of the direct servers.
+func (lb *LoadBalancer) SwapServerDiscovery(new ServerDiscovery) (old ServerDiscovery) {
+	old = lb.discovery.Swap(discoveryWrapper{new}).(discoveryWrapper).ServerDiscovery
+	lb.ResetServers()
+	return
+}
+
 // SetErrorHandler sets the error handler to respond to the original client.
 //
 // If handleError is equal to nil, reset it to the default.
@@ -119,7 +157,7 @@ func (lb *LoadBalancer) SetErrorHandler(handleError ErrorHandler) {
 func (lb *LoadBalancer) errorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	switch err {
 	case nil:
-		log.Info("forward the http request",
+		log.Debug("forward the http request",
 			log.F("upstream", lb.name),
 			log.F("policy", lb.GetForwarder().Policy()),
 			log.F("clientaddr", r.RemoteAddr),
@@ -177,42 +215,79 @@ func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	lb.handleError(w, r, lb.HandleHTTP(w, r))
 }
 
-// GetServerDiscovery returns the server discovery.
+// SetServerOnline sets the online status of the server by its id.
 //
-// If not set the server discovery, return nil.
-func (lb *LoadBalancer) GetServerDiscovery() (sd ServerDiscovery) {
-	return lb.discovery.Load().(discoveryWrapper).ServerDiscovery
+// If the server does not exist, do nothing and return false.
+func (lb *LoadBalancer) SetServerOnline(serverID string, online bool) (ok bool) {
+	lb.slock.RLock()
+	upserver, ok := lb.servers[serverID]
+	if ok {
+		if upserver.SetOnline(online) {
+			lb.updateServers()
+		}
+	}
+	lb.slock.RUnlock()
+
+	return
 }
 
-// SwapServerDiscovery sets the server discovery to discover the servers,
-// and returns the old one.
+// SetServerOnlines sets the online statuses of a set of the servers.
 //
-// If sd is equal to nil, it will cancel the server discovery.
-// Or use the server discovery instead of the direct servers.
-func (lb *LoadBalancer) SwapServerDiscovery(new ServerDiscovery) (old ServerDiscovery) {
-	old = lb.discovery.Swap(discoveryWrapper{new}).(discoveryWrapper).ServerDiscovery
-	lb.ResetServers()
+// If the server does not exist, do nothing.
+func (lb *LoadBalancer) SetServerOnlines(onlines map[string]bool) {
+	lb.slock.RLock()
+	var changed bool
+	for serverID, online := range onlines {
+		if upserver, ok := lb.servers[serverID]; ok {
+			if upserver.SetOnline(online) && !changed {
+				changed = true
+			}
+		}
+	}
+	if changed {
+		lb.updateServers()
+	}
+	lb.slock.RUnlock()
+	return
+}
+
+// ServerIsOnline reports whether the server is online.
+//
+// If the server does not exist, return (false, false).
+func (lb *LoadBalancer) ServerIsOnline(serverID string) (online, ok bool) {
+	lb.slock.RLock()
+	upserver, ok := lb.servers[serverID]
+	lb.slock.RUnlock()
+
+	if ok {
+		online = upserver.IsOnline()
+	}
+
 	return
 }
 
 func (lb *LoadBalancer) updateServers() {
 	servers := make(upstream.Servers, 0, len(lb.servers))
 	for _, server := range lb.servers {
-		servers = append(servers, server)
+		if server.IsOnline() {
+			servers = append(servers, server.Server)
+		}
 	}
 	sort.Stable(servers)
 	lb.server.Store(serversWrapper{servers})
 }
 
 // ResetServers resets all the servers.
+//
+// Notice: the online statuses of all the given servers are online.
 func (lb *LoadBalancer) ResetServers(servers ...upstream.Server) {
 	lb.slock.Lock()
 	defer lb.slock.Unlock()
 
-	servermaps := make(map[string]upstream.Server, len(servers))
+	servermaps := make(map[string]*upserver, len(servers))
 	for _len := len(servers) - 1; _len >= 0; _len-- {
 		server := servers[_len]
-		servermaps[server.ID()] = server
+		servermaps[server.ID()] = newUpServer(server)
 	}
 
 	lb.servers = servermaps
@@ -220,13 +295,15 @@ func (lb *LoadBalancer) ResetServers(servers ...upstream.Server) {
 }
 
 // UpsertServers adds or updates the servers.
+//
+// Notice: the online statuses of all the given new servers are online.
 func (lb *LoadBalancer) UpsertServers(servers ...upstream.Server) {
 	lb.slock.Lock()
 	defer lb.slock.Unlock()
 
 	for _len := len(servers) - 1; _len >= 0; _len-- {
 		server := servers[_len]
-		lb.servers[server.ID()] = server
+		lb.servers[server.ID()] = newUpServer(server)
 	}
 	lb.updateServers()
 }
@@ -236,8 +313,8 @@ func (lb *LoadBalancer) UpsertServers(servers ...upstream.Server) {
 // If the server does not exist, do nothing and return nil.
 func (lb *LoadBalancer) RemoveServer(id string) (server upstream.Server) {
 	lb.slock.Lock()
-	server, ok := lb.servers[id]
-	if ok {
+	if upserver, ok := lb.servers[id]; ok {
+		server = upserver.Server
 		delete(lb.servers, id)
 		lb.updateServers()
 	}
@@ -246,17 +323,26 @@ func (lb *LoadBalancer) RemoveServer(id string) (server upstream.Server) {
 }
 
 // GetServer returns the server by the server id.
-func (lb *LoadBalancer) GetServer(id string) (server upstream.Server, ok bool) {
+func (lb *LoadBalancer) GetServer(id string) (server upstream.Server, online, ok bool) {
 	lb.slock.RLock()
-	server, ok = lb.servers[id]
+	upserver, ok := lb.servers[id]
 	lb.slock.RUnlock()
+
+	if ok {
+		server = upserver.Server
+		online = upserver.IsOnline()
+	}
+
 	return
 }
 
-// GetServers returns all the servers.
-func (lb *LoadBalancer) GetServers() upstream.Servers {
-	servers := lb.server.Load().(serversWrapper).Servers
-	newservers := make(upstream.Servers, len(servers))
-	copy(newservers, servers)
-	return newservers
+// GetServers returns all the servers with the online status.
+func (lb *LoadBalancer) GetServers() (onlines map[upstream.Server]bool) {
+	lb.slock.RLock()
+	onlines = make(map[upstream.Server]bool, len(lb.servers))
+	for _, upserver := range lb.servers {
+		onlines[upserver.Server] = upserver.IsOnline()
+	}
+	lb.slock.RUnlock()
+	return
 }
