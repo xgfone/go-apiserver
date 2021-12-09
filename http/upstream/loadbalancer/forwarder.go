@@ -88,7 +88,7 @@ func roundRobin(start int) Forwarder {
 func Weight() Forwarder {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	getWeight := func(server upstream.Server) (weight int) {
-		if ws, ok := server.(upstream.WeightServer); ok {
+		if ws, ok := server.(upstream.WeightedServer); ok {
 			weight = ws.Weight()
 		}
 		return

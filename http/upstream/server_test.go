@@ -64,3 +64,16 @@ func TestURL(t *testing.T) {
 		t.Errorf("expect status code '%d', but got '%d'", 201, resp.StatusCode)
 	}
 }
+
+func TestServersPool(t *testing.T) {
+	sp := NewServerPool(8)
+
+	if servers := sp.Acquire(); cap(servers) != 8 {
+		t.Errorf("expect %d servers, but got '%d'", 8, len(servers))
+	}
+
+	sp.Release(make(Servers, 10))
+	if servers := sp.Acquire(); cap(servers) != 10 {
+		t.Errorf("expect %d servers, but got '%d'", 10, len(servers))
+	}
+}
