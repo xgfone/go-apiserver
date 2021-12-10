@@ -25,10 +25,14 @@ import (
 	"github.com/xgfone/go-apiserver/nets"
 )
 
+func init() {
+	registerBuiltinBuidler("source_ip_hash", SourceIPHash)
+}
+
 // SourceIPHash returns a new balancer based on the source-ip hash.
 //
 // The policy name is "source_ip_hash".
-func SourceIPHash() Balancer {
+func SourceIPHash(callback SelectedServerCallback) Balancer {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return NewForwarder("source_ip_hash",
 		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
@@ -45,6 +49,6 @@ func SourceIPHash() Balancer {
 				value = uint64(random.Intn(_len))
 			}
 
-			return ss[value%uint64(_len)].HandleHTTP(w, r)
+			return serverCallback(callback, w, r, ss[value%uint64(_len)])
 		})
 }

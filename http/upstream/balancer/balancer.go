@@ -16,10 +16,15 @@
 package balancer
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/upstream"
 )
+
+// SelectedServerCallback is a callback for the server selected by the balancer
+// to forward the request to.
+type SelectedServerCallback func(req *http.Request, selectedServer upstream.Server)
 
 // Balancer is used to forward the request to one of the backend servers.
 type Balancer interface {
@@ -27,28 +32,61 @@ type Balancer interface {
 	Policy() string
 }
 
-/// ---------------------------------------------------------------------- ///
-
-var balancers = make(map[string]Balancer, 16)
-
-func init() {
-	Register(Random())
-	Register(RoundRobin())
-	Register(WeightedRandom())
-	Register(WeightedRoundRobin())
-	Register(SourceIPHash())
-	Register(LeastConn())
+func serverCallback(callback SelectedServerCallback, w http.ResponseWriter,
+	r *http.Request, s upstream.Server) (err error) {
+	if err = s.HandleHTTP(w, r); err == nil && callback != nil {
+		callback(r, s)
+	}
+	return
 }
 
-// Register registers the given balancer.
-//
-// If the registering balancer policy has existed, override it to the new.
-func Register(balancer Balancer) { balancers[balancer.Policy()] = balancer }
+/// ---------------------------------------------------------------------- ///
 
-// Get returns the registered balancer by the balancer policy.
+// Builder is used to build a new Balancer with the config.
+type Builder func(config interface{}) (Balancer, error)
+
+var builders = make(map[string]Builder, 16)
+
+func registerBuiltinBuidler(t string, f func(SelectedServerCallback) Balancer) {
+	const s = `balancer builder typed '%s' needs the type SelectedServerCallback, but got '%T'`
+	RegisterBuidler(t, func(config interface{}) (balancer Balancer, err error) {
+		switch v := config.(type) {
+		case nil:
+			balancer = f(nil)
+
+		case SelectedServerCallback:
+			balancer = f(v)
+
+		case func(*http.Request, upstream.Server):
+			balancer = f(v)
+
+		default:
+			err = fmt.Errorf(s, t, config)
+		}
+
+		return
+	})
+}
+
+// RegisterBuidler registers the given balancer builder.
 //
-// If the balancer policy does not exist, return nil.
-func Get(policy string) Balancer { return balancers[policy] }
+// If the balancer builder typed "typ" has existed, override it to the new.
+func RegisterBuidler(typ string, builder Builder) { builders[typ] = builder }
+
+// GetBuilder returns the registered balancer builder by the type.
+//
+// If the balancer builder typed "typ" does not exist, return nil.
+func GetBuilder(typ string) Builder { return builders[typ] }
+
+// Build is a convenient function to build a new balancer typed "typ".
+func Build(typ string, config interface{}) (balancer Balancer, err error) {
+	if builder := GetBuilder(typ); builder != nil {
+		balancer, err = builder(config)
+	} else {
+		err = fmt.Errorf("no the builder typed '%s'", typ)
+	}
+	return
+}
 
 /// ---------------------------------------------------------------------- ///
 

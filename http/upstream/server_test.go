@@ -16,6 +16,7 @@ package upstream
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sort"
 	"testing"
@@ -41,7 +42,37 @@ func TestServers(t *testing.T) {
 	}
 }
 
-func TestURL(t *testing.T) {
+func ExampleURL_ID() {
+	var url URL
+
+	url = URL{Scheme: "http", IP: "127.0.0.1", Path: "/path"}
+	fmt.Println(url.ID())
+
+	url = URL{Scheme: "http", IP: "127.0.0.1", Port: 80, Path: "/path"}
+	fmt.Println(url.ID())
+
+	url = URL{Scheme: "http", Domain: "www.example.com", Path: "/path"}
+	fmt.Println(url.ID())
+
+	url = URL{Scheme: "http", Domain: "www.example.com", Path: "/path"}
+	fmt.Println(url.ID())
+
+	url = URL{Scheme: "http", Domain: "www.example.com", IP: "127.0.0.1", Path: "/path"}
+	fmt.Println(url.ID())
+
+	url = URL{Scheme: "http", Domain: "www.example.com", IP: "127.0.0.1", Port: 80, Path: "/path"}
+	fmt.Println(url.ID())
+
+	// Output:
+	// http://127.0.0.1/path
+	// http://127.0.0.1:80/path
+	// http://www.example.com/path
+	// http://www.example.com:80/path
+	// http://www.example.com+127.0.0.1/path
+	// http://www.example.com+127.0.0.1:80/path
+}
+
+func TestURL_Request(t *testing.T) {
 	url := URL{IP: "127.0.0.1", Port: 8200}
 	req, err := url.Request(context.Background())
 	if err != nil {

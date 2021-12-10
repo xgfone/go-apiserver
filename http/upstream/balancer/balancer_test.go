@@ -55,6 +55,30 @@ func newTestServer(ip string, weight int) *testServer {
 	}
 }
 
+func TestRegisterBuidler(t *testing.T) {
+	var callback1 SelectedServerCallback
+	callback2 := func(*http.Request, upstream.Server) {}
+
+	expects := []string{
+		"random",
+		"round_robin",
+		"weight_random",
+		"weight_round_robin",
+		"source_ip_hash",
+		"least_conn",
+	}
+
+	for _, typ := range expects {
+		if _, err := Build(typ, nil); err != nil {
+			t.Error(err)
+		} else if _, err := Build(typ, callback1); err != nil {
+			t.Error(err)
+		} else if _, err := Build(typ, callback2); err != nil {
+			t.Error(err)
+		}
+	}
+}
+
 func TestCalcServerOnWeight(t *testing.T) {
 	server1, _ := upstream.NewServer(upstream.ServerConfig{
 		URL: upstream.URL{IP: "127.0.0.1", Port: 8101}, StaticWeight: 1,

@@ -31,7 +31,7 @@ func TestWeightedRoundRobin(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1", nil)
 
-	balancer := WeightedRoundRobin()
+	balancer := WeightedRoundRobin(nil)
 	for i := 0; i < 20; i++ {
 		balancer.Forward(rec, req, servers)
 	}

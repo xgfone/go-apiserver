@@ -31,7 +31,7 @@ func TestLeastConn(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1", nil)
 
-	balancer := LeastConn()
+	balancer := LeastConn(nil)
 	for i := 0; i < 10; i++ {
 		balancer.Forward(rec, req, servers)
 	}

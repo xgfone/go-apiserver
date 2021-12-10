@@ -31,9 +31,6 @@ import (
 	"github.com/xgfone/go-apiserver/log"
 )
 
-// ErrNoAvailableServers is used to represents no available servers.
-var ErrNoAvailableServers = errors.New("no available servers")
-
 // ErrorHandler is used to handle the error to respond to the original client.
 //
 // Notice: if the error is nil, it represents no error.
@@ -75,6 +72,8 @@ func (s *upserver) SetOnline(online bool) (ok bool) {
 
 // LoadBalancer is used to forward the http request to one of the backend servers.
 type LoadBalancer struct {
+	EnableLog bool
+
 	name      string
 	balancer  atomic.Value
 	discovery atomic.Value
@@ -95,7 +94,7 @@ func NewLoadBalancer(name string, balancer balancer.Balancer) *LoadBalancer {
 
 	lb := &LoadBalancer{name: name, servers: make(map[string]*upserver, 8)}
 	lb.server.Store(serversWrapper{})
-	lb.balancer.Store(balancerWrapper{})
+	lb.balancer.Store(balancerWrapper{balancer})
 	lb.discovery.Store(discoveryWrapper{})
 	lb.SetErrorHandler(nil)
 	return lb
@@ -159,16 +158,18 @@ func (lb *LoadBalancer) SetErrorHandler(handleError ErrorHandler) {
 func (lb *LoadBalancer) errorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	switch err {
 	case nil:
-		log.Debug("forward the http request",
-			log.F("upstream", lb.name),
-			log.F("balancer", lb.GetBalancer().Policy()),
-			log.F("clientaddr", r.RemoteAddr),
-			log.F("reqhost", r.Host),
-			log.F("reqmethod", r.Method),
-			log.F("reqpath", r.URL.Path))
+		if lb.EnableLog {
+			log.Debug("forward the http request",
+				log.F("upstream", lb.name),
+				log.F("balancer", lb.GetBalancer().Policy()),
+				log.F("clientaddr", r.RemoteAddr),
+				log.F("reqhost", r.Host),
+				log.F("reqmethod", r.Method),
+				log.F("reqpath", r.URL.Path))
+		}
 		return
 
-	case ErrNoAvailableServers:
+	case upstream.ErrNoAvailableServers:
 		w.WriteHeader(503) // Service Unavailable
 
 	default:
@@ -180,14 +181,16 @@ func (lb *LoadBalancer) errorHandler(w http.ResponseWriter, r *http.Request, err
 		}
 	}
 
-	log.Error("fail to forward the http request",
-		log.F("upstream", lb.name),
-		log.F("balancer", lb.GetBalancer().Policy()),
-		log.F("clientaddr", r.RemoteAddr),
-		log.F("reqhost", r.Host),
-		log.F("reqmethod", r.Method),
-		log.F("reqpath", r.URL.Path),
-		log.E(err))
+	if lb.EnableLog {
+		log.Error("fail to forward the http request",
+			log.F("upstream", lb.name),
+			log.F("balancer", lb.GetBalancer().Policy()),
+			log.F("clientaddr", r.RemoteAddr),
+			log.F("reqhost", r.Host),
+			log.F("reqmethod", r.Method),
+			log.F("reqpath", r.URL.Path),
+			log.E(err))
+	}
 }
 
 // HandleHTTP implements the interface Server.
@@ -200,7 +203,7 @@ func (lb *LoadBalancer) HandleHTTP(w http.ResponseWriter, r *http.Request) error
 	}
 
 	if len(servers) == 0 {
-		return ErrNoAvailableServers
+		return upstream.ErrNoAvailableServers
 	}
 
 	if timeout := lb.GetTimeout(); timeout > 0 {

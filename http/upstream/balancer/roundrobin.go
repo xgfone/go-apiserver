@@ -22,26 +22,31 @@ import (
 	"github.com/xgfone/go-apiserver/http/upstream"
 )
 
+func init() {
+	registerBuiltinBuidler("round_robin", RoundRobin)
+	registerBuiltinBuidler("weight_round_robin", WeightedRoundRobin)
+}
+
 // RoundRobin returns a new balancer based on the roundrobin.
 //
 // The policy name is "round_robin".
-func RoundRobin() Balancer {
+func RoundRobin(callback SelectedServerCallback) Balancer {
 	last := uint64(math.MaxUint64)
 	return NewForwarder("round_robin",
 		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
 			pos := atomic.AddUint64(&last, 1)
-			return s[pos%uint64(len(s))].HandleHTTP(w, r)
+			return serverCallback(callback, w, r, s[pos%uint64(len(s))])
 		})
 }
 
 // WeightedRoundRobin returns a new balancer based on the roundrobin and weight.
 //
 // The policy name is "weight_round_robin".
-func WeightedRoundRobin() Balancer {
+func WeightedRoundRobin(callback SelectedServerCallback) Balancer {
 	last := uint64(math.MaxUint64)
 	return NewForwarder("weight_round_robin",
 		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
 			pos := atomic.AddUint64(&last, 1)
-			return calcServerOnWeight(s, pos).HandleHTTP(w, r)
+			return serverCallback(callback, w, r, calcServerOnWeight(s, pos))
 		})
 }

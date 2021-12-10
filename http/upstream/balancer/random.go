@@ -22,25 +22,30 @@ import (
 	"github.com/xgfone/go-apiserver/http/upstream"
 )
 
+func init() {
+	registerBuiltinBuidler("random", Random)
+	registerBuiltinBuidler("weight_random", WeightedRandom)
+}
+
 // Random returns a new balancer based on the random.
 //
 // The policy name is "random".
-func Random() Balancer {
+func Random(callback SelectedServerCallback) Balancer {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return NewForwarder("random",
 		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
-			return s[random.Intn(len(s))].HandleHTTP(w, r)
+			return serverCallback(callback, w, r, s[random.Intn(len(s))])
 		})
 }
 
 // WeightedRandom returns a new balancer based on the roundrobin and weight.
 //
 // The policy name is "weight_random".
-func WeightedRandom() Balancer {
+func WeightedRandom(callback SelectedServerCallback) Balancer {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return NewForwarder("weight_random",
 		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
 			pos := uint64(random.Intn(len(s)))
-			return calcServerOnWeight(s, pos).HandleHTTP(w, r)
+			return serverCallback(callback, w, r, calcServerOnWeight(s, pos))
 		})
 }

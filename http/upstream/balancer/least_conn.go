@@ -21,16 +21,20 @@ import (
 	"github.com/xgfone/go-apiserver/http/upstream"
 )
 
+func init() {
+	registerBuiltinBuidler("least_conn", LeastConn)
+}
+
 // LeastConn returns a new balancer based on the least number of the connection.
 //
 // The policy name is "least_conn".
-func LeastConn() Balancer {
+func LeastConn(callback SelectedServerCallback) Balancer {
 	return NewForwarder("least_conn",
 		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) (err error) {
 			servers := upstream.DefaultServersPool.Acquire()
 			servers = append(servers, ss...)
 			sort.Stable(leastConnServers(servers))
-			err = servers[0].HandleHTTP(w, r)
+			err = serverCallback(callback, w, r, servers[0])
 			upstream.DefaultServersPool.Release(servers)
 			return err
 		})

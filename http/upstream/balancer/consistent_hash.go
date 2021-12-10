@@ -23,9 +23,9 @@ import (
 // ConsistentHash returns a new balancer based on the consistent hash.
 //
 // The policy name is "consistent_hash".
-func ConsistentHash(hash func(*http.Request) int) Balancer {
+func ConsistentHash(callback SelectedServerCallback, hash func(*http.Request) int) Balancer {
 	return NewForwarder("consistent_hash",
 		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
-			return s[hash(r)%len(s)].HandleHTTP(w, r)
+			return serverCallback(callback, w, r, s[hash(r)%len(s)])
 		})
 }

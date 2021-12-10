@@ -17,15 +17,20 @@ package upstream
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/xgfone/go-apiserver/nets"
 )
+
+// ErrNoAvailableServers is used to represents no available servers.
+var ErrNoAvailableServers = errors.New("no available servers")
 
 // URL is the metadata information of the http endpoint.
 type URL struct {
@@ -37,6 +42,33 @@ type URL struct {
 	Path    string            `json:"path" yaml:"path"`     // Such as "/"
 	Queries map[string]string `json:"queries" yaml:"queries"`
 	Headers map[string]string `json:"headers" yaml:"headers"`
+}
+
+// ID returns the unique identity, for example,
+//
+//   "http://127.0.0.1/path/to"
+//   "http://www.example.com+127.0.0.1/path/to"
+//
+func (u URL) ID() string {
+	var host string
+	if u.Domain == "" {
+		if u.IP != "" {
+			host = u.IP
+		}
+	} else {
+		if u.IP == "" {
+			host = u.Domain
+		} else {
+			host = strings.Join([]string{u.Domain, u.IP}, "+")
+		}
+	}
+
+	if u.Port > 0 {
+		host = net.JoinHostPort(host, fmt.Sprint(u.Port))
+	}
+
+	_url := url.URL{Scheme: u.Scheme, Host: host, Path: u.Path}
+	return _url.String()
 }
 
 // Equal reports whether the url is equal to other.
