@@ -54,7 +54,7 @@ func ExampleURL_ID() {
 	url = URL{Scheme: "http", Domain: "www.example.com", Path: "/path"}
 	fmt.Println(url.ID())
 
-	url = URL{Scheme: "http", Domain: "www.example.com", Path: "/path"}
+	url = URL{Scheme: "http", Domain: "www.example.com", Port: 80, Path: "/path"}
 	fmt.Println(url.ID())
 
 	url = URL{Scheme: "http", Domain: "www.example.com", IP: "127.0.0.1", Path: "/path"}
