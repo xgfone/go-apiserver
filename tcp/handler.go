@@ -20,7 +20,7 @@ import (
 	"net"
 	"net/http"
 
-	ghttp "github.com/xgfone/go-apiserver/http"
+	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/internal/atomic"
 	"github.com/xgfone/go-apiserver/log"
 )
@@ -80,7 +80,7 @@ var _ Handler = &HTTPServerHandler{}
 type HTTPServerHandler struct {
 	http.Server
 
-	handler  ghttp.SwitchHandler
+	handler  handler.SwitchHandler
 	listener *ForwardConnListener
 }
 
@@ -93,17 +93,21 @@ func NewHTTPServerHandler(localAddr net.Addr, handler http.Handler) *HTTPServerH
 		panic("HTTPServerHandler: the http handler is nil")
 	}
 
-	var h HTTPServerHandler
-	config := ForwardConnListenerConfig{OnShutdown: h.onShutdown}
-	h.listener = NewForwardConnListener(localAddr, &config)
-	h.Server.Handler = http.HandlerFunc(h.serveHTTP)
-	h.Server.ErrorLog = log.StdLogger(fmt.Sprintf("HTTPServer(%s)", localAddr.String()))
+	h := new(HTTPServerHandler)
 	h.handler.Set(handler)
-	return &h
+	h.Server.Handler = h
+	h.Server.ErrorLog = log.StdLogger(fmt.Sprintf("HTTPServer(%s)", localAddr.String()))
+	h.listener = NewForwardConnListener(localAddr, &ForwardConnListenerConfig{
+		OnShutdown: h.onShutdown,
+	})
+
+	return h
 }
 
 func (h *HTTPServerHandler) onShutdown(c context.Context) { h.Server.Shutdown(c) }
-func (h *HTTPServerHandler) serveHTTP(rw http.ResponseWriter, r *http.Request) {
+
+// ServeHTTP implements the interface http.Handler to be used as a http.Handler.
+func (h *HTTPServerHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	h.Get().ServeHTTP(rw, r)
 }
 

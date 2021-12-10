@@ -23,13 +23,13 @@ import (
 	"sync"
 	"sync/atomic"
 
-	ghttp "github.com/xgfone/go-apiserver/http"
+	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/matcher"
 	"github.com/xgfone/go-apiserver/http/ruler"
 )
 
 // Middleware is the http handler middleware.
-type Middleware = ghttp.Middleware
+type Middleware = handler.Middleware
 
 // Route is a http request route.
 type Route struct {
@@ -103,14 +103,15 @@ type routesWrapper struct{ Routes }
 // Router is the http router to dispatch the request to the different handlers
 // by the route rule matcher.
 type Router struct {
-	NotFound http.Handler
+	notFound handler.SwitchHandler
+	handler  handler.SwitchHandler
 	builder  *ruler.Builder
-	handler  ghttp.SwitchHandler
-	glock    sync.Mutex
-	gmdws    ghttp.Middlewares
+
+	glock sync.Mutex
+	gmdws handler.Middlewares
 
 	rlock  sync.RWMutex
-	rmdws  ghttp.Middlewares
+	rmdws  handler.Middlewares
 	origs  map[string]Route
 	routes Routes
 	router atomic.Value
@@ -118,15 +119,31 @@ type Router struct {
 
 // NewRouter returns a new Router.
 func NewRouter() *Router {
-	r := &Router{
-		NotFound: ghttp.Handler404,
-		builder:  ruler.NewBuilder(),
-		origs:    make(map[string]Route, 16),
-	}
+	r := &Router{builder: ruler.NewBuilder(), origs: make(map[string]Route, 16)}
 	r.handler.Set(http.HandlerFunc(r.serveHTTP))
+	r.notFound.Set(handler.Handler404)
 	r.router.Store(routesWrapper{})
 	return r
 }
+
+// SetNotFoundFunc resets the NotFound function as the http handler.
+func (r *Router) SetNotFoundFunc(handlerFunc http.HandlerFunc) {
+	if handlerFunc == nil {
+		panic("the NotFound http handler function is nil")
+	}
+	r.notFound.Set(handlerFunc)
+}
+
+// SetNotFound resets the NotFound handler.
+func (r *Router) SetNotFound(handler http.Handler) {
+	if handler == nil {
+		panic("the NotFound http handler is nil")
+	}
+	r.notFound.Set(handler)
+}
+
+// GetNotFound returns the NotFound handler.
+func (r *Router) GetNotFound() http.Handler { return r.notFound.Get() }
 
 // Use appends the http handler middlewars and uses them to act on the route
 // handlers when to add the route later.
@@ -145,7 +162,7 @@ func (r *Router) Use(mws ...Middleware) {
 // UseReset is the same as Use, but resets the route middlewares to mws.
 func (r *Router) UseReset(mws ...Middleware) {
 	r.rlock.Lock()
-	r.rmdws = append(ghttp.Middlewares{}, mws...)
+	r.rmdws = append(handler.Middlewares{}, mws...)
 	r.rlock.Unlock()
 }
 
@@ -176,7 +193,7 @@ func (r *Router) Global(mws ...Middleware) {
 func (r *Router) GlobalReset(mws ...Middleware) {
 	r.glock.Lock()
 	defer r.glock.Unlock()
-	r.gmdws = append(ghttp.Middlewares{}, mws...)
+	r.gmdws = append(handler.Middlewares{}, mws...)
 	r.updateHandler()
 }
 
@@ -200,7 +217,7 @@ func (r *Router) serveHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	r.NotFound.ServeHTTP(w, req)
+	r.notFound.Get().ServeHTTP(w, req)
 }
 
 // ServeHTTP implements the interface http.Handler.

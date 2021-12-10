@@ -15,76 +15,57 @@
 package router
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/matcher"
 )
 
-func BenchmarkRoute(b *testing.B) {
+func BenchmarkExactRouteWithNoopMiddleware4(b *testing.B) {
+	benchmarkRouteWithPath(b, "/exact/path")
+}
+
+func BenchmarkParamRouteWithNoopMiddleware4(b *testing.B) {
+	benchmarkRouteWithPath(b, "/path/:param1/:param2")
+}
+
+func benchmarkRouteWithPath(b *testing.B, path string) {
+	newMiddleware := handler.NewMiddleware
+
 	router := NewRouter()
-	router.NotFound = http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
-		panic("notfound")
-	})
+	router.Use(newMiddleware("md1", noopMd), newMiddleware("md2", noopMd))
+	router.Global(newMiddleware("md1", noopMd), newMiddleware("md2", noopMd))
+	router.SetNotFoundFunc(func(http.ResponseWriter, *http.Request) { panic("notfound") })
 	handler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(200)
 		io.WriteString(rw, "OK")
 	})
 
-	for _, r := range gplusAPI {
-		m := matcher.And(
-			matcher.Must(matcher.Path(r.Path)),
-			matcher.Must(matcher.Method(r.Method)),
-		)
+	const method = http.MethodGet
+	m := matcher.And(matcher.Must(matcher.Path(path)), matcher.Must(matcher.Method(method)))
+	router.AddRoute(NewRoute(method+path, 0, m, handler))
 
-		router.AddRoute(NewRoute(r.Method+r.Path, 0, m, handler))
+	rec := httptest.NewRecorder()
+	rec.Body.WriteString("OK")
+	req := httptest.NewRequest(method, path, nil)
+	if req.Method != method || req.URL.Path != path {
+		panic(fmt.Sprintf("method=%s, path=%s", req.Method, req.URL.Path))
 	}
-
-	benchmarkRoutes(b, router, gplusAPI)
-}
-
-func benchmarkRoutes(b *testing.B, router http.Handler, routes []*testRoute) {
-	r := httptest.NewRequest("GET", "/", nil)
-	u := r.URL
-	w := httptest.NewRecorder()
 
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		for _, route := range routes {
-			r.Method = route.Method
-			u.Path = route.Path
-			router.ServeHTTP(w, r)
-		}
+		rec.Body.Reset()
+		router.ServeHTTP(rec, req)
 	}
 }
 
-type testRoute struct {
-	Method string
-	Path   string
-}
-
-var gplusAPI = []*testRoute{
-	// People
-	{"GET", "/people/:userId"},
-	{"GET", "/people"},
-	{"GET", "/activities/:activityId/people/:collection"},
-	{"GET", "/people/:userId/people/:collection"},
-	{"GET", "/people/:userId/openIdConnect"},
-
-	// Activities
-	{"GET", "/people/:userId/activities/:collection"},
-	{"GET", "/activities/:activityId"},
-	{"GET", "/activities"},
-
-	// Comments
-	{"GET", "/activities/:activityId/comments"},
-	{"GET", "/comments/:commentId"},
-
-	// Moments
-	{"POST", "/people/:userId/moments/:collection"},
-	{"GET", "/people/:userId/moments/:collection"},
-	{"DELETE", "/moments/:id"},
+func noopMd(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(rw, r)
+	})
 }

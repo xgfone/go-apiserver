@@ -12,31 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package http
+package handler
 
 import "net/http"
 
-// DefaultHandlerManager is the default global http handler manager.
-var DefaultHandlerManager = NewHandlerManager()
+// DefaultManager is the default global http handler manager.
+var DefaultManager = NewManager()
 
-// AddHandler is equal to DefaultHandlerManager.AddHandler(name, handler).
+// AddHandler is equal to DefaultManager.AddHandler(name, handler).
 func AddHandler(name string, handler http.Handler) (err error) {
-	return DefaultHandlerManager.AddHandler(name, handler)
+	return DefaultManager.AddHandler(name, handler)
 }
 
-// DelHandler is equal to DefaultHandlerManager.DelHandler(name).
+// DelHandler is equal to DefaultManager.DelHandler(name).
 func DelHandler(name string) http.Handler {
-	return DefaultHandlerManager.DelHandler(name)
+	return DefaultManager.DelHandler(name)
 }
 
-// GetHandler is equal to DefaultHandlerManager.GetHandler(name).
+// GetHandler is equal to DefaultManager.GetHandler(name).
 func GetHandler(name string) http.Handler {
-	return DefaultHandlerManager.GetHandler(name)
+	return DefaultManager.GetHandler(name)
 }
 
-// GetHandlers is equal to DefaultHandlerManager.GetHandlers().
+// GetHandlers is equal to DefaultManager.GetHandlers().
 func GetHandlers() map[string]http.Handler {
-	return DefaultHandlerManager.GetHandlers()
+	return DefaultManager.GetHandlers()
 }
 
 /// ----------------------------------------------------------------------- ///

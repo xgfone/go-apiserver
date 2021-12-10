@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package http provides some http handlers and convenient functions.
+// Package http provides some http convenient functions.
 package http

@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package http
+// Package handler provides some http handler and middleware functions.
+package handler
 
 import (
 	"errors"
@@ -212,19 +213,19 @@ func (mh *MiddlewareHandler) updateHandler() {
 
 /// ----------------------------------------------------------------------- ///
 
-// HandlerManager is used to manage the http handler.
-type HandlerManager struct {
+// Manager is used to manage the http handler.
+type Manager struct {
 	lock     sync.RWMutex
 	handlers map[string]http.Handler
 }
 
-// NewHandlerManager returns a new http handler manager.
-func NewHandlerManager() *HandlerManager {
-	return &HandlerManager{handlers: make(map[string]http.Handler, 8)}
+// NewManager returns a new http handler manager.
+func NewManager() *Manager {
+	return &Manager{handlers: make(map[string]http.Handler, 8)}
 }
 
 // AddHandler adds the named http handler.
-func (m *HandlerManager) AddHandler(name string, handler http.Handler) (err error) {
+func (m *Manager) AddHandler(name string, handler http.Handler) (err error) {
 	if name == "" {
 		return errors.New("the http handler name is empty")
 	} else if handler == nil {
@@ -245,7 +246,7 @@ func (m *HandlerManager) AddHandler(name string, handler http.Handler) (err erro
 // DelHandler deletes the http handler by the name.
 //
 // If the http handler does not exist, do nothing and return nil.
-func (m *HandlerManager) DelHandler(name string) http.Handler {
+func (m *Manager) DelHandler(name string) http.Handler {
 	m.lock.Lock()
 	handler, ok := m.handlers[name]
 	if ok {
@@ -258,7 +259,7 @@ func (m *HandlerManager) DelHandler(name string) http.Handler {
 // GetHandler returns the http handler by the name.
 //
 // If the http handler does not exist, return nil.
-func (m *HandlerManager) GetHandler(name string) http.Handler {
+func (m *Manager) GetHandler(name string) http.Handler {
 	m.lock.RLock()
 	handler := m.handlers[name]
 	m.lock.RUnlock()
@@ -266,7 +267,7 @@ func (m *HandlerManager) GetHandler(name string) http.Handler {
 }
 
 // GetHandlers returns all the http handlers.
-func (m *HandlerManager) GetHandlers() map[string]http.Handler {
+func (m *Manager) GetHandlers() map[string]http.Handler {
 	m.lock.RLock()
 	handlers := make(map[string]http.Handler, len(m.handlers))
 	for name, handler := range m.handlers {
