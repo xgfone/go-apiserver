@@ -104,7 +104,9 @@ func TestServersPool(t *testing.T) {
 	}
 
 	sp.Release(make(Servers, 10))
-	if servers := sp.Acquire(); cap(servers) != 10 {
+	if servers := sp.Acquire(); servers == nil {
+		panic("servers is nil")
+	} else if cap(servers) != 10 {
 		t.Errorf("expect %d servers, but got '%d'", 10, len(servers))
 	}
 }
