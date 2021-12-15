@@ -25,7 +25,6 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/upstream"
 	"github.com/xgfone/go-apiserver/http/upstream/balancer"
-	"github.com/xgfone/go-apiserver/log"
 )
 
 func testHandler(key string) http.Handler {
@@ -35,7 +34,6 @@ func testHandler(key string) http.Handler {
 }
 
 func TestLoadBalancer(t *testing.T) {
-	log.SetNothingWriter()
 	lb := NewLoadBalancer("test", balancer.RoundRobin(nil))
 	lb.SwapBalancer(balancer.Retry(balancer.RoundRobin(nil)))
 

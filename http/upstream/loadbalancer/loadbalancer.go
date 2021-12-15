@@ -31,10 +31,8 @@ import (
 	"github.com/xgfone/go-apiserver/log"
 )
 
-// ErrorHandler is used to handle the error to respond to the original client.
-//
-// Notice: if the error is nil, it represents no error.
-type ErrorHandler func(http.ResponseWriter, *http.Request, error)
+// ResultHandler is used to handle the result of forwarding the request.
+type ResultHandler func(*LoadBalancer, http.ResponseWriter, *http.Request, error)
 
 // ServerDiscovery is used to discover the servers.
 type ServerDiscovery interface {
@@ -72,18 +70,16 @@ func (s *upserver) SetOnline(online bool) (ok bool) {
 
 // LoadBalancer is used to forward the http request to one of the backend servers.
 type LoadBalancer struct {
-	EnableLog bool
-
 	name      string
 	balancer  atomic.Value
 	discovery atomic.Value
 	timeout   int64
 
-	handleError ErrorHandler
-
 	slock   sync.RWMutex
 	servers map[string]*upserver
 	server  atomic.Value // For serversWrapper
+
+	handleResult ResultHandler
 }
 
 // NewLoadBalancer returns a new LoadBalancer to forward the http request.
@@ -96,7 +92,7 @@ func NewLoadBalancer(name string, balancer balancer.Balancer) *LoadBalancer {
 	lb.server.Store(serversWrapper{})
 	lb.balancer.Store(balancerWrapper{balancer})
 	lb.discovery.Store(discoveryWrapper{})
-	lb.SetErrorHandler(nil)
+	lb.SetResultHandler(nil)
 	return lb
 }
 
@@ -144,29 +140,29 @@ func (lb *LoadBalancer) SwapServerDiscovery(new ServerDiscovery) (old ServerDisc
 	return
 }
 
-// SetErrorHandler sets the error handler to respond to the original client.
+// SetResultHandler sets the result handler to handle the result of forwarding
+// the request, so it may be used to log the request.
 //
-// If handleError is equal to nil, reset it to the default.
-func (lb *LoadBalancer) SetErrorHandler(handleError ErrorHandler) {
-	if handleError == nil {
-		lb.handleError = lb.errorHandler
+// If handler is equal to nil, reset it to the default.
+func (lb *LoadBalancer) SetResultHandler(handler ResultHandler) {
+	if handler == nil {
+		lb.handleResult = handleResult
 	} else {
-		lb.handleError = handleError
+		lb.handleResult = handler
 	}
 }
 
-func (lb *LoadBalancer) errorHandler(w http.ResponseWriter, r *http.Request, err error) {
+func handleResult(lb *LoadBalancer, w http.ResponseWriter, r *http.Request, err error) {
 	switch err {
 	case nil:
-		if lb.EnableLog {
-			log.Debug("forward the http request",
-				log.F("upstream", lb.name),
-				log.F("balancer", lb.GetBalancer().Policy()),
-				log.F("clientaddr", r.RemoteAddr),
-				log.F("reqhost", r.Host),
-				log.F("reqmethod", r.Method),
-				log.F("reqpath", r.URL.Path))
-		}
+		log.Trace().
+			Kv("upstream", lb.name).
+			Kv("balancer", lb.GetBalancer().Policy()).
+			Kv("clientaddr", r.RemoteAddr).
+			Kv("reqhost", r.Host).
+			Kv("reqmethod", r.Method).
+			Kv("reqpath", r.URL.Path).
+			Printf("forward the http request")
 		return
 
 	case upstream.ErrNoAvailableServers:
@@ -181,16 +177,15 @@ func (lb *LoadBalancer) errorHandler(w http.ResponseWriter, r *http.Request, err
 		}
 	}
 
-	if lb.EnableLog {
-		log.Error("fail to forward the http request",
-			log.F("upstream", lb.name),
-			log.F("balancer", lb.GetBalancer().Policy()),
-			log.F("clientaddr", r.RemoteAddr),
-			log.F("reqhost", r.Host),
-			log.F("reqmethod", r.Method),
-			log.F("reqpath", r.URL.Path),
-			log.E(err))
-	}
+	log.Error().
+		Kv("upstream", lb.name).
+		Kv("balancer", lb.GetBalancer().Policy()).
+		Kv("clientaddr", r.RemoteAddr).
+		Kv("reqhost", r.Host).
+		Kv("reqmethod", r.Method).
+		Kv("reqpath", r.URL.Path).
+		Kv("err", err).
+		Printf("fail to forward the http request")
 }
 
 // HandleHTTP implements the interface Server.
@@ -217,7 +212,7 @@ func (lb *LoadBalancer) HandleHTTP(w http.ResponseWriter, r *http.Request) error
 
 // ServeHTTP implements the interface http.Handler.
 func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	lb.handleError(w, r, lb.HandleHTTP(w, r))
+	lb.handleResult(lb, w, r, lb.HandleHTTP(w, r))
 }
 
 // SetServerOnline sets the online status of the server by its id.

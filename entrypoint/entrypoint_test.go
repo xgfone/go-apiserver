@@ -20,10 +20,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/http/handler"
-	"github.com/xgfone/go-apiserver/log"
 )
-
-func init() { log.SetNothingWriter() }
 
 func TestEntryPoint(t *testing.T) {
 	manager := NewManager()

@@ -90,7 +90,7 @@ func (s *Server) OnShutdown(callbacks ...func()) {
 
 // Start starts the TCP server.
 func (s *Server) Start() {
-	addr := log.F("addr", s.Listener.Addr().String())
+	addr := s.Listener.Addr().String()
 
 	for {
 		conn, err := s.Listener.Accept()
@@ -101,7 +101,8 @@ func (s *Server) Start() {
 			}
 
 			if !errors.Is(err, net.ErrClosed) {
-				log.Error("fail to accept the new connection", addr, log.E(err))
+				log.Error().Kv("listenaddr", addr).Kv("err", err).
+					Printf("fail to accept the new connection")
 			}
 
 			s.Handler.OnServerExit(err)
@@ -157,8 +158,8 @@ func (c *tlsConn) ensureTLSConn() {
 
 		var bs [1]byte
 		if _, c.err = c.Conn.Read(bs[:]); c.err != nil {
-			log.Error("fail to read the first byte from the tcp conneciton",
-				log.F("remoteaddr", c.RemoteAddr().String()), log.E(c.err))
+			log.Error().Kv("remoteaddr", c.RemoteAddr().String()).Kv("err", c.err).
+				Printf("fail to read the first byte from the tcp conneciton")
 			c.Close()
 			return
 		}

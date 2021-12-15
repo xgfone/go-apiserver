@@ -29,7 +29,9 @@ type fileInfo struct {
 	File string
 	Data []byte
 	Last time.Time
-	Info log.Field
+
+	logk string
+	logv string
 }
 
 type fileCertInfo struct {
@@ -117,9 +119,9 @@ func (p *FileProvider) AddCertFile(name, caFile, keyFile, certFile string) error
 
 	p.certs[name] = &fileCertInfo{
 		Name: name,
-		CA:   fileInfo{File: caFile, Info: log.F("cafile", caFile)},
-		Key:  fileInfo{File: keyFile, Info: log.F("keyfile", keyFile)},
-		Cert: fileInfo{File: certFile, Info: log.F("certfile", certFile)},
+		CA:   fileInfo{File: caFile, logk: "cafile", logv: caFile},
+		Key:  fileInfo{File: keyFile, logk: "keyfile", logv: keyFile},
+		Cert: fileInfo{File: certFile, logk: "certfile", logv: certFile},
 	}
 	p.lock.Unlock()
 
@@ -200,8 +202,11 @@ func (p *FileProvider) checkAndUpdate(info *fileCertInfo, updater CertUpdater) {
 
 	cert, err := NewCertificate(info.CA.Data, info.Key.Data, info.Cert.Data)
 	if err != nil {
-		log.Error("fail to create certificate", info.CA.Info, info.Key.Info,
-			info.Cert.Info, log.E(err))
+		log.Error().Kv(info.CA.logk, info.CA.logv).
+			Kv(info.Key.logk, info.Key.logv).
+			Kv(info.Cert.logk, info.Cert.logv).
+			Kv("err", err).
+			Printf("fail to create certificate")
 		return
 	}
 
@@ -213,9 +218,9 @@ func readCertificateFile(cert fileInfo) fileInfo {
 	data, modTime, err := readChangedFile(cert.File, cert.Last)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Warn("the certificate file does not exist", cert.Info)
+			log.Warn().Kv(cert.logk, cert.logv).Printf("the certificate file does not exist")
 		} else {
-			log.Error("fail to read the certificate file", cert.Info)
+			log.Error().Kv(cert.logk, cert.logv).Printf("fail to read the certificate file")
 		}
 
 		return cert

@@ -20,11 +20,8 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/internal/test"
-	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/tlscert"
 )
-
-func init() { log.SetNothingWriter() }
 
 func TestServer(t *testing.T) {
 	cert, err := tlscert.NewCertificate([]byte(test.Ca), []byte(test.Key), []byte(test.Cert))
@@ -32,7 +29,7 @@ func TestServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ln, err := Listen("127.0.0.1:8001")
+	ln, err := Listen("127.0.0.1:8301")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,12 +60,12 @@ func TestServer(t *testing.T) {
 	// Test HTTP
 	go func() {
 		// request the block http to test the graceful shutdown.
-		url := "http://127.0.0.1:8001/?sleep=" + waitDuration.String()
+		url := "http://127.0.0.1:8301/?sleep=" + waitDuration.String()
 		testHTTPReq(t, client, url)
 	}()
 
 	// Test HTTPS: first time
-	resp, err := client.Get("https://127.0.0.1:8001")
+	resp, err := client.Get("https://127.0.0.1:8301")
 	if resp != nil {
 		resp.Body.Close()
 		if resp.StatusCode != 200 {
@@ -80,8 +77,8 @@ func TestServer(t *testing.T) {
 	}
 
 	// Test HTTPS for two times
-	testHTTPReq(t, client, "https://127.0.0.1:8001")
-	testHTTPReq(t, client, "https://127.0.0.1:8001")
+	testHTTPReq(t, client, "https://127.0.0.1:8301")
+	testHTTPReq(t, client, "https://127.0.0.1:8301")
 
 	start := time.Now()
 	server.Stop()

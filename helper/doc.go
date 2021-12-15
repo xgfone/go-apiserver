@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package udp implements a UDP server and some handlers.
-package udp
+// Package helper provides some helpful functions.
+package helper

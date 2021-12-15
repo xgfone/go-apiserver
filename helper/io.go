@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package helper provides some helpful functions.
 package helper
 
 import "io"
