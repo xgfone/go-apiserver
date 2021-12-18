@@ -155,14 +155,15 @@ func (lb *LoadBalancer) SetResultHandler(handler ResultHandler) {
 func handleResult(lb *LoadBalancer, w http.ResponseWriter, r *http.Request, err error) {
 	switch err {
 	case nil:
-		log.Trace().
-			Kv("upstream", lb.name).
-			Kv("balancer", lb.GetBalancer().Policy()).
-			Kv("clientaddr", r.RemoteAddr).
-			Kv("reqhost", r.Host).
-			Kv("reqmethod", r.Method).
-			Kv("reqpath", r.URL.Path).
-			Printf("forward the http request")
+		if logger := log.Trace(); logger.Enabled() {
+			logger.Kv("upstream", lb.name).
+				Kv("balancer", lb.GetBalancer().Policy()).
+				Kv("clientaddr", r.RemoteAddr).
+				Kv("reqhost", r.Host).
+				Kv("reqmethod", r.Method).
+				Kv("reqpath", r.URL.Path).
+				Printf("forward the http request")
+		}
 		return
 
 	case upstream.ErrNoAvailableServers:

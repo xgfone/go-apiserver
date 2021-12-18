@@ -37,14 +37,16 @@ const (
 
 // Pre-define some log functions.
 var (
-	Trace func() log.Logger = log.Trace
-	Debug func() log.Logger = log.Debug
-	Info  func() log.Logger = log.Info
-	Warn  func() log.Logger = log.Warn
-	Error func() log.Logger = log.Error
-	Alert func() log.Logger = log.Alert
-	Panic func() log.Logger = log.Panic
-	Fatal func() log.Logger = log.Fatal
+	Level func(level, depth int) *log.Emitter = log.Level
+
+	Trace func() *log.Emitter = log.Trace
+	Debug func() *log.Emitter = log.Debug
+	Info  func() *log.Emitter = log.Info
+	Warn  func() *log.Emitter = log.Warn
+	Error func() *log.Emitter = log.Error
+	Alert func() *log.Emitter = log.Alert
+	Panic func() *log.Emitter = log.Panic
+	Fatal func() *log.Emitter = log.Fatal
 
 	Tracef func(msg string, args ...interface{}) = logf.Tracef
 	Debugf func(msg string, args ...interface{}) = logf.Debugf
@@ -55,11 +57,6 @@ var (
 	Panicf func(msg string, args ...interface{}) = logf.Panicf
 	Fatalf func(msg string, args ...interface{}) = logf.Fatalf
 
-	Kv     func(key string, value interface{}) log.Logger = log.Kv
-	Kvs    func(kvs ...interface{}) log.Logger            = log.Kvs
-	Print  func(args ...interface{})                      = log.Print
-	Printf func(msg string, args ...interface{})          = log.Printf
-
 	Ef        func(err error, msg string, args ...interface{}) = log.Ef
 	IfErr     func(err error, msg string, kvs ...interface{})  = log.IfErr
 	WrapPanic func(kvs ...interface{})                         = log.WrapPanic
@@ -68,13 +65,10 @@ var (
 type jsonEncoder = log.JSONEncoder
 
 // Default returns the default logger.
-func Default() *log.Engine { return log.DefaultLogger }
+func Default() log.Logger { return log.DefaultLogger }
 
 // Clone clones the default logger and returns a new one.
-func Clone() *log.Engine { return log.DefaultLogger.Clone() }
-
-// Logger returns a log emitter based on the level.
-func Logger(level, depth int) log.Logger { return log.Log(level, depth+1) }
+func Clone() log.Logger { return log.DefaultLogger.Clone() }
 
 // StdLogger returns a stdlib log logger.
 func StdLogger(prefix string) *stdlog.Logger { return log.StdLog(prefix) }

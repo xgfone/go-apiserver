@@ -25,7 +25,7 @@ func TestLogger(t *testing.T) {
 	Default().Output.GetEncoder().(*jsonEncoder).TimeKey = ""
 	Default().SetWriter(buf)
 	Info().Kv("k1", "v1").Print("msg1")
-	Logger(LvlInfo, 0).Kv("k2", "v2").Print("msg2")
+	Level(LvlInfo, 0).Kv("k2", "v2").Print("msg2")
 	StdLogger("stdlog: ").Print("msg3")
 
 	expects := []string{
