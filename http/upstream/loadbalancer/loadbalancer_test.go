@@ -39,13 +39,11 @@ func TestLoadBalancer(t *testing.T) {
 
 	go func() {
 		server := http.Server{Addr: "127.0.0.1:8101", Handler: testHandler("8101")}
-		t.Cleanup(func() { server.Shutdown(context.Background()) })
 		server.ListenAndServe()
 	}()
 
 	go func() {
 		server := http.Server{Addr: "127.0.0.1:8102", Handler: testHandler("8102")}
-		t.Cleanup(func() { server.Shutdown(context.Background()) })
 		server.ListenAndServe()
 	}()
 
