@@ -22,6 +22,7 @@ import (
 	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/log"
+	"github.com/xgfone/go-apiserver/nets"
 )
 
 // TLSConn is used to support to check whether the connection is based on TLS.
@@ -100,7 +101,7 @@ func (s *Server) Start() {
 				continue
 			}
 
-			if !errors.Is(err, net.ErrClosed) {
+			if !nets.IsClosed(err) {
 				log.Error().Kv("listenaddr", addr).Kv("err", err).
 					Printf("fail to accept the new connection")
 			}
