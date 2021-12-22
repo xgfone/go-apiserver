@@ -62,8 +62,6 @@ var (
 	WrapPanic func(kvs ...interface{})                         = log.WrapPanic
 )
 
-type jsonEncoder = log.JSONEncoder
-
 // Default returns the default logger.
 func Default() log.Logger { return log.DefaultLogger }
 
