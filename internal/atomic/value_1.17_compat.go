@@ -17,6 +17,11 @@
 
 package atomic
 
+import "sync/atomic"
+
+// Value is used to update the value atomically.
+type Value struct{ atomic.Value }
+
 func (v *Value) Swap(new interface{}) (old interface{}) {
 	old = v.Value.Load()
 	v.Value.Store(new)

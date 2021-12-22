@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.17
+// +build go1.17
+
 package atomic
 
 import "sync/atomic"
 
 // Value is used to update the value atomically.
-type Value struct{ atomic.Value }
+type Value = atomic.Value
