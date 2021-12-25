@@ -22,6 +22,19 @@ import (
 	"net/http"
 )
 
+// Unwrap unwraps the innest wrapped http ResponseWriter.
+//
+// If rw has not implemented the interface WrappedResponseWriter, return itself.
+func Unwrap(rw http.ResponseWriter) http.ResponseWriter {
+	for {
+		ww, ok := rw.(WrappedResponseWriter)
+		if !ok {
+			return rw
+		}
+		rw = ww.WrappedResponseWriter()
+	}
+}
+
 // WrappedResponseWriter is used to unwrap the wrapped http.ResponseWriter.
 type WrappedResponseWriter interface {
 	WrappedResponseWriter() http.ResponseWriter
