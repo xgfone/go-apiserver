@@ -8,4 +8,4 @@ require (
 
 replace github.com/vulcand/predicate => github.com/xgfone/predicate v0.0.0-20211127075616-84113d52a350
 
-go 1.16
+go 1.13
