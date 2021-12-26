@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package request provides some http request functions.
-package request
+// Package reqresp provides some http request and response functions.
+package reqresp
