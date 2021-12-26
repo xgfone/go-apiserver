@@ -23,8 +23,8 @@ import (
 
 // Context is used to represents the context information of the request.
 type Context struct {
-	// Req and Resp are the original http request response.
-	Resp http.ResponseWriter
+	// Req and Resp are the http request and response.
+	Resp ResponseWriter
 	Req  *http.Request
 
 	Any   interface{}            // any single-value data
