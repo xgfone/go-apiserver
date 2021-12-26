@@ -23,8 +23,9 @@ import (
 
 // Context is used to represents the context information of the request.
 type Context struct {
-	// Req is the original http request.
-	Req *http.Request
+	// Req and Resp are the original http request response.
+	Resp http.ResponseWriter
+	Req  *http.Request
 
 	Any   interface{}            // any single-value data
 	Datas map[string]interface{} // a set of any key-value datas
@@ -109,9 +110,7 @@ func NewContextAllocator() ContextAllocator {
 	return &alloc
 }
 
-const reqParamCtx reqParam = 0
-
-type reqParam int8
+type reqParam uint8
 
 // SetContext sets the request context into the request and returns a new one.
 //
@@ -120,15 +119,14 @@ func SetContext(req *http.Request, c *Context) (newreq *http.Request) {
 	if c == nil {
 		return req
 	}
-
-	return req.WithContext(context.WithValue(req.Context(), reqParamCtx, c))
+	return req.WithContext(context.WithValue(req.Context(), reqParam(255), c))
 }
 
 // GetContext gets and returns the request context from the request.
 //
 // If the request context does not exist, reutrn nil.
 func GetContext(req *http.Request) *Context {
-	if c, ok := req.Context().Value(reqParamCtx).(*Context); ok {
+	if c, ok := req.Context().Value(reqParam(255)).(*Context); ok {
 		return c
 	}
 	return nil
