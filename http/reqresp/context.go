@@ -21,48 +21,6 @@ import (
 	"sync"
 )
 
-// Context is used to represents the context information of the request.
-type Context struct {
-	// Req and Resp are the http request and response.
-	Resp ResponseWriter
-	Req  *http.Request
-
-	Any   interface{}            // any single-value data
-	Datas map[string]interface{} // a set of any key-value datas
-
-	// For route information
-	RouteName    string
-	UpstreamName string
-
-	// Query are used to cache the parsed request query.
-	Query url.Values
-}
-
-// ParseQuery parses the query parameters, caches and returns the parsed query.
-func (c *Context) ParseQuery() (query url.Values, err error) {
-	if c.Query != nil {
-		return c.Query, nil
-	}
-
-	if query, err = url.ParseQuery(c.Req.URL.RawQuery); err == nil {
-		c.Query = query
-	}
-
-	return
-}
-
-// GetQueries is the same as Queries, but ingores the error.
-func (c *Context) GetQueries() (query url.Values) {
-	query, _ = c.ParseQuery()
-	return
-}
-
-// GetQuery parses the query parameters and return the value of the parameter
-// by the key.
-func (c *Context) GetQuery(key string) (value string) {
-	return c.GetQueries().Get(key)
-}
-
 // ContextAllocator is used to allocate or release the request context.
 type ContextAllocator interface {
 	Acquire(*http.Request) *Context
@@ -211,51 +169,44 @@ func SetReqDatas(req *http.Request, datas map[string]interface{}) (newreq *http.
 	return req
 }
 
-// SetReqParam is the same as SetReqData, but assert the value to string.
-func SetReqParam(req *http.Request, key, value string) (newreq *http.Request) {
-	return SetReqData(req, key, value)
+// Context is used to represents the context information of the request.
+type Context struct {
+	// Req and Resp are the http request and response.
+	Resp ResponseWriter
+	Req  *http.Request
+
+	Any   interface{}            // any single-value data
+	Datas map[string]interface{} // a set of any key-value datas
+
+	// For route information
+	RouteName    string
+	UpstreamName string
+
+	// Query are used to cache the parsed request query.
+	Query url.Values
 }
 
-// SetReqParams is the same SetReqDatas, but assert the values to string.
-func SetReqParams(req *http.Request, params map[string]string) (newreq *http.Request) {
-	if len(params) == 0 {
-		return req
+// ParseQuery parses the query parameters, caches and returns the parsed query.
+func (c *Context) ParseQuery() (query url.Values, err error) {
+	if c.Query != nil {
+		return c.Query, nil
 	}
 
-	c := GetContext(req)
-	if c == nil {
-		c = DefaultContextAllocator.Acquire(req)
-		req = SetContext(req, c)
+	if query, err = url.ParseQuery(c.Req.URL.RawQuery); err == nil {
+		c.Query = query
 	}
 
-	if c.Datas == nil {
-		c.Datas = make(map[string]interface{}, 8+len(params))
-	}
-
-	for key, value := range params {
-		c.Datas[key] = value
-	}
-
-	return req
-}
-
-// GetReqParam is the same as GetReqData, but assert the value to string.
-func GetReqParam(req *http.Request, key string) (value string, ok bool) {
-	value, ok = GetReqData(req, key).(string)
 	return
 }
 
-// GetReqParams is the same as GetReqDatas, but assert the value to string.
-//
-// Suggest to use GetReqDatas instead of GetReqParams.
-func GetReqParams(req *http.Request) (params map[string]string) {
-	if c := GetContext(req); c != nil {
-		params = make(map[string]string, len(c.Datas))
-		for key, value := range c.Datas {
-			if v, ok := value.(string); ok {
-				params[key] = v
-			}
-		}
-	}
+// GetQueries is the same as Queries, but ingores the error.
+func (c *Context) GetQueries() (query url.Values) {
+	query, _ = c.ParseQuery()
 	return
+}
+
+// GetQuery parses the query parameters and return the value of the parameter
+// by the key.
+func (c *Context) GetQuery(key string) (value string) {
+	return c.GetQueries().Get(key)
 }
