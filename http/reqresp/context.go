@@ -178,10 +178,6 @@ type Context struct {
 	Any   interface{}            // any single-value data
 	Datas map[string]interface{} // a set of any key-value datas
 
-	// For route information
-	RouteName    string
-	UpstreamName string
-
 	// Query are used to cache the parsed request query.
 	Query url.Values
 }
