@@ -57,16 +57,14 @@ func putBuilder(b *builder) { b.Reset(); bpool.Put(b) }
 
 // ContextAllocator is used to allocate or release the request context.
 type ContextAllocator interface {
-	Acquire(*http.Request) *Context
+	Acquire() *Context
 	Release(*Context)
 }
 
 type contextAllocator struct{ ctxPool sync.Pool }
 
-func (a *contextAllocator) Acquire(req *http.Request) (c *Context) {
-	c = a.ctxPool.Get().(*Context)
-	c.Request = req
-	return
+func (a *contextAllocator) Acquire() (c *Context) {
+	return a.ctxPool.Get().(*Context)
 }
 
 func (a *contextAllocator) Release(c *Context) {
@@ -116,7 +114,8 @@ func GetContext(req *http.Request) *Context {
 // if the request context does not exist.
 func GetOrNewContext(req *http.Request) (c *Context, new bool) {
 	if c = GetContext(req); c == nil {
-		c = DefaultContextAllocator.Acquire(req)
+		c = DefaultContextAllocator.Acquire()
+		c.Request = req
 		new = true
 	}
 	return
@@ -156,8 +155,9 @@ func SetReqData(req *http.Request, key string, value interface{}) (newreq *http.
 
 	c := GetContext(req)
 	if c == nil {
-		c = DefaultContextAllocator.Acquire(req)
+		c = DefaultContextAllocator.Acquire()
 		req = SetContext(req, c)
+		c.Request = req
 	}
 
 	if c.Datas == nil {
@@ -176,8 +176,9 @@ func SetReqDatas(req *http.Request, datas map[string]interface{}) (newreq *http.
 
 	c := GetContext(req)
 	if c == nil {
-		c = DefaultContextAllocator.Acquire(req)
+		c = DefaultContextAllocator.Acquire()
 		req = SetContext(req, c)
+		c.Request = req
 	}
 
 	if c.Datas == nil {
