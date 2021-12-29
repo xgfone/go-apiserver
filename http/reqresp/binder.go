@@ -17,10 +17,10 @@ package reqresp
 import (
 	"encoding/json"
 	"encoding/xml"
-	"fmt"
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/header"
+	"github.com/xgfone/go-apiserver/http/herrors"
 )
 
 // Binder is used to bind the request data to a struct.
@@ -93,12 +93,12 @@ func (mb *MuxBinder) Del(contentType string) {
 func (mb *MuxBinder) Bind(dst interface{}, req *http.Request) error {
 	ct := header.ContentType(req.Header)
 	if ct == "" {
-		return fmt.Errorf("no the header 'Content-Type'")
+		return herrors.ErrMissingContentType
 	}
 
 	if binder := mb.Get(ct); binder != nil {
 		return binder.Bind(dst, req)
 	}
 
-	return fmt.Errorf("not support Content-Type '%s'", ct)
+	return herrors.ErrUnsupportedMediaType.Newf("not support Content-Type '%s'", ct)
 }
