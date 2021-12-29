@@ -21,6 +21,20 @@ import (
 	"github.com/xgfone/go-apiserver/helper"
 )
 
+func BenchmarkRequestSetDataGetData(b *testing.B) {
+	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1", nil)
+	req = SetReqData(req, "key", "value")
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		req = SetReqData(req, "key", "value")
+		if value, ok := GetReqData(req, "key").(string); !ok || value != "value" {
+			panic("invalid value")
+		}
+	}
+}
+
 func TestRequestParams(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1", nil)
 	req = SetReqData(req, "key1", "value1")
@@ -42,18 +56,4 @@ func TestRequestParams(t *testing.T) {
 	}
 
 	DefaultContextAllocator.Release(GetContext(req))
-}
-
-func BenchmarkRequestSetDataGetData(b *testing.B) {
-	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1", nil)
-	req = SetReqData(req, "key", "value")
-
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		req = SetReqData(req, "key", "value")
-		if value, ok := GetReqData(req, "key").(string); !ok || value != "value" {
-			panic("invalid value")
-		}
-	}
 }
