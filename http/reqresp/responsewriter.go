@@ -71,7 +71,7 @@ func (rw *responseWriter) WrappedResponseWriter() http.ResponseWriter {
 }
 
 func (rw *responseWriter) WriteHeader(statusCode int) {
-	if statusCode < 1 {
+	if statusCode < 100 || statusCode > 999 {
 		panic(fmt.Errorf("invalid status code %d", statusCode))
 	}
 
