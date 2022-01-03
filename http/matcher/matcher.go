@@ -174,26 +174,6 @@ func Must(matcher Matcher, err error) Matcher {
 
 /// ----------------------------------------------------------------------- ///
 
-type regexpImpl struct{ *regexp.Regexp }
-
-func (r regexpImpl) Match(s string) bool { return r.Regexp.MatchString(s) }
-
-func newRegexp(rule string) (Regexp, error) {
-	re, err := regexp.Compile(rule)
-	if err != nil {
-		return nil, err
-	}
-	return regexpImpl{Regexp: re}, nil
-}
-
-// Regexp is a regular expression matcher.
-type Regexp interface {
-	Match(s string) (ok bool)
-}
-
-// NewRegexp is used to build a regular expression rule to match the string.
-var NewRegexp func(rule string) (Regexp, error)
-
 // GetPath is used to get the path from the request.
 var GetPath = func(r *http.Request) (path string) { return r.URL.Path }
 
@@ -245,15 +225,19 @@ var (
 	// If the value is empty, check whether the request contains the header "key".
 	Header func(key, value string) (Matcher, error) = headerMatcher
 
-	// HeaderRegexp returns a header regexp matcher to match the request
-	// header by the regexp.
+	// HeaderRegexp returns a header regexp matcher to match the request header
+	// by the regexp.
+	//
+	// The default implementation uses the stdlib "regexp".
 	HeaderRegexp func(key, regexpValue string) (Matcher, error) = headerRegexpMatcher
 
 	// Host returns a host matcher to match the request host.
 	Host func(host string) (Matcher, error) = hostMatcher
 
-	// HostRegexp returns a host regexp matcher to match the request
-	// host by the regexp.
+	// HostRegexp returns a host regexp matcher to match the request host
+	// by the regexp.
+	//
+	// The default implementation uses the stdlib "regexp".
 	HostRegexp func(regexpHost string) (Matcher, error) = hostRegexpMatcher
 )
 
@@ -375,14 +359,14 @@ func headerMatcher(key, value string) (Matcher, error) {
 }
 
 func headerRegexpMatcher(key, regexpValue string) (Matcher, error) {
-	regexp, err := NewRegexp(regexpValue)
+	regexp, err := regexp.Compile(regexpValue)
 	if err != nil {
 		return nil, err
 	}
 
 	desc := fmt.Sprintf("HeaderRegexp(%s)", regexpValue)
 	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
-		return r, regexp.Match(r.Header.Get(key))
+		return r, regexp.MatchString(r.Header.Get(key))
 	}), nil
 }
 
@@ -394,13 +378,13 @@ func hostMatcher(host string) (Matcher, error) {
 }
 
 func hostRegexpMatcher(regexpHost string) (Matcher, error) {
-	regexp, err := NewRegexp(regexpHost)
+	regexp, err := regexp.Compile(regexpHost)
 	if err != nil {
 		return nil, err
 	}
 
 	desc := fmt.Sprintf("HostRegexp(%s)", regexpHost)
 	return New(prioHostRegexp, desc, func(r *http.Request) (*http.Request, bool) {
-		return r, regexp.Match(GetHost(r))
+		return r, regexp.MatchString(GetHost(r))
 	}), nil
 }
