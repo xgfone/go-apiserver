@@ -17,13 +17,16 @@
 package matcher
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
-	"net/url"
+	"net/textproto"
+	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/nets"
 	"github.com/xgfone/netaddr"
 )
@@ -171,6 +174,39 @@ func Must(matcher Matcher, err error) Matcher {
 
 /// ----------------------------------------------------------------------- ///
 
+type regexpImpl struct{ *regexp.Regexp }
+
+func (r regexpImpl) Match(s string) bool { return r.Regexp.MatchString(s) }
+
+func newRegexp(rule string) (Regexp, error) {
+	re, err := regexp.Compile(rule)
+	if err != nil {
+		return nil, err
+	}
+	return regexpImpl{Regexp: re}, nil
+}
+
+// Regexp is a regular expression matcher.
+type Regexp interface {
+	Match(s string) (ok bool)
+}
+
+// NewRegexp is used to build a regular expression rule to match the string.
+var NewRegexp func(rule string) (Regexp, error)
+
+// GetPath is used to get the path from the request.
+var GetPath = func(r *http.Request) (path string) { return r.URL.Path }
+
+// GetHost is used to get the host name from the request.
+var GetHost = func(r *http.Request) (host string) {
+	if r.TLS != nil && r.TLS.ServerName != "" {
+		host = r.TLS.ServerName
+	} else {
+		host, _ = nets.SplitHostPort(r.Host)
+	}
+	return
+}
+
 const (
 	prioHeaderRegexp = 1
 	prioHeader       = 2
@@ -183,20 +219,65 @@ const (
 	prioHost         = 8
 )
 
-// Path returns a path matcher to match the request path accurately.
-func Path(path string) (Matcher, error) {
-	// TOOD: path parameters
+var (
+	// Path returns a path matcher to match the request path accurately.
+	Path func(path string) (Matcher, error) = pathMatcher
+
+	// PathPrefix returns a path prefix matcher to match the prefix
+	// of the request path.
+	PathPrefix func(pathPrefix string) (Matcher, error) = pathPrefixMatcher
+
+	// Method returns a method matcher to match the request method.
+	Method func(method string) (Matcher, error) = methodMatcher
+
+	// ClientIP returns a matcher to match the remote address of the request.
+	//
+	// Support that clientIP is an IP or CIDR, such as "1.2.3.4", "1.2.3.0/24".
+	ClientIP func(clientIP string) (Matcher, error) = clientIPMatcher
+
+	// Query returns a qeury matcher to match the request query.
+	//
+	// If the value is empty, check whether the request contains the query "key".
+	Query func(key, value string) (Matcher, error) = queryMatcher
+
+	// Header returns a header matcher to match the request header.
+	//
+	// If the value is empty, check whether the request contains the header "key".
+	Header func(key, value string) (Matcher, error) = headerMatcher
+
+	// HeaderRegexp returns a header regexp matcher to match the request
+	// header by the regexp.
+	HeaderRegexp func(key, regexpValue string) (Matcher, error) = headerRegexpMatcher
+
+	// Host returns a host matcher to match the request host.
+	Host func(host string) (Matcher, error) = hostMatcher
+
+	// HostRegexp returns a host regexp matcher to match the request
+	// host by the regexp.
+	HostRegexp func(regexpHost string) (Matcher, error) = hostRegexpMatcher
+)
+
+func pathMatcher(path string) (Matcher, error) {
+	if len(path) == 0 {
+		return nil, errors.New("the url path is empty")
+	} else if path[0] != '/' {
+		return nil, fmt.Errorf("the url path does not start with '/'")
+	}
+	// TODO: path parameters
 
 	desc := fmt.Sprintf("Path(%s)", path)
 	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
-		return r, r.URL.Path == path
+		return r, GetPath(r) == path
 	}), nil
 }
 
-// PathPrefix returns a path prefix matcher to match the prefix
-// of the request path.
-func PathPrefix(pathPrefix string) (Matcher, error) {
-	// TOOD: path parameters
+func pathPrefixMatcher(pathPrefix string) (Matcher, error) {
+	if len(pathPrefix) == 0 {
+		return nil, errors.New("the url path prefix is empty")
+	} else if pathPrefix[0] != '/' {
+		return nil, fmt.Errorf("the url path prefix does not start with '/'")
+	}
+	// TODO: path parameters
 
 	desc := fmt.Sprintf("PathPrefix(%s)", pathPrefix)
 	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
@@ -204,8 +285,7 @@ func PathPrefix(pathPrefix string) (Matcher, error) {
 	}), nil
 }
 
-// Method returns a method matcher to match the request method.
-func Method(method string) (Matcher, error) {
+func methodMatcher(method string) (Matcher, error) {
 	switch method {
 	case http.MethodGet, http.MethodHead, http.MethodPost, http.MethodDelete,
 		http.MethodPut, http.MethodPatch, http.MethodConnect, http.MethodTrace,
@@ -220,10 +300,7 @@ func Method(method string) (Matcher, error) {
 	}), nil
 }
 
-// ClientIP returns a matcher to match the remote address of the request.
-//
-// Support that clientIP is an IP or CIDR, such as "1.2.3.4", "1.2.3.0/24".
-func ClientIP(clientIP string) (Matcher, error) {
+func clientIPMatcher(clientIP string) (Matcher, error) {
 	var err error
 	var ipnet netaddr.IPNetwork
 
@@ -258,26 +335,29 @@ func ClientIP(clientIP string) (Matcher, error) {
 	}), nil
 }
 
-// Query returns a qeury matcher to match the request query.
-func Query(key, value string) (Matcher, error) {
+func queryMatcher(key, value string) (Matcher, error) {
 	if key == "" {
 		return nil, fmt.Errorf("the query key is empty")
 	}
 
 	desc := fmt.Sprintf("Query(%s=%s)", key, value)
 	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
+		c, new := reqresp.GetOrNewContext(r)
+		if new {
+			r = reqresp.SetContext(r, c)
+		}
+
 		var ok bool
 		if value == "" {
-			_, ok = r.URL.Query()[key]
+			_, ok = c.GetQueries()[key]
 		} else {
-			ok = r.URL.Query().Get(key) == value
+			ok = c.GetQueries().Get(key) == value
 		}
 		return r, ok
 	}), nil
 }
 
-// Header returns a header matcher to match the request header.
-func Header(key, value string) (Matcher, error) {
+func headerMatcher(key, value string) (Matcher, error) {
 	if key == "" {
 		return nil, fmt.Errorf("the header key is empty")
 	}
@@ -286,39 +366,41 @@ func Header(key, value string) (Matcher, error) {
 	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
 		var ok bool
 		if value == "" {
-			_, ok = url.Values(r.Header)[key]
+			_, ok = r.Header[textproto.CanonicalMIMEHeaderKey(key)]
 		} else {
-			ok = url.Values(r.Header).Get(key) == value
+			ok = r.Header.Get(key) == value
 		}
 		return r, ok
 	}), nil
 }
 
-// HeaderRegexp returns a header regexp matcher to match the request
-// header by the regexp.
-func HeaderRegexp(key, value string) (Matcher, error) {
-	// TODO:)
-	return nil, fmt.Errorf("HeaderRegexp: Not Implemented")
-}
+func headerRegexpMatcher(key, regexpValue string) (Matcher, error) {
+	regexp, err := NewRegexp(regexpValue)
+	if err != nil {
+		return nil, err
+	}
 
-// Host returns a host matcher to match the request host.
-func Host(host string) (Matcher, error) {
-	desc := fmt.Sprintf("Host(%s)", host)
+	desc := fmt.Sprintf("HeaderRegexp(%s)", regexpValue)
 	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
-		var rhost string
-		if r.TLS != nil && r.TLS.ServerName != "" {
-			rhost = r.TLS.ServerName
-		} else {
-			rhost, _ = nets.SplitHostPort(r.Host)
-		}
-
-		return r, rhost == host
+		return r, regexp.Match(r.Header.Get(key))
 	}), nil
 }
 
-// HostRegexp returns a host regexp matcher to match the request
-// host by the regexp.
-func HostRegexp(regexpHost string) (Matcher, error) {
-	// TODO:)
-	return nil, fmt.Errorf("HostRegexp: Not Implemented")
+func hostMatcher(host string) (Matcher, error) {
+	desc := fmt.Sprintf("Host(%s)", host)
+	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
+		return r, GetHost(r) == host
+	}), nil
+}
+
+func hostRegexpMatcher(regexpHost string) (Matcher, error) {
+	regexp, err := NewRegexp(regexpHost)
+	if err != nil {
+		return nil, err
+	}
+
+	desc := fmt.Sprintf("HostRegexp(%s)", regexpHost)
+	return New(prioHostRegexp, desc, func(r *http.Request) (*http.Request, bool) {
+		return r, regexp.Match(GetHost(r))
+	}), nil
 }
