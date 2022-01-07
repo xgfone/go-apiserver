@@ -199,6 +199,7 @@ type Context struct {
 	ResponseWriter
 	*http.Request
 
+	Err    error                  // used to store the error
 	Any    interface{}            // any single-value data
 	Datas  map[string]interface{} // a set of any key-value datas
 	Binder Binder
