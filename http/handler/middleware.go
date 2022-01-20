@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-apiserver/http/reqresp"
 )
 
 // Middleware is the http handler middleware.
@@ -99,6 +100,22 @@ func (m middleware) Handler(h http.Handler) http.Handler { return m.handler(h) }
 // NewMiddleware returns a new HTTP handler middleware.
 func NewMiddleware(name string, m func(http.Handler) http.Handler) Middleware {
 	return middleware{name: name, handler: m}
+}
+
+// ContextMiddleware returns a new http handler middleware, which will allocate
+// a request context and put it into the http request, then release it after
+// handling the http request.
+func ContextMiddleware() Middleware {
+	return NewMiddleware("context", func(h http.Handler) http.Handler {
+		return WrapHandler(h, func(h http.Handler, w http.ResponseWriter, r *http.Request) {
+			if c, new := reqresp.GetOrNewContext(r); new {
+				r = reqresp.SetContext(r, c)
+				defer reqresp.DefaultContextAllocator.Release(c)
+			}
+
+			h.ServeHTTP(w, r)
+		})
+	})
 }
 
 /// ----------------------------------------------------------------------- ///
