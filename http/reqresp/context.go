@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -75,16 +75,18 @@ func (a *contextAllocator) Release(c *Context) {
 }
 
 // DefaultContextAllocator is the default request context allocator.
-var DefaultContextAllocator = NewContextAllocator()
+var DefaultContextAllocator = NewContextAllocator(8)
 
 // NewContextAllocator returns a new ContextAllocator, which acquires a request
 // context from the pool and releases the request context into the pool.
 //
 // Notice: if Context.Any has implemented the interface { Reset() },
 // it will be called when releasing the request context.
-func NewContextAllocator() ContextAllocator {
+func NewContextAllocator(dataCap int) ContextAllocator {
 	var alloc contextAllocator
-	alloc.ctxPool.New = func() interface{} { return new(Context) }
+	alloc.ctxPool.New = func() interface{} {
+		return &Context{Datas: make(map[string]interface{}, dataCap)}
+	}
 	return &alloc
 }
 
