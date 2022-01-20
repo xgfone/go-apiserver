@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,14 +21,40 @@ import (
 	"github.com/xgfone/go-apiserver/http/matcher"
 )
 
-// Name returns a route builder with the name.
+// Name returns a route builder with the name, which is equal to
+// NewRouteBuilder(r).Name(name).
 func (r *Router) Name(name string) RouteBuilder {
-	return RouteBuilder{router: r, panic: true}.Name(name)
+	return NewRouteBuilder(r).Name(name)
 }
 
-// Rule returns a route builder with the matcher rule.
+// Rule returns a route builder with the matcher rule,
+// which is equal to NewRouteBuilder(r).Rule(matchRule).
 func (r *Router) Rule(matchRule string) RouteBuilder {
-	return RouteBuilder{router: r, panic: true}.Rule(matchRule)
+	return NewRouteBuilder(r).Rule(matchRule)
+}
+
+// Path returns a route builder with the path matcher,
+// which is equal to NewRouteBuilder(r).Path(path).
+func (r *Router) Path(path string) RouteBuilder {
+	return NewRouteBuilder(r).Path(path)
+}
+
+// PathPrefix returns a route builder with the path prefix matcher,
+// which is equal to NewRouteBuilder(r).PathPrefix(pathPrefix).
+func (r *Router) PathPrefix(pathPrefix string) RouteBuilder {
+	return NewRouteBuilder(r).PathPrefix(pathPrefix)
+}
+
+// Host returns a route builder with the host matcher,
+// which is equal to NewRouteBuilder(r).Host(host).
+func (r *Router) Host(host string) RouteBuilder {
+	return NewRouteBuilder(r).Host(host)
+}
+
+// HostRegexp returns a route builder with the host regexp matcher,
+// which is equal to NewRouteBuilder(r).HostRegexp(regexpHost).
+func (r *Router) HostRegexp(regexpHost string) RouteBuilder {
+	return NewRouteBuilder(r).HostRegexp(regexpHost)
 }
 
 // RouteBuilder is used to build the route.
@@ -37,8 +63,15 @@ type RouteBuilder struct {
 	name     string
 	rule     string
 	matcher  matcher.Matcher
+	matchers matcher.Matchers
 	priority int
 	panic    bool
+	err      error
+}
+
+// NewRouteBuilder returns a new RouteBuilder with the router.
+func NewRouteBuilder(router *Router) RouteBuilder {
+	return RouteBuilder{router: router, panic: true}
 }
 
 // SetPanic sets the flag to panic when failing to add the route.
@@ -75,6 +108,116 @@ func (b RouteBuilder) Match(matchers ...matcher.Matcher) RouteBuilder {
 	return b
 }
 
+// And appends the matchers based on AND.
+func (b RouteBuilder) And(matchers ...matcher.Matcher) RouteBuilder {
+	b.matchers = append(b.matchers, matchers...)
+	return b
+}
+
+// Or is eqaul to b.And(matcher.Or(matchers...)).
+func (b RouteBuilder) Or(matchers ...matcher.Matcher) RouteBuilder {
+	return b.And(matcher.Or(matchers...))
+}
+
+// Path is the same as b.And(matcher.Path(path)).
+func (b RouteBuilder) Path(path string) RouteBuilder {
+	if b.err == nil {
+		var m matcher.Matcher
+		if m, b.err = matcher.Path(path); b.err == nil {
+			b = b.And(m)
+		}
+	}
+	return b
+}
+
+// PathPrefix is the same as b.And(matcher.PathPrefix(pathPrefix)).
+func (b RouteBuilder) PathPrefix(pathPrefix string) RouteBuilder {
+	if b.err == nil {
+		var m matcher.Matcher
+		if m, b.err = matcher.PathPrefix(pathPrefix); b.err == nil {
+			b = b.And(m)
+		}
+	}
+	return b
+}
+
+// Method is the same as b.And(matcher.Method(method)).
+func (b RouteBuilder) Method(method string) RouteBuilder {
+	if b.err == nil {
+		var m matcher.Matcher
+		if m, b.err = matcher.Method(method); b.err == nil {
+			b = b.And(m)
+		}
+	}
+	return b
+}
+
+// ClientIP is the same as b.And(matcher.ClientIP(clientIP)).
+func (b RouteBuilder) ClientIP(clientIP string) RouteBuilder {
+	if b.err == nil {
+		var m matcher.Matcher
+		if m, b.err = matcher.ClientIP(clientIP); b.err == nil {
+			b = b.And(m)
+		}
+	}
+	return b
+}
+
+// Query is the same as b.And(matcher.Query(key, value)).
+func (b RouteBuilder) Query(key, value string) RouteBuilder {
+	if b.err == nil {
+		var m matcher.Matcher
+		if m, b.err = matcher.Query(key, value); b.err == nil {
+			b = b.And(m)
+		}
+	}
+	return b
+}
+
+// Header is the same as b.And(matcher.Header(key, value)).
+func (b RouteBuilder) Header(key, value string) RouteBuilder {
+	if b.err == nil {
+		var m matcher.Matcher
+		if m, b.err = matcher.Header(key, value); b.err == nil {
+			b = b.And(m)
+		}
+	}
+	return b
+}
+
+// HeaderRegexp is the same as b.And(matcher.HeaderRegexp(key, regexpValue)).
+func (b RouteBuilder) HeaderRegexp(key, regexpValue string) RouteBuilder {
+	if b.err == nil {
+		var m matcher.Matcher
+		if m, b.err = matcher.HeaderRegexp(key, regexpValue); b.err == nil {
+			b = b.And(m)
+		}
+	}
+	return b
+}
+
+// Host is the same as b.And(matcher.Host(host)).
+func (b RouteBuilder) Host(host string) RouteBuilder {
+	if b.err == nil {
+		var m matcher.Matcher
+		if m, b.err = matcher.Host(host); b.err == nil {
+			b = b.And(m)
+		}
+	}
+	return b
+}
+
+// HostRegexp is the same as b.And(matcher.HostRegexp(regexpHost)).
+func (b RouteBuilder) HostRegexp(regexpHost string) RouteBuilder {
+	if b.err == nil {
+		var m matcher.Matcher
+		if m, b.err = matcher.HostRegexp(regexpHost); b.err == nil {
+			b = b.And(m)
+		}
+	}
+	return b
+}
+
 // HandlerFunc adds the route with the handler functions.
 func (b RouteBuilder) HandlerFunc(handler http.HandlerFunc) error {
 	return b.Handler(handler)
@@ -90,6 +233,10 @@ func (b RouteBuilder) Handler(handler http.Handler) error {
 }
 
 func (b RouteBuilder) addRoute(handler http.Handler) (err error) {
+	if b.matcher == nil && len(b.matchers) > 0 {
+		b.matcher = matcher.And(b.matchers...)
+	}
+
 	rule := b.rule
 	if b.matcher != nil {
 		rule = b.matcher.String()
@@ -98,15 +245,15 @@ func (b RouteBuilder) addRoute(handler http.Handler) (err error) {
 		return fmt.Errorf("missing the route matcher")
 	}
 
-	name := b.name
-	if name == "" {
-		name = rule
-	}
-
 	if b.matcher == nil {
 		if b.matcher, err = b.router.builder.Parse(rule); err != nil {
 			return err
 		}
+	}
+
+	name := b.name
+	if name == "" {
+		name = rule
 	}
 
 	route, err := NewRouteWithError(name, b.priority, b.matcher, handler)
