@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,10 @@ package matcher
 
 import (
 	"net/http"
+	"net/url"
 	"testing"
+
+	"github.com/xgfone/go-apiserver/http/reqresp"
 )
 
 func testMatcher(t *testing.T, req *http.Request, matcher Matcher, match bool) {
@@ -78,4 +81,102 @@ func TestMatcher(t *testing.T) {
 	testMatcher(t, req, Or(Must(Method("GET")), Must(Path("/path/to"))), true)
 	testMatcher(t, req, Or(Must(Method("GET")), Must(Path("/path"))), true)
 	testMatcher(t, req, Or(Must(Method("POST")), Must(Path("/path"))), false)
+}
+
+func TestPathMatcherParameter(t *testing.T) {
+	matchers := []Matcher{
+		Must(Path("/prefix/{id}")),
+		Must(Path("/prefix/{id}/")),
+		Must(Path("/prefix/{id}/path")),
+		Must(Path("/prefix/{id}/to/{name}")),
+	}
+
+	paths := []struct {
+		Path string
+		Args map[string]string
+	}{
+		{Path: "/prefix/123", Args: map[string]string{"id": "123"}},
+		{Path: "/prefix/123/", Args: map[string]string{"id": "123"}},
+		{Path: "/prefix/123/path", Args: map[string]string{"id": "123"}},
+		{Path: "/prefix/123/to/abc", Args: map[string]string{"id": "123", "name": "abc"}},
+		{Path: "/not/match"},
+	}
+
+	req := &http.Request{URL: &url.URL{}}
+	for i, m := range matchers {
+		for j, p := range paths {
+			req.URL.Path = p.Path
+			nreq, ok := m.Match(req)
+			if i == j {
+				if !ok {
+					t.Errorf("%s does not match the path '%s'", m.String(), p.Path)
+					continue
+				}
+
+				if datas := reqresp.GetReqDatas(nreq); len(p.Args) != len(datas) {
+					t.Errorf("expect %d arguments, but got %d: %v", len(p.Args), len(datas), datas)
+					t.Error(reqresp.GetContext(nreq))
+				} else {
+					for key, value := range p.Args {
+						if v := datas[key]; v != value {
+							t.Errorf("argument '%s': expect value '%s', but got '%s'", key, value, v)
+						}
+					}
+				}
+			} else {
+				if ok {
+					t.Errorf("%s does not expect to match the path '%s'", m.String(), p.Path)
+				}
+			}
+		}
+	}
+}
+
+func TestPathPrefixMatcherParameter(t *testing.T) {
+	matcher := Must(PathPrefix("/prefix/{id}"))
+
+	paths := []struct {
+		Match bool
+		Path  string
+		Args  map[string]string
+	}{
+		{Match: true, Path: "/prefix/123", Args: map[string]string{"id": "123"}},
+		{Match: true, Path: "/prefix/123/", Args: map[string]string{"id": "123"}},
+		{Match: true, Path: "/prefix/123/path", Args: map[string]string{"id": "123"}},
+		{Match: false, Path: "/notmatch/123"},
+	}
+
+	req := &http.Request{URL: &url.URL{}}
+	for _, p := range paths {
+		req.URL.Path = p.Path
+		nreq, ok := matcher.Match(req)
+		if p.Match {
+			if !ok {
+				t.Errorf("%s does not match the path '%s'", matcher.String(), p.Path)
+				continue
+			}
+
+			if datas := reqresp.GetReqDatas(nreq); len(p.Args) != len(datas) {
+				t.Errorf("expect %d arguments, but got %d: %v", len(p.Args), len(datas), datas)
+				t.Error(reqresp.GetContext(nreq))
+			} else {
+				for key, value := range p.Args {
+					if v := datas[key]; v != value {
+						t.Errorf("argument '%s': expect value '%s', but got '%s'", key, value, v)
+					}
+				}
+			}
+		} else {
+			if ok {
+				t.Errorf("%s does not expect to match the path '%s'", matcher.String(), p.Path)
+			}
+		}
+	}
+
+	matcher = Must(PathPrefix("/prefix/{id}/"))
+	req.URL.Path = "/prefix/123"
+	_, ok := matcher.Match(req)
+	if ok {
+		t.Errorf("unexpect the matcher '%s' to match the path '%s'", matcher.String(), req.URL.Path)
+	}
 }

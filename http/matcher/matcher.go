@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/nets"
@@ -201,10 +202,24 @@ const (
 
 var (
 	// Path returns a path matcher to match the request path accurately.
+	//
+	// For the default implementation, it supports the path parameters,
+	// such as "/{param1}/{param2}" or "/prefix/{param1}/path/{param2}/to".
+	// For the path arguments extracted from the request path, they will be
+	// put into the Datas field of reqresp.Context that can be accessed from
+	// the new request returned by the matcher by using reqresp.GetContext.
 	Path func(path string) (Matcher, error) = pathMatcher
 
 	// PathPrefix returns a path prefix matcher to match the prefix
 	// of the request path.
+	//
+	// For the default implementation, it supports the path parameters,
+	// such as "/{param1}/{param2}" or "/prefix/{param1}/path/{param2}/to".
+	// For the path arguments extracted from the request path, they will be
+	// put into the Datas field of reqresp.Context that can be accessed from
+	// the new request returned by the matcher by using reqresp.GetContext.
+	// Furthermore, the prefix path "/prefix" matches the path "/prefix/",
+	// but the prefix path "/prefix/" does not match the path "/prefix".
 	PathPrefix func(pathPrefix string) (Matcher, error) = pathPrefixMatcher
 
 	// Method returns a method matcher to match the request method.
@@ -241,18 +256,121 @@ var (
 	HostRegexp func(regexpHost string) (Matcher, error) = hostRegexpMatcher
 )
 
+var kvpool = sync.Pool{New: func() interface{} { return make([]kv, 0, 4) }}
+
+type kv struct {
+	key   string
+	value string
+}
+
+type argPath struct {
+	name string
+	path string
+}
+
+type urlPath struct {
+	isPrefix bool
+	rawPath  string
+	paths    []argPath
+	plen     int
+}
+
+func (p urlPath) Match(old *http.Request) (new *http.Request, ok bool) {
+	if p.plen == 0 {
+		if p.isPrefix {
+			return old, strings.HasPrefix(GetPath(old), p.rawPath)
+		}
+		return old, GetPath(old) == p.rawPath
+	}
+
+	args := kvpool.Get().([]kv)
+	path := GetPath(old)
+
+	var i int
+	for ; i < p.plen && len(path) > 0; i++ {
+		ap := p.paths[i]
+		if len(ap.name) == 0 {
+			if !strings.HasPrefix(path, ap.path) {
+				kvpool.Put(args[:0])
+				return old, false
+			}
+
+			path = path[len(ap.path):]
+			continue
+		}
+
+		if index := strings.IndexByte(path, '/'); index == -1 {
+			args = append(args, kv{key: ap.name, value: path})
+			path = ""
+		} else {
+			args = append(args, kv{key: ap.name, value: path[:index]})
+			path = path[index:]
+		}
+	}
+
+	ok = i == p.plen
+	if ok && !p.isPrefix {
+		ok = len(path) == 0
+	}
+
+	new = old
+	if ok {
+		c, isnew := reqresp.GetOrNewContext(old)
+		for i, _len := 0, len(args); i < _len; i++ {
+			c.Datas[args[i].key] = args[i].value
+		}
+		if isnew {
+			new = reqresp.SetContext(old, c)
+		}
+	}
+
+	kvpool.Put(args[:0])
+	return
+}
+
+func newPathMatcher(desc, path string, isPrefix bool) (Matcher, error) {
+	p := urlPath{isPrefix: isPrefix, rawPath: path}
+
+	if strings.IndexByte(path, '{') > -1 && strings.IndexByte(path, '}') > -1 {
+		p.paths = make([]argPath, 0, 4)
+		for len(path) > 0 {
+			leftIndex := strings.IndexByte(path, '{')
+			if leftIndex == -1 {
+				p.paths = append(p.paths, argPath{path: path})
+				break
+			}
+
+			rightIndex := strings.IndexByte(path, '}')
+			if rightIndex == -1 {
+				p.paths = append(p.paths, argPath{path: path})
+				break
+			}
+
+			name := path[leftIndex+1 : rightIndex]
+			if name == "" {
+				return nil, fmt.Errorf("no path parameter name at index between %d and %d",
+					leftIndex, rightIndex)
+			}
+
+			p.paths = append(p.paths, argPath{path: path[:leftIndex]})
+			p.paths = append(p.paths, argPath{name: name})
+			path = path[rightIndex+1:]
+		}
+		p.plen = len(p.paths)
+	}
+
+	return New(prioPath, desc, p.Match), nil
+}
+
 func pathMatcher(path string) (Matcher, error) {
 	if len(path) == 0 {
 		return nil, errors.New("the url path is empty")
 	} else if path[0] != '/' {
 		return nil, fmt.Errorf("the url path does not start with '/'")
 	}
-	// TODO: path parameters
 
 	desc := fmt.Sprintf("Path(%s)", path)
-	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
-		return r, GetPath(r) == path
-	}), nil
+	return newPathMatcher(desc, path, false)
 }
 
 func pathPrefixMatcher(pathPrefix string) (Matcher, error) {
@@ -261,12 +379,9 @@ func pathPrefixMatcher(pathPrefix string) (Matcher, error) {
 	} else if pathPrefix[0] != '/' {
 		return nil, fmt.Errorf("the url path prefix does not start with '/'")
 	}
-	// TODO: path parameters
 
 	desc := fmt.Sprintf("PathPrefix(%s)", pathPrefix)
-	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
-		return r, strings.HasPrefix(r.URL.Path, pathPrefix)
-	}), nil
+	return newPathMatcher(desc, pathPrefix, true)
 }
 
 func methodMatcher(method string) (Matcher, error) {
