@@ -156,12 +156,12 @@ func handleResult(lb *LoadBalancer, w http.ResponseWriter, r *http.Request, err 
 	switch err {
 	case nil:
 		if logger := log.Trace(); logger.Enabled() {
-			logger.Kv("upstream", lb.name).
-				Kv("balancer", lb.GetBalancer().Policy()).
-				Kv("clientaddr", r.RemoteAddr).
-				Kv("reqhost", r.Host).
-				Kv("reqmethod", r.Method).
-				Kv("reqpath", r.URL.Path).
+			logger.Str("upstream", lb.name).
+				Str("balancer", lb.GetBalancer().Policy()).
+				Str("clientaddr", r.RemoteAddr).
+				Str("reqhost", r.Host).
+				Str("reqmethod", r.Method).
+				Str("reqpath", r.URL.Path).
 				Printf("forward the http request")
 		}
 		return
@@ -179,13 +179,13 @@ func handleResult(lb *LoadBalancer, w http.ResponseWriter, r *http.Request, err 
 	}
 
 	log.Error().
-		Kv("upstream", lb.name).
-		Kv("balancer", lb.GetBalancer().Policy()).
-		Kv("clientaddr", r.RemoteAddr).
-		Kv("reqhost", r.Host).
-		Kv("reqmethod", r.Method).
-		Kv("reqpath", r.URL.Path).
-		Kv("err", err).
+		Str("upstream", lb.name).
+		Str("balancer", lb.GetBalancer().Policy()).
+		Str("clientaddr", r.RemoteAddr).
+		Str("reqhost", r.Host).
+		Str("reqmethod", r.Method).
+		Str("reqpath", r.URL.Path).
+		Err(err).
 		Printf("fail to forward the http request")
 }
 

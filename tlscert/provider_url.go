@@ -183,14 +183,14 @@ func (p *URLProvider) checkAndUpdate(info *urlCertInfo, updater CertUpdater) {
 		defer resp.Body.Close()
 	}
 	if err != nil {
-		log.Error().Kv("name", info.Name).Kv("url", info.URL).Kv("err", err).
+		log.Error().Str("name", info.Name).Str("url", info.URL).Err(err).
 			Printf("fail to get the certificate")
 		return
 	}
 
 	var r urlCert
 	if err = json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		log.Error().Kv("name", info.Name).Kv("err", err).
+		log.Error().Str("name", info.Name).Err(err).
 			Printf("fail to decode the response body with json")
 		return
 	}
@@ -201,7 +201,7 @@ func (p *URLProvider) checkAndUpdate(info *urlCertInfo, updater CertUpdater) {
 
 	cert, err := NewCertificate([]byte(r.CA), []byte(r.Key), []byte(r.Cert))
 	if err != nil {
-		log.Error().Kv("name", info.Name).Kv("err", err).
+		log.Error().Str("name", info.Name).Err(err).
 			Printf("fail to create certificate")
 		return
 	}
