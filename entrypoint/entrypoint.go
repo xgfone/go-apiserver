@@ -55,33 +55,41 @@ type EntryPoint struct {
 	httpHandler *tcp.HTTPServerHandler
 }
 
+// NewHTTPEntryPoint returns a new http entrypoint.
+func NewHTTPEntryPoint(name, addr string, handler http.Handler) (*EntryPoint, error) {
+	ln, err := tcp.Listen(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	if handler == nil {
+		handler = router.NewRouter()
+	}
+
+	ep := &EntryPoint{Name: name, Addr: addr, protocol: "http"}
+	ep.httpHandler = tcp.NewHTTPServerHandler(ln.Addr(), handler)
+	ep.mwHandler = tcp.NewMiddlewareHandler(ep.httpHandler)
+	ep.server = tcp.NewServer(ln, ep.mwHandler, nil)
+	return ep, nil
+}
+
 // NewEntryPoint returns a new entrypoint.
 func NewEntryPoint(name, addr string) (*EntryPoint, error) {
-	ep := EntryPoint{Name: name, Addr: addr, protocol: "http"}
-
+	var protocol string
 	if index := strings.Index(addr, "://"); index > -1 {
-		ep.protocol = addr[:index]
+		protocol = addr[:index]
 		addr = addr[index+3:]
 	}
 
-	switch ep.protocol {
+	switch protocol {
 	case "", "http":
-		ln, err := tcp.Listen(addr)
-		if err != nil {
-			return nil, err
-		}
-
-		ep.httpHandler = tcp.NewHTTPServerHandler(ln.Addr(), router.NewRouter())
-		ep.mwHandler = tcp.NewMiddlewareHandler(ep.httpHandler)
-		ep.server = tcp.NewServer(ln, ep.mwHandler, nil)
+		return NewHTTPEntryPoint(name, addr, nil)
 
 	// case "tcp":
 	// case "udp":
 	default:
-		return nil, fmt.Errorf("unknown entrypoint protocol '%s'", ep.protocol)
+		return nil, fmt.Errorf("unknown entrypoint protocol '%s'", protocol)
 	}
-
-	return &ep, nil
 }
 
 // Protocol returns the protocol of the entrypoint, such as "http", "tcp" or "udp".
@@ -119,13 +127,13 @@ func (ep *EntryPoint) Start() {
 		panic("unknown the entrypoint server type")
 	}
 
-	log.Info().Kv("name", ep.Name).Kv("listenaddr", ep.Addr).
+	log.Info().Str("name", ep.Name).Str("listenaddr", ep.Addr).
 		Printf("start the %s server", ep.protocol)
 
 	go ep.httpHandler.Start()
 	ep.server.Start()
 
-	log.Info().Kv("name", ep.Name).Kv("listenaddr", ep.Addr).
+	log.Info().Str("name", ep.Name).Str("listenaddr", ep.Addr).
 		Printf("stop the %s server", ep.protocol)
 }
 
