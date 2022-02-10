@@ -31,6 +31,25 @@ type noopCertUpdater struct{}
 func (u noopCertUpdater) AddCertificate(name string, cert Certificate) {}
 func (u noopCertUpdater) DelCertificate(name string)                   {}
 
+// CertUpdaters is a set of CertUpdaters.
+type CertUpdaters []CertUpdater
+
+// AddCertificate implements the interface CertUpdater,
+// which will forward to each updater member.
+func (us CertUpdaters) AddCertificate(name string, cert Certificate) {
+	for _, updater := range us {
+		updater.AddCertificate(name, cert)
+	}
+}
+
+// DelCertificate implements the interface CertUpdater,
+// which will forward to each updater member.
+func (us CertUpdaters) DelCertificate(name string) {
+	for _, updater := range us {
+		updater.DelCertificate(name)
+	}
+}
+
 // Provider is used to provide the certificates.
 type Provider interface {
 	// Name is the name of the provider, which indicates uniquely the provider.
