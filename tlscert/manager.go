@@ -32,9 +32,10 @@ type CertManager struct {
 	// Default: cert.MatchHost(host) || cert.MatchIP(host)
 	CertMatchHost func(cert Certificate, host string) bool
 
-	name  string
-	lock  sync.RWMutex
-	certs map[string]Certificate
+	name    string
+	lock    sync.RWMutex
+	certs   map[string]Certificate
+	updater CertUpdater
 
 	tlsCerts  atomic.Value
 	tlsConfig atomic.Value
@@ -55,6 +56,16 @@ func (m *CertManager) certMatchHost(cert Certificate, host string) bool {
 
 // Name returns the name of the manager.
 func (m *CertManager) Name() string { return m.name }
+
+// OnChanged sets the certificate updater, and calls back the updater
+// when adding or deleting a certain certificate.
+//
+// If the updater is nil, unset it.
+func (m *CertManager) OnChanged(updater CertUpdater) {
+	m.lock.Lock()
+	m.updater = updater
+	m.lock.Unlock()
+}
 
 // GetCertificates returns all the certificates.
 func (m *CertManager) GetCertificates() map[string]Certificate {
@@ -86,9 +97,10 @@ func (m *CertManager) AddCertificate(name string, cert Certificate) {
 	}
 
 	m.lock.Lock()
+	defer m.lock.Unlock()
 	m.certs[name] = cert
 	m.updateCertificates()
-	m.lock.Unlock()
+	m.updater.AddCertificate(name, cert)
 	return
 }
 
@@ -96,11 +108,12 @@ func (m *CertManager) AddCertificate(name string, cert Certificate) {
 // if the certificate does not exist.
 func (m *CertManager) DelCertificate(name string) {
 	m.lock.Lock()
+	defer m.lock.Unlock()
 	if _, ok := m.certs[name]; ok {
 		delete(m.certs, name)
 		m.updateCertificates()
+		m.updater.DelCertificate(name)
 	}
-	m.lock.Unlock()
 }
 
 func (m *CertManager) updateCertificates() {
