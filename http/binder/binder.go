@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package reqresp
+// Package binder is used to bind a value to the http request.
+package binder
 
 import (
 	"encoding/json"
 	"encoding/xml"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
 )
 
-// Binder is used to bind the request data to a struct.
+// Binder is used to bind the data to the http request.
 type Binder interface {
 	// Bind parses the data from http.Request to dst.
 	//
@@ -37,6 +40,11 @@ type BinderFunc func(dst interface{}, req *http.Request) error
 // Bind implements the interface Binder.
 func (f BinderFunc) Bind(dst interface{}, req *http.Request) error {
 	return f(dst, req)
+}
+
+// BindQuery binds the data to the url query, which supports the struct tag "query".
+func BindQuery(data interface{}, query url.Values) error {
+	return BindURLValues(data, query, "query")
 }
 
 // JSONBinder returns a binder to bind the data to the request body as JSON.
@@ -56,6 +64,24 @@ func XMLBinder() Binder {
 			err = xml.NewDecoder(r.Body).Decode(v)
 		}
 		return
+	})
+}
+
+// FormBinder returns a binder to bind the data to the request body as Form,
+// which supports the struct tag "form".
+func FormBinder(maxMemory int64) Binder {
+	return BinderFunc(func(v interface{}, r *http.Request) (err error) {
+		ct := r.Header.Get("Content-Type")
+
+		if strings.HasPrefix(ct, header.MIMEMultipartForm) {
+			if err = r.ParseMultipartForm(maxMemory); err != nil {
+				return
+			}
+		} else if err = r.ParseForm(); err != nil {
+			return err
+		}
+
+		return BindURLValues(v, r.Form, "form")
 	})
 }
 

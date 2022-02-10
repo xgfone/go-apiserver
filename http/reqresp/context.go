@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/xgfone/go-apiserver/http/binder"
 	"github.com/xgfone/go-apiserver/http/header"
 )
 
@@ -204,7 +205,7 @@ type Context struct {
 	Err    error                  // used to store the error
 	Any    interface{}            // any single-value data
 	Datas  map[string]interface{} // a set of any key-value datas
-	Binder Binder
+	Binder binder.Binder
 
 	// Query and Cookies are used to cache the parsed request query and cookies.
 	Cookies []*http.Cookie
