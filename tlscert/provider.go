@@ -26,6 +26,11 @@ type CertUpdater interface {
 	DelCertificate(name string)
 }
 
+type noopCertUpdater struct{}
+
+func (u noopCertUpdater) AddCertificate(name string, cert Certificate) {}
+func (u noopCertUpdater) DelCertificate(name string)                   {}
+
 // Provider is used to provide the certificates.
 type Provider interface {
 	// Name is the name of the provider, which indicates uniquely the provider.

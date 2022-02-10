@@ -47,6 +47,7 @@ func NewCertManager(name string) *CertManager {
 	cm.tlsCerts.Store(tlsCertsWrapper{})
 	cm.CertMatchHost = cm.certMatchHost
 	cm.SetTLSConfig(&tls.Config{})
+	cm.OnChanged(nil)
 	return cm
 }
 
@@ -63,7 +64,11 @@ func (m *CertManager) Name() string { return m.name }
 // If the updater is nil, unset it.
 func (m *CertManager) OnChanged(updater CertUpdater) {
 	m.lock.Lock()
-	m.updater = updater
+	if updater == nil {
+		m.updater = noopCertUpdater{}
+	} else {
+		m.updater = updater
+	}
 	m.lock.Unlock()
 }
 
