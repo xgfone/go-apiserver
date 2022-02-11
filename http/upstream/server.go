@@ -200,13 +200,13 @@ func GetServerWeight(server Server) int {
 }
 
 // DefaultServersPool is the default servers pool.
-var DefaultServersPool = NewServerPool(16)
+var DefaultServersPool = NewServersPool(16)
 
 // ServersPool is used to allocate and recycle the server slice.
 type ServersPool struct{ pool sync.Pool }
 
-// NewServerPool returns a new servers pool.
-func NewServerPool(defaultCap int) *ServersPool {
+// NewServersPool returns a new servers pool.
+func NewServersPool(defaultCap int) *ServersPool {
 	sp := &ServersPool{}
 	sp.pool.New = func() interface{} { return make(Servers, 0, defaultCap) }
 	return sp
