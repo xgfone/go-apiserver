@@ -178,7 +178,7 @@ func Must(matcher Matcher, err error) Matcher {
 // GetPath is used to get the path from the request.
 var GetPath = func(r *http.Request) (path string) { return r.URL.Path }
 
-// GetHost is used to get the host name from the request.
+// GetHost is used to get the host name without the port from the request.
 var GetHost = func(r *http.Request) (host string) {
 	if r.TLS != nil && r.TLS.ServerName != "" {
 		host = r.TLS.ServerName
