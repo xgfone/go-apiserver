@@ -22,9 +22,9 @@ import (
 
 // ConsistentHash returns a new balancer based on the consistent hash.
 //
-// The policy name is "consistent_hash".
-func ConsistentHash(hash func(*http.Request) int) Balancer {
-	return NewBalancer("consistent_hash",
+// The policy name is equal to hashPolicy with the prefix "consistent_hash_".
+func ConsistentHash(hashPolicy string, hash func(*http.Request) int) Balancer {
+	return NewBalancer("consistent_hash_"+hashPolicy,
 		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
 			return forward(w, r, s[hash(r)%len(s)])
 		})

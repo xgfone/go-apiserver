@@ -23,11 +23,8 @@ type Builder func(config interface{}) (Balancer, error)
 
 var builders = make(map[string]Builder, 16)
 
-func registerBuiltinBuidler(t string, newBalancer func() Balancer) {
-	RegisterBuidler(t, func(interface{}) (balancer Balancer, err error) {
-		balancer = newBalancer()
-		return
-	})
+func registerBuiltinBuidler(t string, f func() Balancer) {
+	RegisterBuidler(t, func(interface{}) (Balancer, error) { return f(), nil })
 }
 
 // RegisterBuidler registers the given balancer builder.
