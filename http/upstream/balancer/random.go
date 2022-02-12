@@ -30,22 +30,22 @@ func init() {
 // Random returns a new balancer based on the random.
 //
 // The policy name is "random".
-func Random(callback SelectedServerCallback) Balancer {
+func Random() Balancer {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return NewForwarder("random",
+	return NewBalancer("random",
 		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
-			return serverCallback(callback, w, r, s[random.Intn(len(s))])
+			return forward(w, r, s[random.Intn(len(s))])
 		})
 }
 
 // WeightedRandom returns a new balancer based on the roundrobin and weight.
 //
 // The policy name is "weight_random".
-func WeightedRandom(callback SelectedServerCallback) Balancer {
+func WeightedRandom() Balancer {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return NewForwarder("weight_random",
+	return NewBalancer("weight_random",
 		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
 			pos := uint64(random.Intn(len(s)))
-			return serverCallback(callback, w, r, calcServerOnWeight(s, pos))
+			return forward(w, r, calcServerOnWeight(s, pos))
 		})
 }

@@ -32,9 +32,9 @@ func init() {
 // SourceIPHash returns a new balancer based on the source-ip hash.
 //
 // The policy name is "source_ip_hash".
-func SourceIPHash(callback SelectedServerCallback) Balancer {
+func SourceIPHash() Balancer {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return NewForwarder("source_ip_hash",
+	return NewBalancer("source_ip_hash",
 		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
 			var value uint64
 			_len := len(ss)
@@ -49,6 +49,6 @@ func SourceIPHash(callback SelectedServerCallback) Balancer {
 				value = uint64(random.Intn(_len))
 			}
 
-			return serverCallback(callback, w, r, ss[value%uint64(_len)])
+			return forward(w, r, ss[value%uint64(_len)])
 		})
 }

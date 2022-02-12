@@ -34,8 +34,8 @@ func testHandler(key string) http.Handler {
 }
 
 func TestLoadBalancer(t *testing.T) {
-	lb := NewLoadBalancer("test", balancer.RoundRobin(nil))
-	lb.SwapBalancer(balancer.Retry(balancer.RoundRobin(nil)))
+	lb := NewLoadBalancer("test", balancer.RoundRobin())
+	lb.SwapBalancer(balancer.Retry(balancer.RoundRobin()))
 
 	go func() {
 		server := http.Server{Addr: "127.0.0.1:8101", Handler: testHandler("8101")}

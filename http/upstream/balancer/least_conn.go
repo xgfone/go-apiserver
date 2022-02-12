@@ -28,13 +28,13 @@ func init() {
 // LeastConn returns a new balancer based on the least number of the connection.
 //
 // The policy name is "least_conn".
-func LeastConn(callback SelectedServerCallback) Balancer {
-	return NewForwarder("least_conn",
+func LeastConn() Balancer {
+	return NewBalancer("least_conn",
 		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) (err error) {
 			servers := upstream.DefaultServersPool.Acquire()
 			servers = append(servers, ss...)
 			sort.Stable(leastConnServers(servers))
-			err = serverCallback(callback, w, r, servers[0])
+			err = forward(w, r, servers[0])
 			upstream.DefaultServersPool.Release(servers)
 			return err
 		})

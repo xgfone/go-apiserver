@@ -36,7 +36,7 @@ func TestSourceIPHash(t *testing.T) {
 	req2.RemoteAddr = "192.168.0.1"
 	req3.RemoteAddr = "192.168.0.2"
 
-	balancer := SourceIPHash(nil)
+	balancer := SourceIPHash()
 	balancer.Forward(rec, req1, servers)
 	balancer.Forward(rec, req1, servers)
 	balancer.Forward(rec, req1, servers)

@@ -30,23 +30,23 @@ func init() {
 // RoundRobin returns a new balancer based on the roundrobin.
 //
 // The policy name is "round_robin".
-func RoundRobin(callback SelectedServerCallback) Balancer {
+func RoundRobin() Balancer {
 	last := uint64(math.MaxUint64)
-	return NewForwarder("round_robin",
+	return NewBalancer("round_robin",
 		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
 			pos := atomic.AddUint64(&last, 1)
-			return serverCallback(callback, w, r, s[pos%uint64(len(s))])
+			return forward(w, r, s[pos%uint64(len(s))])
 		})
 }
 
 // WeightedRoundRobin returns a new balancer based on the roundrobin and weight.
 //
 // The policy name is "weight_round_robin".
-func WeightedRoundRobin(callback SelectedServerCallback) Balancer {
+func WeightedRoundRobin() Balancer {
 	last := uint64(math.MaxUint64)
-	return NewForwarder("weight_round_robin",
+	return NewBalancer("weight_round_robin",
 		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
 			pos := atomic.AddUint64(&last, 1)
-			return serverCallback(callback, w, r, calcServerOnWeight(s, pos))
+			return forward(w, r, calcServerOnWeight(s, pos))
 		})
 }

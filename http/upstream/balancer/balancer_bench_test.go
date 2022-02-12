@@ -45,25 +45,25 @@ func benchmarkBalancer(b *testing.B, balancer Balancer) {
 }
 
 func BenchmarkSourceIPHash(b *testing.B) {
-	benchmarkBalancer(b, SourceIPHash(nil))
+	benchmarkBalancer(b, SourceIPHash())
 }
 
 func BenchmarkRandom(b *testing.B) {
-	benchmarkBalancer(b, Random(nil))
+	benchmarkBalancer(b, Random())
 }
 
 func BenchmarkRoundRobin(b *testing.B) {
-	benchmarkBalancer(b, RoundRobin(nil))
+	benchmarkBalancer(b, RoundRobin())
 }
 
 func BenchmarkWeightedRandom(b *testing.B) {
-	benchmarkBalancer(b, WeightedRandom(nil))
+	benchmarkBalancer(b, WeightedRandom())
 }
 
 func BenchmarkWeightedRoundRobin(b *testing.B) {
-	benchmarkBalancer(b, WeightedRoundRobin(nil))
+	benchmarkBalancer(b, WeightedRoundRobin())
 }
 
 func BenchmarkLeastConn(b *testing.B) {
-	benchmarkBalancer(b, LeastConn(nil))
+	benchmarkBalancer(b, LeastConn())
 }
