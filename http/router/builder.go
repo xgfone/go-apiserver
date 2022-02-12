@@ -209,12 +209,12 @@ func (b RouteBuilder) HostRegexp(regexpHost string) RouteBuilder {
 	return b
 }
 
-// HandlerFunc adds the route with the handler functions.
+// HandlerFunc registers the route with the handler functions.
 func (b RouteBuilder) HandlerFunc(handler http.HandlerFunc) error {
 	return b.Handler(handler)
 }
 
-// Handler adds the route with the handler.
+// Handler registers the route with the handler.
 func (b RouteBuilder) Handler(handler http.Handler) error {
 	err := b.addRoute(handler)
 	if err != nil && b.panic {
@@ -243,4 +243,46 @@ func (b RouteBuilder) addRoute(handler http.Handler) (err error) {
 	}
 
 	return b.router.AddRoute(route)
+}
+
+// GET is a convenient function to register the route with the handler,
+// which is the same as b.Method(http.MethodGet).Handler(handler).
+func (b RouteBuilder) GET(handler http.HandlerFunc) RouteBuilder {
+	b.Method(http.MethodGet).SetPanic(true).Handler(handler)
+	return b
+}
+
+// PUT is a convenient function to register the route with the handler,
+// which is the same as b.Method(http.MethodPut).Handler(handler).
+func (b RouteBuilder) PUT(handler http.HandlerFunc) RouteBuilder {
+	b.Method(http.MethodPut).SetPanic(true).Handler(handler)
+	return b
+}
+
+// POST is a convenient function to register the route with the handler,
+// which is the same as b.Method(http.MethodPost).Handler(handler).
+func (b RouteBuilder) POST(handler http.HandlerFunc) RouteBuilder {
+	b.Method(http.MethodPost).SetPanic(true).Handler(handler)
+	return b
+}
+
+// DELETE is a convenient function to register the route with the handler,
+// which is the same as b.Method(http.MethodDelete).Handler(handler).
+func (b RouteBuilder) DELETE(handler http.HandlerFunc) RouteBuilder {
+	b.Method(http.MethodDelete).SetPanic(true).Handler(handler)
+	return b
+}
+
+// PATCH is a convenient function to register the route with the handler,
+// which is the same as b.Method(http.MethodPatch).Handler(handler).
+func (b RouteBuilder) PATCH(handler http.HandlerFunc) RouteBuilder {
+	b.Method(http.MethodPatch).SetPanic(true).Handler(handler)
+	return b
+}
+
+// HEAD is a convenient function to register the route with the handler,
+// which is the same as b.Method(http.MethodHead).Handler(handler).
+func (b RouteBuilder) HEAD(handler http.HandlerFunc) RouteBuilder {
+	b.Method(http.MethodHead).SetPanic(true).Handler(handler)
+	return b
 }
