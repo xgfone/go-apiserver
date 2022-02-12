@@ -100,11 +100,9 @@ func (b RouteBuilder) Rule(rule string) RouteBuilder {
 	return b
 }
 
-// Match sets the matcher of the route.
-func (b RouteBuilder) Match(matchers ...matcher.Matcher) RouteBuilder {
-	if len(matchers) > 0 {
-		b.matcher = matcher.And(matchers...)
-	}
+// Matcher resets the matcher of the route.
+func (b RouteBuilder) Matcher(matcher matcher.Matcher) RouteBuilder {
+	b.matcher = matcher
 	return b
 }
 

@@ -30,7 +30,7 @@ func TestPriorityRoute(t *testing.T) {
 	router := NewRouter()
 
 	hostMatcher, _ := matcher.Host("127.0.0.1")
-	router.Name("route1").Match(hostMatcher).
+	router.Name("route1").Matcher(hostMatcher).
 		HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			rw.WriteHeader(201)
 			rw.Write([]byte(`route1`))
