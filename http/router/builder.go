@@ -28,9 +28,15 @@ func (r *Router) Name(name string) RouteBuilder {
 }
 
 // Matcher returns a route builder with the matcher,
-// which is equal to NewRouteBuilder(r).Matcher(matchRule).
+// which is equal to NewRouteBuilder(r).Matcher(matcher).
 func (r *Router) Matcher(matcher matcher.Matcher) RouteBuilder {
 	return NewRouteBuilder(r).Matcher(matcher)
+}
+
+// Rule returns a route builder with the matcher rule,
+// which is equal to NewRouteBuilder(r).Rule(matcherRule).
+func (r *Router) Rule(matcherRule string) RouteBuilder {
+	return NewRouteBuilder(r).Rule(matcherRule)
 }
 
 // Path returns a route builder with the path matcher,
@@ -96,18 +102,35 @@ func (b RouteBuilder) Priority(priority int) RouteBuilder {
 // Matcher resets the matcher of the route.
 func (b RouteBuilder) Matcher(matcher matcher.Matcher) RouteBuilder {
 	b.matcher = matcher
+	b.matchers = nil
+	b.err = nil
 	return b
 }
 
 // And appends the matchers based on AND.
 func (b RouteBuilder) And(matchers ...matcher.Matcher) RouteBuilder {
 	b.matchers = append(b.matchers, matchers...)
+	b.matcher = nil
 	return b
 }
 
 // Or is eqaul to b.And(matcher.Or(matchers...)).
 func (b RouteBuilder) Or(matchers ...matcher.Matcher) RouteBuilder {
 	return b.And(matcher.Or(matchers...))
+}
+
+// Rule is the same as Matcher, but use the builder to build the matcher
+// with the matcher rule string.
+func (b RouteBuilder) Rule(matcherRule string) RouteBuilder {
+	if b.router.RuleBuilder == nil {
+		panic("not set the rule buidler of the route matcher")
+	}
+
+	if b.err == nil {
+		b.matcher, b.err = b.router.RuleBuilder(matcherRule)
+		b.matchers = nil
+	}
+	return b
 }
 
 // Path is the same as b.And(matcher.Path(path)).
@@ -216,6 +239,10 @@ func (b RouteBuilder) HandlerFunc(handler http.HandlerFunc) error {
 
 // Handler registers the route with the handler.
 func (b RouteBuilder) Handler(handler http.Handler) error {
+	if b.err == nil {
+
+	}
+
 	err := b.addRoute(handler)
 	if err != nil && b.panic {
 		panic(err)

@@ -102,6 +102,9 @@ type routesWrapper struct{ Routes }
 // Router is the http router to dispatch the request to the different handlers
 // by the route rule matcher.
 type Router struct {
+	// RuleBuilder is used to build the matcher by the rule string.
+	RuleBuilder func(matcherRule string) (matcher.Matcher, error)
+
 	notFound handler.SwitchHandler
 	handler  handler.SwitchHandler
 
