@@ -14,13 +14,6 @@
 
 package entrypoint
 
-import (
-	"net/http"
-
-	"github.com/xgfone/go-atexit"
-	"github.com/xgfone/go-log"
-)
-
 // DefaultManager is the default global entrypoint manager.
 var DefaultManager = NewManager()
 
@@ -42,21 +35,4 @@ func GetEntryPoint(name string) *EntryPoint {
 // GetEntryPoints is equal to DefaultManager.GetEntryPoints().
 func GetEntryPoints() []*EntryPoint {
 	return DefaultManager.GetEntryPoints()
-}
-
-// StartHTTPServer is a simple convenient function to start a http server.
-func StartHTTPServer(name, addr string, handler http.Handler) {
-	if handler == nil {
-		panic("the http handler must not be nil")
-	}
-
-	ep, err := NewHTTPEntryPoint(name, addr, handler)
-	if err != nil {
-		log.Fatal().Str("name", name).Str("addr", addr).Err(err).
-			Printf("fail to start the http server")
-	}
-
-	atexit.Register(ep.Stop)
-	ep.OnShutdown(atexit.Execute)
-	ep.Start()
 }
