@@ -15,7 +15,21 @@
 // Package nets provides some convenient net functions.
 package nets
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
+
+type timeoutError interface {
+	Timeout() bool // Is the error a timeout?
+	error
+}
+
+// IsTimeout reports whether the error is timeout.
+func IsTimeout(err error) bool {
+	var timeoutErr timeoutError
+	return errors.As(err, &timeoutErr) && timeoutErr.Timeout()
+}
 
 // SplitHostPort separates host and port. If the port is not valid, it returns
 // the entire input as host, and it doesn't check the validity of the host.

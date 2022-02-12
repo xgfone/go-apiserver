@@ -21,7 +21,6 @@ import (
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/log"
-	glog "github.com/xgfone/go-log"
 )
 
 // Logger returns a new http handler middleware to log the http request.
@@ -37,20 +36,32 @@ func Logger() handler.Middleware {
 				err = c.Err
 			}
 
-			var logger *glog.Emitter
-			if err == nil {
-				logger = log.Info()
-			} else {
-				logger = log.Error().Err(err)
+			level := log.LvlInfo
+			if err != nil {
+				level = log.LvlError
 			}
+
+			if !log.Enabled(level) {
+				return
+			}
+
+			kvs := make([]interface{}, 0, 14)
+			kvs = append(kvs,
+				"addr", r.RemoteAddr,
+				"method", r.Method,
+				"path", r.URL.Path,
+				"start", start.Unix(),
+				"cost", cost)
 
 			if rw, ok := w.(reqresp.ResponseWriter); ok {
-				logger = logger.Int("code", rw.StatusCode())
+				kvs = append(kvs, "code", rw.StatusCode())
 			}
 
-			logger.Str("addr", r.RemoteAddr).Str("method", r.Method).
-				Str("uri", r.RequestURI).Int64("start", start.Unix()).
-				Duration("cost", cost).Printf("log http request")
+			if err != nil {
+				kvs = append(kvs, "err", err)
+			}
+
+			log.Log(level, 0, "log http request", kvs...)
 		})
 	})
 }

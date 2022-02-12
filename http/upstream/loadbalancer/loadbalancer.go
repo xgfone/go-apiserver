@@ -17,8 +17,6 @@ package loadbalancer
 
 import (
 	"context"
-	"errors"
-	"net"
 	"net/http"
 	"sort"
 	"sync"
@@ -29,6 +27,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/upstream/balancer"
 	"github.com/xgfone/go-apiserver/internal/atomic"
 	"github.com/xgfone/go-apiserver/log"
+	"github.com/xgfone/go-apiserver/nets"
 )
 
 // ResultHandler is used to handle the result of forwarding the request.
@@ -155,14 +154,14 @@ func (lb *LoadBalancer) SetResultHandler(handler ResultHandler) {
 func handleResult(lb *LoadBalancer, w http.ResponseWriter, r *http.Request, err error) {
 	switch err {
 	case nil:
-		if logger := log.Trace(); logger.Enabled() {
-			logger.Str("upstream", lb.name).
-				Str("balancer", lb.GetBalancer().Policy()).
-				Str("clientaddr", r.RemoteAddr).
-				Str("reqhost", r.Host).
-				Str("reqmethod", r.Method).
-				Str("reqpath", r.URL.Path).
-				Printf("forward the http request")
+		if log.Enabled(log.LvlTrace) {
+			log.Trace("forward the http request",
+				"upstream", lb.name,
+				"balancer", lb.GetBalancer().Policy(),
+				"clientaddr", r.RemoteAddr,
+				"reqhost", r.Host,
+				"reqmethod", r.Method,
+				"reqpath", r.URL.Path)
 		}
 		return
 
@@ -170,23 +169,21 @@ func handleResult(lb *LoadBalancer, w http.ResponseWriter, r *http.Request, err 
 		w.WriteHeader(503) // Service Unavailable
 
 	default:
-		var netErr net.Error
-		if errors.As(err, &netErr) && netErr.Timeout() {
+		if nets.IsTimeout(err) {
 			w.WriteHeader(504) // Gateway Timeout
 		} else {
 			w.WriteHeader(502) // Bad Gateway
 		}
 	}
 
-	log.Error().
-		Str("upstream", lb.name).
-		Str("balancer", lb.GetBalancer().Policy()).
-		Str("clientaddr", r.RemoteAddr).
-		Str("reqhost", r.Host).
-		Str("reqmethod", r.Method).
-		Str("reqpath", r.URL.Path).
-		Err(err).
-		Printf("fail to forward the http request")
+	log.Error("fail to forward the http request",
+		"upstream", lb.name,
+		"balancer", lb.GetBalancer().Policy(),
+		"clientaddr", r.RemoteAddr,
+		"reqhost", r.Host,
+		"reqmethod", r.Method,
+		"reqpath", r.URL.Path,
+		"err", err)
 }
 
 // HandleHTTP implements the interface Server.

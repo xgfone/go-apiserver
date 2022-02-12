@@ -102,8 +102,8 @@ func (s *Server) Start() {
 			}
 
 			if !nets.IsClosed(err) {
-				log.Error().Str("listenaddr", addr).Err(err).
-					Printf("fail to accept the new connection")
+				log.Error("fail to accept the new connection",
+					"listenaddr", addr, "err", err)
 			}
 
 			s.Handler.OnServerExit(err)
@@ -159,8 +159,8 @@ func (c *tlsConn) ensureTLSConn() {
 
 		var bs [1]byte
 		if _, c.err = c.Conn.Read(bs[:]); c.err != nil {
-			log.Error().Str("remoteaddr", c.RemoteAddr().String()).Err(c.err).
-				Printf("fail to read the first byte from the tcp conneciton")
+			log.Error("fail to read the first byte from the tcp conneciton",
+				"remoteaddr", c.RemoteAddr().String(), "err", c.err)
 			c.Close()
 			return
 		}

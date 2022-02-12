@@ -127,14 +127,14 @@ func (ep *EntryPoint) Start() {
 		panic("unknown the entrypoint server type")
 	}
 
-	log.Info().Str("name", ep.Name).Str("listenaddr", ep.Addr).
-		Printf("start the %s server", ep.protocol)
+	log.Info(fmt.Sprintf("start the %s server", ep.protocol),
+		"name", ep.Name, "listenaddr", ep.Addr)
 
 	go ep.httpHandler.Start()
 	ep.server.Start()
 
-	log.Info().Str("name", ep.Name).Str("listenaddr", ep.Addr).
-		Printf("stop the %s server", ep.protocol)
+	log.Info(fmt.Sprintf("stop the %s server", ep.protocol),
+		"name", ep.Name, "listenaddr", ep.Addr)
 }
 
 // Stop stops the entrypoint and waits until all the connections are closed.

@@ -202,10 +202,11 @@ func (p *FileProvider) checkAndUpdate(info *fileCertInfo, updater CertUpdater) {
 
 	cert, err := NewCertificate(info.CA.Data, info.Key.Data, info.Cert.Data)
 	if err != nil {
-		log.Error().Str(info.CA.logk, info.CA.logv).
-			Str(info.Key.logk, info.Key.logv).
-			Str(info.Cert.logk, info.Cert.logv).
-			Err(err).Printf("fail to create certificate")
+		log.Error("fail to create certificate",
+			info.CA.logk, info.CA.logv,
+			info.Key.logk, info.Key.logv,
+			info.Cert.logk, info.Cert.logv,
+			"err", err)
 		return
 	}
 
@@ -217,9 +218,9 @@ func readCertificateFile(cert fileInfo) fileInfo {
 	data, modTime, err := readChangedFile(cert.File, cert.Last)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Warn().Str(cert.logk, cert.logv).Printf("the certificate file does not exist")
+			log.Warn("the certificate file does not exist", cert.logk, cert.logv)
 		} else {
-			log.Error().Str(cert.logk, cert.logv).Printf("fail to read the certificate file")
+			log.Error("fail to read the certificate file", cert.logk, cert.logv)
 		}
 
 		return cert

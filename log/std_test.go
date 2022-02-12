@@ -16,31 +16,23 @@ package log
 
 import (
 	"bytes"
+	"log"
 	"strings"
 	"testing"
-
-	"github.com/xgfone/go-log"
-	"github.com/xgfone/go-log/encoder"
 )
 
-func newTestEncoder() log.Encoder {
-	encoder := encoder.NewJSONEncoder(log.FormatLevel)
-	encoder.TimeKey = ""
-	return encoder
-}
-
-func TestLogger(t *testing.T) {
+func TestStdLogger(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	Default().Output.SetEncoder(newTestEncoder())
-	Default().SetWriter(buf)
-	Info().Kv("k1", "v1").Print("msg1")
-	Level(LvlInfo, 0).Kv("k2", "v2").Print("msg2")
-	StdLogger("stdlog: ").Print("msg3")
+	DefaultLogger = NewLogger(buf, "prefix: ", log.Lshortfile)
+
+	Info("msg1", "k1", "v1")
+	Log(LvlInfo, 0, "msg2", "k2", "v2")
+	StdLogger("stdlog: ", LvlDebug).Print("msg3")
 
 	expects := []string{
-		`{"lvl":"info","caller":"log_test.go:36:TestLogger","k1":"v1","msg":"msg1"}`,
-		`{"lvl":"info","caller":"log_test.go:37:TestLogger","k2":"v2","msg":"msg2"}`,
-		`{"lvl":"debug","caller":"log_test.go:38:TestLogger","msg":"stdlog: msg3"}`,
+		`prefix: std_test.go:28: msg1; k1=v1`,
+		`prefix: std_test.go:29: msg2; k2=v2`,
+		`stdlog: std_test.go:30: msg3`,
 		``,
 	}
 	results := strings.Split(buf.String(), "\n")
