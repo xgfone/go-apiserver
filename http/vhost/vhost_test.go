@@ -39,16 +39,42 @@ func TestManager(t *testing.T) {
 	m.AddVHost(exactHost2, httpHandler(202))
 	m.AddVHost(suffixHost, httpHandler(203))
 
+	if vhosts := m.handler.Load().(vhostsWrapper).vhosts; len(vhosts) != 3 {
+		t.Errorf("expect %d vhosts, but got %d: %v", 3, len(vhosts), vhosts)
+	} else {
+		for i, vhost := range vhosts {
+			switch i {
+			case 0:
+				if vhost.VHost != "www.example1.com" {
+					t.Errorf("expect vhost '%s', but got '%s'", "www.example1.com", vhost.VHost)
+				}
+
+			case 1:
+				if vhost.VHost != "www.example2.com" {
+					t.Errorf("expect vhost '%s', but got '%s'", "www.example2.com", vhost.VHost)
+				}
+
+			case 2:
+				if vhost.VHost != ".example2.com" {
+					t.Errorf("expect vhost '%s', but got '%s'", ".example2.com", vhost.VHost)
+				}
+
+			}
+		}
+	}
+
 	if m.GetVHost(exactHost1) == nil {
 		t.Errorf("not get the handler of the virtual host '%s'", exactHost1)
+	}
+	if m.GetVHost(exactHost2) == nil {
+		t.Errorf("not get the handler of the virtual host '%s'", exactHost2)
 	}
 	if m.GetVHost(suffixHost) == nil {
 		t.Errorf("not get the handler of the virtual host '%s'", suffixHost)
 	}
 
-	vhosts := m.GetVHosts()
-	if len(vhosts) != 3 {
-		t.Errorf("expect %d vhosts, but got %d: %v", 2, len(vhosts), vhosts)
+	if vhosts := m.GetVHosts(); len(vhosts) != 3 {
+		t.Errorf("expect %d vhosts, but got %d: %v", 3, len(vhosts), vhosts)
 	} else {
 		for vhost := range vhosts {
 			switch vhost {

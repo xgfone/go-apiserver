@@ -18,6 +18,7 @@ package vhost
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -76,7 +77,7 @@ type vhosts []vhost
 
 func (hs vhosts) Len() int           { return len(hs) }
 func (hs vhosts) Swap(i, j int)      { hs[i], hs[j] = hs[j], hs[i] }
-func (hs vhosts) Less(i, j int) bool { return hs[i].Prio > hs[j].Prio }
+func (hs vhosts) Less(i, j int) bool { return hs[i].Prio < hs[j].Prio }
 
 type defaultVHost struct{ http.Handler }
 type vhostsWrapper struct{ vhosts }
@@ -124,6 +125,7 @@ func (m *Manager) updateVHosts() {
 	for _, vhost := range m.vhosts {
 		vhosts = append(vhosts, vhost)
 	}
+	sort.Stable(vhosts)
 	m.handler.Store(vhostsWrapper{vhosts: vhosts})
 }
 
