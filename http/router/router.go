@@ -25,7 +25,6 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/matcher"
-	"github.com/xgfone/go-apiserver/http/ruler"
 )
 
 // Middleware is the http handler middleware.
@@ -105,7 +104,6 @@ type routesWrapper struct{ Routes }
 type Router struct {
 	notFound handler.SwitchHandler
 	handler  handler.SwitchHandler
-	builder  *ruler.Builder
 
 	glock sync.Mutex
 	gmdws handler.Middlewares
@@ -119,7 +117,7 @@ type Router struct {
 
 // NewRouter returns a new Router.
 func NewRouter() *Router {
-	r := &Router{builder: ruler.NewBuilder(), origs: make(map[string]Route, 16)}
+	r := &Router{origs: make(map[string]Route, 16)}
 	r.handler.Set(http.HandlerFunc(r.serveHTTP))
 	r.notFound.Set(handler.Handler404)
 	r.router.Store(routesWrapper{})
@@ -317,19 +315,4 @@ func (r *Router) ResetRoutes(routes ...Route) {
 		r.origs[route.Name] = route
 	}
 	r.updateRoutes()
-}
-
-// AddRuleRoute adds the route based on the rule.
-func (r *Router) AddRuleRoute(priority int, name, rule string, h http.Handler) error {
-	matcher, err := r.builder.Parse(rule)
-	if err != nil {
-		return err
-	}
-
-	route, err := NewRouteWithError(name, priority, matcher, h)
-	if err != nil {
-		return err
-	}
-
-	return r.AddRoute(route)
 }

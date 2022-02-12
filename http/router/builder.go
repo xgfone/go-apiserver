@@ -15,7 +15,7 @@
 package router
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/matcher"
@@ -27,10 +27,10 @@ func (r *Router) Name(name string) RouteBuilder {
 	return NewRouteBuilder(r).Name(name)
 }
 
-// Rule returns a route builder with the matcher rule,
-// which is equal to NewRouteBuilder(r).Rule(matchRule).
-func (r *Router) Rule(matchRule string) RouteBuilder {
-	return NewRouteBuilder(r).Rule(matchRule)
+// Matcher returns a route builder with the matcher,
+// which is equal to NewRouteBuilder(r).Matcher(matchRule).
+func (r *Router) Matcher(matcher matcher.Matcher) RouteBuilder {
+	return NewRouteBuilder(r).Matcher(matcher)
 }
 
 // Path returns a route builder with the path matcher,
@@ -61,7 +61,6 @@ func (r *Router) HostRegexp(regexpHost string) RouteBuilder {
 type RouteBuilder struct {
 	router   *Router
 	name     string
-	rule     string
 	matcher  matcher.Matcher
 	matchers matcher.Matchers
 	priority int
@@ -91,12 +90,6 @@ func (b RouteBuilder) Name(name string) RouteBuilder {
 // Priority sets the priority of the route.
 func (b RouteBuilder) Priority(priority int) RouteBuilder {
 	b.priority = priority
-	return b
-}
-
-// Rule sets the matcher rule of the route.
-func (b RouteBuilder) Rule(rule string) RouteBuilder {
-	b.rule = rule
 	return b
 }
 
@@ -235,23 +228,13 @@ func (b RouteBuilder) addRoute(handler http.Handler) (err error) {
 		b.matcher = matcher.And(b.matchers...)
 	}
 
-	rule := b.rule
-	if b.matcher != nil {
-		rule = b.matcher.String()
-	}
-	if rule == "" {
-		return fmt.Errorf("missing the route matcher")
-	}
-
 	if b.matcher == nil {
-		if b.matcher, err = b.router.builder.Parse(rule); err != nil {
-			return err
-		}
+		return errors.New("mising the route matcher")
 	}
 
 	name := b.name
 	if name == "" {
-		name = rule
+		name = b.matcher.String()
 	}
 
 	route, err := NewRouteWithError(name, b.priority, b.matcher, handler)

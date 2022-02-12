@@ -26,17 +26,21 @@ import (
 	"github.com/xgfone/go-apiserver/http/matcher"
 )
 
+var (
+	getMatcher, _  = matcher.Method("GET")
+	hostMatcher, _ = matcher.Host("127.0.0.1")
+)
+
 func TestPriorityRoute(t *testing.T) {
 	router := NewRouter()
 
-	hostMatcher, _ := matcher.Host("127.0.0.1")
 	router.Name("route1").Matcher(hostMatcher).
 		HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			rw.WriteHeader(201)
 			rw.Write([]byte(`route1`))
 		})
 
-	router.Rule("Host(`127.0.0.1`) && Method(`GET`)").Name("route2").
+	router.Matcher(matcher.And(hostMatcher, getMatcher)).Name("route2").
 		HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			rw.WriteHeader(202)
 			rw.Write([]byte(`route2`))
@@ -98,7 +102,7 @@ func TestRouteMiddleware(t *testing.T) {
 	router := NewRouter()
 	router.Global(logMiddleware(buf, "log1"), logMiddleware(buf, "log2"))
 	router.Use(logMiddleware(buf, "log3"), logMiddleware(buf, "log4"))
-	router.Rule("Host(`127.0.0.1`) && Method(`GET`)").Name("route").HandlerFunc(h)
+	router.Matcher(matcher.And(hostMatcher, getMatcher)).Name("route").HandlerFunc(h)
 
 	req, _ := http.NewRequest("GET", "http://127.0.0.1", nil)
 	rec := httptest.NewRecorder()
