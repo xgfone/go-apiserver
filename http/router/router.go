@@ -25,6 +25,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/matcher"
+	"github.com/xgfone/go-apiserver/internal/ruler"
 )
 
 // Middleware is the http handler middleware.
@@ -124,6 +125,7 @@ func NewRouter() *Router {
 	r.handler.Set(http.HandlerFunc(r.serveHTTP))
 	r.notFound.Set(handler.Handler404)
 	r.router.Store(routesWrapper{})
+	r.BuildMatcherRule = ruler.Build
 	return r
 }
 
