@@ -75,9 +75,16 @@ func (h vhost) MatchHost(host string) (ok bool) {
 
 type vhosts []vhost
 
-func (hs vhosts) Len() int           { return len(hs) }
-func (hs vhosts) Swap(i, j int)      { hs[i], hs[j] = hs[j], hs[i] }
-func (hs vhosts) Less(i, j int) bool { return hs[i].Prio < hs[j].Prio }
+func (hs vhosts) Len() int      { return len(hs) }
+func (hs vhosts) Swap(i, j int) { hs[i], hs[j] = hs[j], hs[i] }
+func (hs vhosts) Less(i, j int) bool {
+	if hs[i].Prio < hs[j].Prio {
+		return true
+	} else if hs[i].Prio == hs[j].Prio && len(hs[i].VHost) > len(hs[j].VHost) {
+		return true
+	}
+	return false
+}
 
 type defaultVHost struct{ http.Handler }
 type vhostsWrapper struct{ vhosts }

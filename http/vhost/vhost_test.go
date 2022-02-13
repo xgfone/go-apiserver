@@ -30,8 +30,8 @@ func httpHandler(statusCode int) http.Handler {
 func TestManager(t *testing.T) {
 	const (
 		exactHost1 = "www.example1.com"
-		exactHost2 = "www.example2.com"
-		suffixHost = "*.example2.com"
+		exactHost2 = "www.example.com"
+		suffixHost = "*.example.com"
 	)
 
 	m := NewManager()
@@ -45,18 +45,18 @@ func TestManager(t *testing.T) {
 		for i, vhost := range vhosts {
 			switch i {
 			case 0:
-				if vhost.VHost != "www.example1.com" {
-					t.Errorf("expect vhost '%s', but got '%s'", "www.example1.com", vhost.VHost)
+				if vhost.VHost != exactHost1 {
+					t.Errorf("expect vhost '%s', but got '%s'", exactHost1, vhost.VHost)
 				}
 
 			case 1:
-				if vhost.VHost != "www.example2.com" {
-					t.Errorf("expect vhost '%s', but got '%s'", "www.example2.com", vhost.VHost)
+				if vhost.VHost != exactHost2 {
+					t.Errorf("expect vhost '%s', but got '%s'", exactHost2, vhost.VHost)
 				}
 
 			case 2:
-				if vhost.VHost != ".example2.com" {
-					t.Errorf("expect vhost '%s', but got '%s'", ".example2.com", vhost.VHost)
+				if vhost.VHost != ".example.com" {
+					t.Errorf("expect vhost '%s', but got '%s'", ".example.com", vhost.VHost)
 				}
 
 			}
@@ -92,14 +92,14 @@ func TestManager(t *testing.T) {
 		t.Errorf("expect status code %d, but got %d", 201, rec1.Code)
 	}
 
-	req2 := httptest.NewRequest(http.MethodGet, "http://www.example2.com", nil)
+	req2 := httptest.NewRequest(http.MethodGet, "http://www.example.com", nil)
 	rec2 := httptest.NewRecorder()
 	m.ServeHTTP(rec2, req2)
 	if rec2.Code != 202 {
 		t.Errorf("expect status code %d, but got %d", 202, rec2.Code)
 	}
 
-	req3 := httptest.NewRequest(http.MethodGet, "http://abc.example2.com", nil)
+	req3 := httptest.NewRequest(http.MethodGet, "http://abc.example.com", nil)
 	rec3 := httptest.NewRecorder()
 	m.ServeHTTP(rec3, req3)
 	if rec3.Code != 203 {
