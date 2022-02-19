@@ -19,6 +19,7 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/matcher"
+	"github.com/xgfone/go-apiserver/http/reqresp"
 )
 
 // Name returns a route builder with the name, which is equal to
@@ -230,6 +231,43 @@ func (b RouteBuilder) HostRegexp(regexpHost string) RouteBuilder {
 		}
 	}
 	return b
+}
+
+// ContextHandler is the same HandlerFunc, but wraps the request and response
+// into Context.
+func (b RouteBuilder) ContextHandler(h func(*reqresp.Context)) error {
+	return b.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, new := reqresp.GetOrNewContext(r)
+		if new {
+			if rw, ok := w.(reqresp.ResponseWriter); ok {
+				c.ResponseWriter = rw
+			} else {
+				c.ResponseWriter = reqresp.NewResponseWriter(w)
+			}
+
+			defer reqresp.DefaultContextAllocator.Release(c)
+		}
+		h(c)
+	})
+}
+
+// ContextHandlerWithError is the same ContextHandler, but supports to return
+// an error.
+func (b RouteBuilder) ContextHandlerWithError(h func(*reqresp.Context) error) error {
+	return b.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, new := reqresp.GetOrNewContext(r)
+		if new {
+			if rw, ok := w.(reqresp.ResponseWriter); ok {
+				c.ResponseWriter = rw
+			} else {
+				c.ResponseWriter = reqresp.NewResponseWriter(w)
+			}
+
+			defer reqresp.DefaultContextAllocator.Release(c)
+		}
+
+		c.Err = h(c)
+	})
 }
 
 // HandlerFunc registers the route with the handler functions.
