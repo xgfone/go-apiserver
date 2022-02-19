@@ -128,3 +128,40 @@ func (mb *MuxBinder) Bind(dst interface{}, req *http.Request) error {
 
 	return herrors.ErrUnsupportedMediaType.Newf("not support Content-Type '%s'", ct)
 }
+
+// DefaultValidateBinder is a binder with the validator and the default value setter.
+type DefaultValidateBinder struct {
+	Binder
+
+	// SetDefault is used to set the data to the default if it is ZERO.
+	//
+	// If data is a struct, set the fields of the struct to the default if ZERO.
+	//
+	// Default: nil
+	SetDefault func(data interface{}) error
+
+	// Validate is used to validate whether data is valid.
+	//
+	// Default: nil
+	Validate func(data interface{}) error
+}
+
+// Bind implements the interface Binder, and set the default value
+// and validate whether the value is valid.
+func (b *DefaultValidateBinder) Bind(v interface{}, r *http.Request) (err error) {
+	if err = b.Binder.Bind(v, r); err != nil {
+		return
+	}
+
+	if b.SetDefault != nil {
+		if err = b.SetDefault(v); err != nil {
+			return
+		}
+	}
+
+	if b.Validate != nil {
+		err = b.Validate(v)
+	}
+
+	return
+}

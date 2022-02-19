@@ -14,6 +14,21 @@
 
 package helper
 
+// IsInteger reports whether s is the integer or not.
+func IsInteger(s string) bool {
+	if s == "" {
+		return false
+	}
+
+	for i, _len := 0, len(s); i < _len; i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+
+	return true
+}
+
 // InStrings reports whether the string s is in the string slice ss.
 func InStrings(s string, ss []string) (yes bool) {
 	for _len := len(ss) - 1; _len >= 0; _len-- {
