@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
@@ -65,90 +64,4 @@ func logMiddleware(buf *bytes.Buffer, name string) Middleware {
 			fmt.Fprintf(buf, "middleware '%s' after\n", name)
 		})
 	})
-}
-
-func TestMiddlewareHandler(t *testing.T) {
-	buf := bytes.NewBuffer(nil)
-	h := func(name string) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintln(buf, name)
-		})
-	}
-
-	mh := NewMiddlewareHandler(h("h1"), logMiddleware(buf, "mw1"), logMiddleware(buf, "mw2"))
-	mh.Use(logMiddleware(buf, "mw3"), logMiddleware(buf, "mw4"))
-
-	rec := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1", nil)
-	mh.ServeHTTP(rec, req)
-	expects := []string{
-		"middleware 'mw1' before",
-		"middleware 'mw2' before",
-		"middleware 'mw3' before",
-		"middleware 'mw4' before",
-		"h1",
-		"middleware 'mw4' after",
-		"middleware 'mw3' after",
-		"middleware 'mw2' after",
-		"middleware 'mw1' after",
-		"",
-	}
-	results := strings.Split(buf.String(), "\n")
-	if len(results) != len(expects) {
-		t.Errorf("expect %d lines, but got %d", len(expects), len(results))
-	} else {
-		for i := 0; i < len(results); i++ {
-			if results[i] != expects[i] {
-				t.Errorf("expect '%s', but got '%s'", expects[i], results[i])
-			}
-		}
-	}
-
-	buf.Reset()
-	mh.Swap(h("h2"))
-	mh.ServeHTTP(rec, req)
-	expects = []string{
-		"middleware 'mw1' before",
-		"middleware 'mw2' before",
-		"middleware 'mw3' before",
-		"middleware 'mw4' before",
-		"h2",
-		"middleware 'mw4' after",
-		"middleware 'mw3' after",
-		"middleware 'mw2' after",
-		"middleware 'mw1' after",
-		"",
-	}
-	results = strings.Split(buf.String(), "\n")
-	if len(results) != len(expects) {
-		t.Errorf("expect %d lines, but got %d", len(expects), len(results))
-	} else {
-		for i := 0; i < len(results); i++ {
-			if results[i] != expects[i] {
-				t.Errorf("expect '%s', but got '%s'", expects[i], results[i])
-			}
-		}
-	}
-
-	buf.Reset()
-	mh.Unuse("mw3", "mw4")
-	mh.ServeHTTP(rec, req)
-	expects = []string{
-		"middleware 'mw1' before",
-		"middleware 'mw2' before",
-		"h2",
-		"middleware 'mw2' after",
-		"middleware 'mw1' after",
-		"",
-	}
-	results = strings.Split(buf.String(), "\n")
-	if len(results) != len(expects) {
-		t.Errorf("expect %d lines, but got %d", len(expects), len(results))
-	} else {
-		for i := 0; i < len(results); i++ {
-			if results[i] != expects[i] {
-				t.Errorf("expect '%s', but got '%s'", expects[i], results[i])
-			}
-		}
-	}
 }

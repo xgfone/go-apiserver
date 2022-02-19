@@ -14,33 +14,6 @@
 
 package handler
 
-import "net/http"
-
-// DefaultManager is the default global http handler manager.
-var DefaultManager = NewManager()
-
-// AddHandler is equal to DefaultManager.AddHandler(name, handler).
-func AddHandler(name string, handler http.Handler) (err error) {
-	return DefaultManager.AddHandler(name, handler)
-}
-
-// DelHandler is equal to DefaultManager.DelHandler(name).
-func DelHandler(name string) http.Handler {
-	return DefaultManager.DelHandler(name)
-}
-
-// GetHandler is equal to DefaultManager.GetHandler(name).
-func GetHandler(name string) http.Handler {
-	return DefaultManager.GetHandler(name)
-}
-
-// GetHandlers is equal to DefaultManager.GetHandlers().
-func GetHandlers() map[string]http.Handler {
-	return DefaultManager.GetHandlers()
-}
-
-/// ----------------------------------------------------------------------- ///
-
 // DefaultMiddlewareManager is the default global middleware manager.
 var DefaultMiddlewareManager = NewMiddlewareManager()
 
