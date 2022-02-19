@@ -212,6 +212,11 @@ type Context struct {
 	Query   url.Values
 }
 
+// NewContext returns a new Context.
+func NewContext(dataCapSize int) *Context {
+	return &Context{Datas: make(map[string]interface{}, dataCapSize)}
+}
+
 // Reset resets the context itself.
 func (c *Context) Reset() {
 	// Clean the datas.
