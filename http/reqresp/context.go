@@ -100,7 +100,9 @@ func SetContext(req *http.Request, c *Context) (newreq *http.Request) {
 	if c == nil {
 		return req
 	}
-	return req.WithContext(context.WithValue(req.Context(), reqParam(255), c))
+
+	c.Request = req.WithContext(context.WithValue(req.Context(), reqParam(255), c))
+	return c.Request
 }
 
 // GetContext gets and returns the request context from the request.

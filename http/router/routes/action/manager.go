@@ -121,7 +121,6 @@ func (m *RouteManager) respond(action string, handler http.Handler,
 		defer reqresp.DefaultContextAllocator.Release(ctx)
 		r = reqresp.SetContext(r, ctx)
 		w = ctx.ResponseWriter
-		ctx.Request = r
 	}
 
 	c, ok := ctx.Any.(*Context)
