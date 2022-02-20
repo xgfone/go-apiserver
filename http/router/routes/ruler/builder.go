@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package router
+package ruler
 
 import (
 	"errors"
@@ -23,50 +23,50 @@ import (
 )
 
 // Name returns a route builder with the name, which is equal to
-// NewRouteBuilder(r).Name(name).
-func (r *Router) Name(name string) RouteBuilder {
-	return NewRouteBuilder(r).Name(name)
+// NewRouteBuilder(m).Name(name).
+func (m *RouteManager) Name(name string) RouteBuilder {
+	return NewRouteBuilder(m).Name(name)
 }
 
 // Matcher returns a route builder with the matcher,
-// which is equal to NewRouteBuilder(r).Matcher(matcher).
-func (r *Router) Matcher(matcher matcher.Matcher) RouteBuilder {
-	return NewRouteBuilder(r).Matcher(matcher)
+// which is equal to NewRouteBuilder(m).Matcher(matcher).
+func (m *RouteManager) Matcher(matcher matcher.Matcher) RouteBuilder {
+	return NewRouteBuilder(m).Matcher(matcher)
 }
 
 // Rule returns a route builder with the matcher rule,
-// which is equal to NewRouteBuilder(r).Rule(matcherRule).
-func (r *Router) Rule(matcherRule string) RouteBuilder {
-	return NewRouteBuilder(r).Rule(matcherRule)
+// which is equal to NewRouteBuilder(m).Rule(matcherRule).
+func (m *RouteManager) Rule(matcherRule string) RouteBuilder {
+	return NewRouteBuilder(m).Rule(matcherRule)
 }
 
 // Path returns a route builder with the path matcher,
-// which is equal to NewRouteBuilder(r).Path(path).
-func (r *Router) Path(path string) RouteBuilder {
-	return NewRouteBuilder(r).Path(path)
+// which is equal to NewRouteBuilder(m).Path(path).
+func (m *RouteManager) Path(path string) RouteBuilder {
+	return NewRouteBuilder(m).Path(path)
 }
 
 // PathPrefix returns a route builder with the path prefix matcher,
-// which is equal to NewRouteBuilder(r).PathPrefix(pathPrefix).
-func (r *Router) PathPrefix(pathPrefix string) RouteBuilder {
-	return NewRouteBuilder(r).PathPrefix(pathPrefix)
+// which is equal to NewRouteBuilder(m).PathPrefix(pathPrefix).
+func (m *RouteManager) PathPrefix(pathPrefix string) RouteBuilder {
+	return NewRouteBuilder(m).PathPrefix(pathPrefix)
 }
 
 // Host returns a route builder with the host matcher,
-// which is equal to NewRouteBuilder(r).Host(host).
-func (r *Router) Host(host string) RouteBuilder {
-	return NewRouteBuilder(r).Host(host)
+// which is equal to NewRouteBuilder(m).Host(host).
+func (m *RouteManager) Host(host string) RouteBuilder {
+	return NewRouteBuilder(m).Host(host)
 }
 
 // HostRegexp returns a route builder with the host regexp matcher,
-// which is equal to NewRouteBuilder(r).HostRegexp(regexpHost).
-func (r *Router) HostRegexp(regexpHost string) RouteBuilder {
-	return NewRouteBuilder(r).HostRegexp(regexpHost)
+// which is equal to NewRouteBuilder(m).HostRegexp(regexpHost).
+func (m *RouteManager) HostRegexp(regexpHost string) RouteBuilder {
+	return NewRouteBuilder(m).HostRegexp(regexpHost)
 }
 
 // RouteBuilder is used to build the route.
 type RouteBuilder struct {
-	router   *Router
+	manager  *RouteManager
 	name     string
 	matcher  matcher.Matcher
 	matchers matcher.Matchers
@@ -75,9 +75,9 @@ type RouteBuilder struct {
 	err      error
 }
 
-// NewRouteBuilder returns a new RouteBuilder with the router.
-func NewRouteBuilder(router *Router) RouteBuilder {
-	return RouteBuilder{router: router, panic: true}
+// NewRouteBuilder returns a new RouteBuilder with the route manager.
+func NewRouteBuilder(m *RouteManager) RouteBuilder {
+	return RouteBuilder{manager: m, panic: true}
 }
 
 // SetPanic sets the flag to panic when failing to add the route.
@@ -123,12 +123,12 @@ func (b RouteBuilder) Or(matchers ...matcher.Matcher) RouteBuilder {
 // Rule is the same as Matcher, but use the builder to build the matcher
 // with the matcher rule string.
 func (b RouteBuilder) Rule(matcherRule string) RouteBuilder {
-	if b.router.BuildMatcherRule == nil {
+	if b.manager.BuildMatcherRule == nil {
 		panic("not set the rule buidler of the route matcher")
 	}
 
 	if b.err == nil {
-		b.matcher, b.err = b.router.BuildMatcherRule(matcherRule)
+		b.matcher, b.err = b.manager.BuildMatcherRule(matcherRule)
 		b.matchers = nil
 	}
 	return b
@@ -277,8 +277,8 @@ func (b RouteBuilder) HandlerFunc(handler http.HandlerFunc) error {
 
 // Handler registers the route with the handler.
 func (b RouteBuilder) Handler(handler http.Handler) error {
-	if b.err == nil {
-
+	if b.err != nil {
+		return b.err
 	}
 
 	err := b.addRoute(handler)
@@ -302,12 +302,8 @@ func (b RouteBuilder) addRoute(handler http.Handler) (err error) {
 		name = b.matcher.String()
 	}
 
-	route, err := NewRouteWithError(name, b.priority, b.matcher, handler)
-	if err != nil {
-		return err
-	}
-
-	return b.router.AddRoute(route)
+	route := NewRoute(name, b.priority, b.matcher, handler)
+	return b.manager.AddRoute(route)
 }
 
 // GET is a convenient function to register the route with the handler,

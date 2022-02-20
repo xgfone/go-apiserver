@@ -226,11 +226,6 @@ func (c *Context) Reset() {
 		}
 	}
 
-	// Reset the any data.
-	if reset, ok := c.Any.(interface{ Reset() }); ok {
-		reset.Reset()
-	}
-
 	*c = Context{Any: c.Any, Datas: c.Datas, Binder: c.Binder}
 }
 

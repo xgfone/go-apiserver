@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/xgfone/go-apiserver/http/router"
+	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/tcp"
 )
@@ -63,7 +64,7 @@ func NewHTTPEntryPoint(name, addr string, handler http.Handler) (*EntryPoint, er
 	}
 
 	if handler == nil {
-		handler = router.NewRouter()
+		handler = router.NewRouter(ruler.NewRouteManager())
 	}
 
 	ep := &EntryPoint{Name: name, Addr: addr, protocol: "http"}

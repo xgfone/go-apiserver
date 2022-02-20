@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package router implements a router of the http handler.
 package router
 
 import (
@@ -22,168 +23,73 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/http/handler"
-	"github.com/xgfone/go-apiserver/http/matcher"
+	"github.com/xgfone/go-apiserver/http/middleware"
+	"github.com/xgfone/go-apiserver/internal/test"
 )
 
-var (
-	getMatcher, _  = matcher.Method("GET")
-	hostMatcher, _ = matcher.Host("127.0.0.1")
-)
+type rmFunc func(http.ResponseWriter, *http.Request, http.Handler)
 
-func TestPriorityRoute(t *testing.T) {
-	router := NewRouter()
-
-	router.Name("route1").Matcher(hostMatcher).
-		HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			rw.WriteHeader(201)
-			rw.Write([]byte(`route1`))
-		})
-
-	router.Matcher(matcher.And(hostMatcher, getMatcher)).Name("route2").
-		HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			rw.WriteHeader(202)
-			rw.Write([]byte(`route2`))
-		})
-
-	routes := router.GetRoutes()
-	if _len := len(routes); _len != 2 {
-		t.Errorf("expect %d routes, but got %d", 2, _len)
-	} else {
-		names := []string{"route2", "route1"}
-		for i := 0; i < 2; i++ {
-			if names[i] != routes[i].Name {
-				t.Errorf("expect the route named '%s', but got '%s'",
-					names[i], routes[i].Name)
-			}
-		}
-	}
-
-	req, _ := http.NewRequest("GET", "http://127.0.0.1", nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != 202 {
-		t.Errorf("expect the status code '%d', but got '%d'", 202, rec.Code)
-	} else if body := rec.Body.String(); body != "route2" {
-		t.Errorf("expect the body '%s', but got '%s'", "route2", body)
-	}
-
-	router.DelRoute("route1")
-	if route, ok := router.GetRoute("route1"); ok {
-		t.Errorf("unexpected the route named '%s': '%s'", "route1", route.Name)
-	}
-
-	router.DelRoutes("route2")
-	routes = router.GetRoutes()
-	for _, route := range routes {
-		t.Errorf("unexpected the route named '%s'", route.Name)
-	}
+func (f rmFunc) Route(w http.ResponseWriter, r *http.Request, no http.Handler) {
+	f(w, r, no)
 }
 
-func logMiddleware(buf *bytes.Buffer, name string) Middleware {
-	return handler.NewMiddleware(name, func(h http.Handler) http.Handler {
-		return handler.WrapHandler(h,
-			func(h http.Handler, rw http.ResponseWriter, r *http.Request) {
-				fmt.Fprintf(buf, "middleware '%s' before\n", name)
-				h.ServeHTTP(rw, r)
-				fmt.Fprintf(buf, "middleware '%s' after\n", name)
-			})
+func logMiddleware(buf *bytes.Buffer, name string, prio int) middleware.Middleware {
+	return middleware.NewMiddleware(name, prio, func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(buf, "middleware '%s' before\n", name)
+			h.ServeHTTP(rw, r)
+			fmt.Fprintf(buf, "middleware '%s' after\n", name)
+		})
 	})
 }
 
-func TestRouteMiddleware(t *testing.T) {
+func TestRouter(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	h := func(rw http.ResponseWriter, r *http.Request) {
-		rw.WriteHeader(200)
-		buf.WriteString("handler\n")
-	}
+	router := NewRouter(rmFunc(func(w http.ResponseWriter, r *http.Request, no http.Handler) {
+		if r.Method == http.MethodGet && r.URL.Path == "/path1" {
+			w.WriteHeader(201)
+			fmt.Fprintln(buf, "handler")
+		} else {
+			no.ServeHTTP(w, r)
+		}
+	}))
 
-	router := NewRouter()
-	router.Global(logMiddleware(buf, "log1"), logMiddleware(buf, "log2"))
-	router.Use(logMiddleware(buf, "log3"), logMiddleware(buf, "log4"))
-	router.Matcher(matcher.And(hostMatcher, getMatcher)).Name("route").HandlerFunc(h)
+	router.Middlewares.Use(logMiddleware(buf, "log1", 1), logMiddleware(buf, "log2", 2))
+	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(204)
+		fmt.Fprintln(buf, "notfound")
+	})
 
-	req, _ := http.NewRequest("GET", "http://127.0.0.1", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/path1", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
-
-	if rec.Code != 200 {
-		t.Fatalf("expect the status code '%d', but got '%d'", 200, rec.Code)
-	}
-
-	expects := []string{
-		"middleware 'log1' before",
-		"middleware 'log2' before",
-		"middleware 'log3' before",
-		"middleware 'log4' before",
-		"handler",
-		"middleware 'log4' after",
-		"middleware 'log3' after",
-		"middleware 'log2' after",
-		"middleware 'log1' after",
-		"",
-	}
-	results := strings.Split(buf.String(), "\n")
-	if len(results) != len(expects) {
-		t.Errorf("expect %d lines, but got %d", len(expects), len(results))
+	if rec.Code != 201 {
+		t.Errorf("expect status code '%d', but got '%d'", 201, rec.Code)
 	} else {
-		for i := 0; i < len(results); i++ {
-			if results[i] != expects[i] {
-				t.Errorf("expect '%s', but got '%s'", expects[i], results[i])
-			}
-		}
+		test.CheckStrings(t, "TestRouter", strings.Split(buf.String(), "\n"), []string{
+			"middleware 'log2' before",
+			"middleware 'log1' before",
+			"handler",
+			"middleware 'log1' after",
+			"middleware 'log2' after",
+			"",
+		})
 	}
 
 	buf.Reset()
-	router.UseCancel("log3")
-	router.GlobalCancel("log1")
+	req = httptest.NewRequest(http.MethodGet, "http://127.0.0.1/path2", nil)
+	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
-
-	expects = []string{
-		"middleware 'log2' before",
-		"middleware 'log3' before",
-		"middleware 'log4' before",
-		"handler",
-		"middleware 'log4' after",
-		"middleware 'log3' after",
-		"middleware 'log2' after",
-		"",
-	}
-	results = strings.Split(buf.String(), "\n")
-	if len(results) != len(expects) {
-		t.Errorf("expect %d lines, but got %d: %v", len(expects), len(results), results)
+	if rec.Code != 204 {
+		t.Errorf("expect status code '%d', but got '%d'", 201, rec.Code)
 	} else {
-		for i := 0; i < len(results); i++ {
-			if results[i] != expects[i] {
-				t.Errorf("expect '%s', but got '%s'", expects[i], results[i])
-			}
-		}
-	}
-
-	buf.Reset()
-	router.UseCancel("log3")
-	route, _ := router.GetRoute("route")
-	route.Handler = handler.UnwrapHandler(route.Handler)
-	router.UpdateRoutes(route)
-	router.ServeHTTP(rec, req)
-
-	expects = []string{
-		"middleware 'log2' before",
-		"middleware 'log4' before",
-		"handler",
-		"middleware 'log4' after",
-		"middleware 'log2' after",
-		"",
-	}
-	results = strings.Split(buf.String(), "\n")
-	if len(results) != len(expects) {
-		t.Errorf("expect %d lines, but got %d: %v", len(expects), len(results), results)
-	} else {
-		for i := 0; i < len(results); i++ {
-			if results[i] != expects[i] {
-				t.Errorf("expect '%s', but got '%s'", expects[i], results[i])
-			}
-		}
+		test.CheckStrings(t, "TestRouter", strings.Split(buf.String(), "\n"), []string{
+			"middleware 'log2' before",
+			"middleware 'log1' before",
+			"notfound",
+			"middleware 'log1' after",
+			"middleware 'log2' after",
+			"",
+		})
 	}
 }

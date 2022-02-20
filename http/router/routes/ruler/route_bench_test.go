@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package router
+package ruler
 
 import (
 	"fmt"
@@ -21,7 +21,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/matcher"
 )
 
@@ -34,12 +33,11 @@ func BenchmarkParamRouteWithNoopMiddleware4(b *testing.B) {
 }
 
 func benchmarkRouteWithPath(b *testing.B, path string) {
-	newMiddleware := handler.NewMiddleware
+	router := NewRouteManager()
+	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic("notfound")
+	})
 
-	router := NewRouter()
-	router.Use(newMiddleware("md1", noopMd), newMiddleware("md2", noopMd))
-	router.Global(newMiddleware("md1", noopMd), newMiddleware("md2", noopMd))
-	router.SetNotFoundFunc(func(http.ResponseWriter, *http.Request) { panic("notfound") })
 	handler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(200)
 		io.WriteString(rw, "OK")
@@ -62,10 +60,4 @@ func benchmarkRouteWithPath(b *testing.B, path string) {
 		rec.Body.Reset()
 		router.ServeHTTP(rec, req)
 	}
-}
-
-func noopMd(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(rw, r)
-	})
 }

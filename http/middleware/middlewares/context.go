@@ -17,16 +17,16 @@ package middlewares
 import (
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/http/handler"
+	mw "github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 )
 
 // Context returns a new http handler middleware, which will allocate
 // a request context and put it into the http request, then release it after
 // handling the http request.
-func Context() handler.Middleware {
-	return handler.NewMiddleware("context", func(h http.Handler) http.Handler {
-		return handler.WrapHandler(h, func(h http.Handler, w http.ResponseWriter, r *http.Request) {
+func Context(priority int) mw.Middleware {
+	return mw.NewMiddleware("context", priority, func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if c, new := reqresp.GetOrNewContext(r); new {
 				if rw, ok := w.(reqresp.ResponseWriter); ok {
 					c.ResponseWriter = rw

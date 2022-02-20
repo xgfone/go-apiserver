@@ -18,16 +18,16 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/http/handler"
+	mw "github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/log"
 )
 
 // Recover returns a new http handler middleware, which is used to wrap
 // and recover the panic.
-func Recover() handler.Middleware {
-	return handler.NewMiddleware("recover", func(h http.Handler) http.Handler {
-		return handler.WrapHandler(h, func(h http.Handler, w http.ResponseWriter, r *http.Request) {
+func Recover(priority int) mw.Middleware {
+	return mw.NewMiddleware("recover", priority, func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer wrapPanic(w, r)
 			h.ServeHTTP(w, r)
 		})

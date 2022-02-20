@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,15 +20,21 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
+	ruleroute "github.com/xgfone/go-apiserver/http/router/routes/ruler"
 	"github.com/xgfone/go-apiserver/internal/ruler"
 )
 
 func ExampleBuild() {
-	router := router.NewRouter()
-	router.BuildMatcherRule = ruler.Build // Set the builder of the matcher rule
+	routeManger := ruleroute.NewRouteManager()
+
+	// Set the builder of the matcher rule
+	//
+	// Notice: NewRouteManager has set it as the default builder of the matcher rule.
+	//         Here is only show-how.
+	routeManger.BuildMatcherRule = ruler.Build
 
 	// Route 1
-	router.
+	routeManger.
 		Rule("Method(`GET`) && Path(`/path1/{id}`)").              // Build the matcher
 		HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // Set the handler
 			c := reqresp.GetContext(r)
@@ -36,13 +42,14 @@ func ExampleBuild() {
 		})
 
 	// Route 2
-	router.
+	routeManger.
 		Rule("Method(`GET`) && Path(`/path2/{id}`)").              // Build the matcher
 		HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // Set the handler
 			c := reqresp.GetContext(r)
 			fmt.Fprintf(w, "route2: %s", c.Datas["id"])
 		})
 
+	router := router.NewRouter(routeManger)
 	http.ListenAndServe("127.0.0.1:80", router)
 
 	// Open a terminal and run the program:
