@@ -19,17 +19,18 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/internal/test"
 )
 
 func TestActionRoute(t *testing.T) {
 	router := NewRouteManager()
 	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(204)
+		reqresp.GetContext(r).WriteHeader(204)
 	})
 
-	router.RegisterContextFunc("Test1", func(c Context) { c.WriteHeader(201) })
-	router.RegisterContextFunc("Test2", func(c Context) { c.WriteHeader(202) })
+	router.RegisterContextFunc("Test1", func(c *Context) { c.WriteHeader(201) })
+	router.RegisterContextFunc("Test2", func(c *Context) { c.WriteHeader(202) })
 
 	if actions := router.GetActions(); len(actions) != 2 {
 		t.Errorf("expect '%d' actions, but got '%d': %v", 2, len(actions), actions)

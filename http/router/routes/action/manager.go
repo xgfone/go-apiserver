@@ -24,14 +24,16 @@ import (
 	"github.com/xgfone/go-apiserver/http/reqresp"
 )
 
+var ctxpool = sync.Pool{New: func() interface{} { return &Context{} }}
+
 // Predefine some http headers.
 var (
 	HeaderAction = "X-Action"
 )
 
 // GetContext returns the Context from the http request.
-func GetContext(req *http.Request) Context {
-	return reqresp.GetContext(req).Any.(Context)
+func GetContext(req *http.Request) *Context {
+	return reqresp.GetContext(req).Any.(*Context)
 }
 
 type actionsWrapper struct{ actions map[string]http.Handler }
@@ -41,6 +43,12 @@ type Context struct {
 	*reqresp.Context
 
 	Action string
+}
+
+// Reset resets the context.
+func (c *Context) Reset() {
+	c.Context = nil
+	c.Action = ""
 }
 
 // RouteManager is used to manage the routes based on the action service.
@@ -76,6 +84,32 @@ func (m *RouteManager) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 // Route implements the interface router.RouteManager.
 func (m *RouteManager) Route(w http.ResponseWriter, r *http.Request, notFound http.Handler) {
+	var action string
+	if m.GetAction != nil {
+		action = m.GetAction(r)
+	} else {
+		action = r.Header.Get(HeaderAction)
+	}
+
+	var ok bool
+	var h http.Handler
+	if len(action) > 0 {
+		h, ok = m.actions.Load().(actionsWrapper).actions[action]
+	}
+
+	if ok {
+		m.respond(action, h, w, r)
+	} else if notFound != nil {
+		m.respond(action, notFound, w, r)
+	} else if m.NotFound != nil {
+		m.respond(action, m.NotFound, w, r)
+	} else {
+		m.respond(action, handler.Handler404, w, r)
+	}
+}
+
+func (m *RouteManager) respond(action string, handler http.Handler,
+	w http.ResponseWriter, r *http.Request) {
 	ctx, new := reqresp.GetOrNewContext(r)
 	if new {
 		if rw, ok := w.(reqresp.ResponseWriter); ok {
@@ -90,29 +124,24 @@ func (m *RouteManager) Route(w http.ResponseWriter, r *http.Request, notFound ht
 		ctx.Request = r
 	}
 
-	c := Context{Context: ctx}
-	if m.GetAction != nil {
-		c.Action = m.GetAction(r)
-	} else {
-		c.Action = r.Header.Get(HeaderAction)
-	}
-
-	ctx.Any = c
-	var ok bool
-	var h http.Handler
-	if len(c.Action) > 0 {
-		h, ok = m.actions.Load().(actionsWrapper).actions[c.Action]
-	}
-
+	c, ok := ctx.Any.(*Context)
 	if ok {
-		h.ServeHTTP(w, r)
-	} else if notFound != nil {
-		notFound.ServeHTTP(w, r)
-	} else if m.NotFound != nil {
-		m.NotFound.ServeHTTP(w, r)
+		c.Action = action
 	} else {
-		handler.Handler404.ServeHTTP(w, r)
+		c := ctxpool.Get().(*Context)
+		c.Context = ctx
+		c.Action = action
+		ctx.Any = c
+		defer releaseContext(c)
 	}
+
+	handler.ServeHTTP(w, r)
+}
+
+func releaseContext(c *Context) {
+	c.Context.Any = nil
+	c.Reset()
+	ctxpool.Put(c)
 }
 
 /* ------------------------------------------------------------------------- */
@@ -154,7 +183,7 @@ func (m *RouteManager) GetActions() (actions []string) {
 }
 
 // RegisterContextFunc is the same as RegisterFunc, but use Context instead.
-func (m *RouteManager) RegisterContextFunc(action string, f func(Context)) (ok bool) {
+func (m *RouteManager) RegisterContextFunc(action string, f func(*Context)) (ok bool) {
 	return m.RegisterFunc(action, func(rw http.ResponseWriter, r *http.Request) {
 		f(GetContext(r))
 	})
