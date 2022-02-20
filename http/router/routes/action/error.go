@@ -32,8 +32,10 @@ var (
 	ErrAuthFailureSignatureExpire  = NewError("AuthFailure.SignatureExpire", "signature is expired")
 	ErrUnauthorizedOperation       = NewError("UnauthorizedOperation", "operation is unauthorized")
 
-	ErrFailedOperation = NewError("FailedOperation", "operation failed")
-	ErrServerError     = NewError("ServerError", "server error")
+	ErrFailedOperation    = NewError("FailedOperation", "operation failed")
+	ErrServerError        = NewError("ServerError", "server error")
+	ErrGatewayTimeout     = NewError("GatewayTimeout", "gateway timeout")
+	ErrServiceUnavailable = NewError("ServiceUnavailable", "service is unavailable")
 
 	ErrQuotaLimitExceeded   = NewError("QuotaLimitExceeded", "exceed the quota limit")
 	ErrRequestLimitExceeded = NewError("RequestLimitExceeded", "exceed the request limit")
