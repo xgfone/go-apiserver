@@ -23,7 +23,7 @@ type Middleware interface {
 	// Name returns the name of the middleware.
 	Name() string
 
-	// The bigger the value, the higher the priority and the middleware
+	// The smaller the value, the higher the priority and the middleware
 	// is executed preferentially.
 	Priority() int
 
@@ -51,7 +51,7 @@ type Middlewares []Middleware
 
 func (ms Middlewares) Len() int           { return len(ms) }
 func (ms Middlewares) Swap(i, j int)      { ms[i], ms[j] = ms[j], ms[i] }
-func (ms Middlewares) Less(i, j int) bool { return ms[j].Priority() < ms[i].Priority() }
+func (ms Middlewares) Less(i, j int) bool { return ms[i].Priority() < ms[j].Priority() }
 
 // Handler wraps the http handler with the middlewares and returns a new one.
 func (ms Middlewares) Handler(handler http.Handler) http.Handler {

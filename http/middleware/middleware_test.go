@@ -49,11 +49,11 @@ func TestRouteMiddleware(t *testing.T) {
 		t.Errorf("expect %d middlewres, but got %d", 2, _len)
 	} else {
 		for i, mw := range middlewares {
-			if i == 0 && mw.Name() != "log2" {
-				t.Errorf("0: expect middleware 'log2', but got '%s'", mw.Name())
+			if i == 0 && mw.Name() != "log1" {
+				t.Errorf("0: expect middleware 'log1', but got '%s'", mw.Name())
 			}
-			if i == 1 && mw.Name() != "log1" {
-				t.Errorf("1: expect middleware 'log1', but got '%s'", mw.Name())
+			if i == 1 && mw.Name() != "log2" {
+				t.Errorf("1: expect middleware 'log2', but got '%s'", mw.Name())
 			}
 		}
 	}
@@ -67,11 +67,11 @@ func TestRouteMiddleware(t *testing.T) {
 	}
 
 	expects := []string{
-		"middleware 'log2' before",
 		"middleware 'log1' before",
+		"middleware 'log2' before",
 		"handler",
-		"middleware 'log1' after",
 		"middleware 'log2' after",
+		"middleware 'log1' after",
 		"",
 	}
 	results := strings.Split(buf.String(), "\n")
