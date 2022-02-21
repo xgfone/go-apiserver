@@ -20,7 +20,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/xgfone/go-apiserver/http/handler"
+	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 )
 
@@ -42,17 +42,19 @@ type actionsWrapper struct{ actions map[string]http.Handler }
 type Context struct {
 	*reqresp.Context
 
-	Action string
+	Action  string
+	handler http.Handler
 }
 
 // Reset resets the context.
-func (c *Context) Reset() {
-	c.Context = nil
-	c.Action = ""
-}
+func (c *Context) Reset() { *c = Context{} }
 
 // RouteManager is used to manage the routes based on the action service.
 type RouteManager struct {
+	// Middlewares is used to manage the middlewares of the action handlers,
+	// which will wrap the handlers of all the actions.
+	Middlewares *middleware.Manager
+
 	// GetAction is used to get the action name from the http request.
 	//
 	// Default: HeaderAction
@@ -61,7 +63,7 @@ type RouteManager struct {
 	// NotFound is used when the manager is used as http.Handler
 	// and does not find the route.
 	//
-	// Default: handler.Handler404
+	// Default: c.Failure(ErrInvalidAction)
 	NotFound http.Handler
 
 	alock   sync.RWMutex
@@ -72,7 +74,9 @@ type RouteManager struct {
 // NewRouteManager returns a new http router based on the action.
 func NewRouteManager() *RouteManager {
 	r := &RouteManager{amaps: make(map[string]http.Handler, 16)}
-	r.NotFound = http.HandlerFunc(notFound)
+	r.NotFound = http.HandlerFunc(notFoundHandler)
+	r.Middlewares = middleware.NewManager()
+	r.Middlewares.SetHandler(http.HandlerFunc(r.serveHTTP))
 	r.updateActions()
 	return r
 }
@@ -104,7 +108,7 @@ func (m *RouteManager) Route(w http.ResponseWriter, r *http.Request, notFound ht
 	} else if m.NotFound != nil {
 		m.respond(action, m.NotFound, w, r)
 	} else {
-		m.respond(action, handler.Handler404, w, r)
+		m.respond(action, http.HandlerFunc(notFoundHandler), w, r)
 	}
 }
 
@@ -127,20 +131,25 @@ func (m *RouteManager) respond(action string, handler http.Handler,
 	if ok {
 		c.Action = action
 	} else {
-		c := ctxpool.Get().(*Context)
+		c = ctxpool.Get().(*Context)
 		c.Context = ctx
 		c.Action = action
 		ctx.Any = c
 		defer releaseContext(c)
 	}
 
-	handler.ServeHTTP(w, r)
+	c.handler = handler
+	m.Middlewares.ServeHTTP(w, r)
 }
 
 func releaseContext(c *Context) {
 	c.Context.Any = nil
 	c.Reset()
 	ctxpool.Put(c)
+}
+
+func (m *RouteManager) serveHTTP(resp http.ResponseWriter, req *http.Request) {
+	GetContext(req).handler.ServeHTTP(resp, req)
 }
 
 /* ------------------------------------------------------------------------- */
