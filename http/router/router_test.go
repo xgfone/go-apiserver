@@ -67,11 +67,11 @@ func TestRouter(t *testing.T) {
 		t.Errorf("expect status code '%d', but got '%d'", 201, rec.Code)
 	} else {
 		test.CheckStrings(t, "TestRouter", strings.Split(buf.String(), "\n"), []string{
-			"middleware 'log2' before",
 			"middleware 'log1' before",
+			"middleware 'log2' before",
 			"handler",
-			"middleware 'log1' after",
 			"middleware 'log2' after",
+			"middleware 'log1' after",
 			"",
 		})
 	}
@@ -84,11 +84,11 @@ func TestRouter(t *testing.T) {
 		t.Errorf("expect status code '%d', but got '%d'", 201, rec.Code)
 	} else {
 		test.CheckStrings(t, "TestRouter", strings.Split(buf.String(), "\n"), []string{
-			"middleware 'log2' before",
 			"middleware 'log1' before",
+			"middleware 'log2' before",
 			"notfound",
-			"middleware 'log1' after",
 			"middleware 'log2' after",
+			"middleware 'log1' after",
 			"",
 		})
 	}
