@@ -26,7 +26,11 @@ type Response struct {
 // Respond is equal to
 //   r := Response{Data: data, Error: Error{Code: code, Message: msg, Causes: errs}}
 //   c.JSON(200, r).
-func (c Context) Respond(code, msg string, data interface{}, errs ...error) {
+func (c *Context) Respond(code, msg string, data interface{}, errs ...error) {
+	if code != "" {
+		c.Err = NewError(code, msg)
+	}
+
 	c.Err = c.JSON(200, Response{
 		Error: Error{Code: code, Message: msg, Causes: errs},
 		Data:  data,
@@ -34,29 +38,27 @@ func (c Context) Respond(code, msg string, data interface{}, errs ...error) {
 }
 
 // Success is equal to c.JSON(200, Response{Data: data}).
-func (c Context) Success(data interface{}) {
+func (c *Context) Success(data interface{}) {
 	c.Err = c.JSON(200, Response{Data: data})
 }
 
 // Failure is the same as c.JSON(200, Response{Error: err}).
-func (c Context) Failure(err error) {
+func (c *Context) Failure(err error) {
 	var ok bool
 	var resp Response
 	if resp.Error, ok = err.(Error); !ok {
 		resp.Error = ErrServerError.WithMessage(err.Error())
 	}
+
+	c.Err = err
 	c.Err = c.JSON(200, resp)
 }
 
-func notFound(resp http.ResponseWriter, req *http.Request) {
+func notFoundHandler(resp http.ResponseWriter, req *http.Request) {
 	c := GetContext(req)
 	if len(c.Action) == 0 {
-		c.Err = c.JSON(200, Response{
-			Error: ErrInvalidAction.WithMessage("missing the action"),
-		})
+		c.Failure(ErrInvalidAction.WithMessage("missing the action"))
 	} else {
-		c.Err = c.JSON(200, Response{
-			Error: ErrInvalidAction.WithMessage("action '%s' is unsupported", c.Action),
-		})
+		c.Failure(ErrInvalidAction.WithMessage("action '%s' is unsupported", c.Action))
 	}
 }
