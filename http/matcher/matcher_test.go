@@ -17,6 +17,7 @@ package matcher
 import (
 	"net/http"
 	"net/url"
+	"sort"
 	"testing"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
@@ -81,6 +82,32 @@ func TestMatcher(t *testing.T) {
 	testMatcher(t, req, Or(Must(Method("GET")), Must(Path("/path/to"))), true)
 	testMatcher(t, req, Or(Must(Method("GET")), Must(Path("/path"))), true)
 	testMatcher(t, req, Or(Must(Method("POST")), Must(Path("/path"))), false)
+}
+
+func TestMatcherPriority(t *testing.T) {
+	matchers := Matchers{
+		New(1, "matcher1", nil),
+		New(3, "matcher3", nil),
+		New(2, "matcher2", nil),
+		New(2, "matcher4", nil),
+	}
+	sort.Stable(matchers)
+
+	for i, m := range matchers {
+		if i == 0 && m.String() != "matcher3" {
+			t.Errorf("%d: expect matcher '%s', but got '%s'", i, "matcher3", m.String())
+		}
+		if i == 1 && m.String() != "matcher2" {
+			t.Errorf("%d: expect matcher '%s', but got '%s'", i, "matcher2", m.String())
+		}
+		if i == 2 && m.String() != "matcher4" {
+			t.Errorf("%d: expect matcher '%s', but got '%s'", i, "matcher4", m.String())
+		}
+		if i == 3 && m.String() != "matcher1" {
+			t.Errorf("%d: expect matcher '%s', but got '%s'", i, "matcher1", m.String())
+		}
+	}
+
 }
 
 func TestPathMatcherParameter(t *testing.T) {
