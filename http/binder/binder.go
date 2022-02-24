@@ -148,7 +148,7 @@ type DefaultValidateBinder struct {
 
 // Bind implements the interface Binder, and set the default value
 // and validate whether the value is valid.
-func (b *DefaultValidateBinder) Bind(v interface{}, r *http.Request) (err error) {
+func (b DefaultValidateBinder) Bind(v interface{}, r *http.Request) (err error) {
 	if err = b.Binder.Bind(v, r); err != nil {
 		return
 	}

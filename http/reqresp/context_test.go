@@ -15,10 +15,12 @@
 package reqresp
 
 import (
+	"bytes"
 	"net/http"
 	"testing"
 
 	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-apiserver/http/header"
 )
 
 func BenchmarkRequestSetDataGetData(b *testing.B) {
@@ -56,4 +58,33 @@ func TestRequestParams(t *testing.T) {
 	}
 
 	DefaultContextAllocator.Release(GetContext(req))
+}
+
+func TestContextBinder(t *testing.T) {
+	var req struct {
+		Int    int    `default:"222"`
+		Uint   int    `default:"333"`
+		String string `default:"abc"`
+	}
+	req.Int = 111
+
+	c := DefaultContextAllocator.Acquire()
+	body := bytes.NewBufferString(`{"Uint":444}`)
+	c.Request, _ = http.NewRequest("GET", "http://localhost", body)
+	c.Request.Header.Set(header.HeaderContentType, header.MIMEApplicationJSON)
+
+	err := c.Bind(&req)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if req.Int != 111 {
+		t.Errorf("expect Int is equal to %d, but got %d", 111, req.Int)
+	}
+	if req.Uint != 444 {
+		t.Errorf("expect Uint is equal to %d, but got %d", 444, req.Uint)
+	}
+	if req.String != "abc" {
+		t.Errorf("expect String is equal to '%s', but '%s'", "abc", req.String)
+	}
 }
