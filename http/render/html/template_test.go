@@ -58,7 +58,7 @@ func TestTemplate(t *testing.T) {
 `
 
 	rec := httptest.NewRecorder()
-	if err := tmpl.Render(rec, "template_test.html", 200, data); err != nil {
+	if err := tmpl.Render(rec, 200, "template_test.html", data); err != nil {
 		t.Errorf("fail to render the template: %s", err)
 	} else if body := rec.Body.String(); body != html {
 		t.Errorf("expect '%s', but got '%s'", html, body)

@@ -23,16 +23,20 @@ import (
 
 // Renderer is the interface to render the response.
 type Renderer interface {
-	Render(w http.ResponseWriter, name string, code int, data interface{}) error
+	Render(w http.ResponseWriter, code int, name string, data interface{}) error
 }
+
+var _ Renderer = RendererFunc(nil)
 
 // RendererFunc is the function type implementing the interface Renderer.
-type RendererFunc func(http.ResponseWriter, string, int, interface{}) error
+type RendererFunc func(http.ResponseWriter, int, string, interface{}) error
 
 // Render implements the interface Renderer.
-func (f RendererFunc) Render(w http.ResponseWriter, name string, code int, data interface{}) error {
-	return f(w, name, code, data)
+func (f RendererFunc) Render(w http.ResponseWriter, code int, name string, data interface{}) error {
+	return f(w, code, name, data)
 }
+
+var _ Renderer = &MuxRenderer{}
 
 // MuxRenderer is a multiplexer for kinds of Renderers.
 type MuxRenderer struct {
@@ -73,10 +77,10 @@ func (mr *MuxRenderer) Del(suffix string) {
 
 // Render implements the interface Renderer, which will get the renderer
 // the name suffix then render the content.
-func (mr *MuxRenderer) Render(w http.ResponseWriter, name string, code int,
+func (mr *MuxRenderer) Render(w http.ResponseWriter, code int, name string,
 	data interface{}) error {
 	if renderer := mr.Get(name); renderer != nil {
-		return renderer.Render(w, name, code, data)
+		return renderer.Render(w, code, name, data)
 	}
 	return fmt.Errorf("unknown renderer named '%s'", name)
 }

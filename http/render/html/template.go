@@ -25,7 +25,10 @@ import (
 	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/http/header"
+	"github.com/xgfone/go-apiserver/http/render"
 )
+
+var _ render.Renderer = &Template{}
 
 // NewTemplate returns a new template renderer to render the html.
 func NewTemplate(loader Loader) *Template {
@@ -107,7 +110,7 @@ func (r *Template) reload() error {
 
 // Render implements the interface render.Renderer to render the html content
 // from the template files by the given template name.
-func (r *Template) Render(w http.ResponseWriter, name string, code int, data interface{}) (err error) {
+func (r *Template) Render(w http.ResponseWriter, code int, name string, data interface{}) (err error) {
 	if atomic.LoadInt32(&r.debug) == 1 {
 		if err = r.reload(); err != nil {
 			return
@@ -123,7 +126,7 @@ func (r *Template) Render(w http.ResponseWriter, name string, code int, data int
 	if err = r.execute(buf, name, data); err == nil {
 		header.SetContentType(w.Header(), header.MIMETextHTMLCharsetUTF8)
 		w.WriteHeader(code)
-		_, err = buf.WriteTo(w)
+		_, err = w.Write(buf.Bytes())
 	}
 	buf.Reset()
 	r.bufs.Put(buf)
