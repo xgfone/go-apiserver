@@ -31,7 +31,7 @@ func TestDirLoader(t *testing.T) {
 	} else {
 		for _, file := range files {
 			switch name := file.Name(); name {
-			case "template_test.html", "test_templates/div.html":
+			case "template_test.html", "templates/div.html":
 			default:
 				t.Errorf("unexpected template file name '%s'", name)
 			}
