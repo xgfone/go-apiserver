@@ -44,6 +44,7 @@ type Context struct {
 
 	Action  string
 	handler http.Handler
+	respond func(*Context, Response) error
 }
 
 // Reset resets the context.
@@ -65,6 +66,12 @@ type RouteManager struct {
 	//
 	// Default: c.Failure(ErrInvalidAction)
 	NotFound http.Handler
+
+	// HandleResponse is used to wrap the response and handle it by itself,
+	// which is used by the methods of Context: Respond, Success, Failure.
+	//
+	// Default: nil
+	HandleResponse func(*Context, Response) error
 
 	alock   sync.RWMutex
 	amaps   map[string]http.Handler
@@ -139,7 +146,15 @@ func (m *RouteManager) respond(action string, handler http.Handler,
 	}
 
 	c.handler = handler
+	c.respond = m.HandleResponse
 	m.Middlewares.ServeHTTP(w, r)
+	if !c.WroteHeader() {
+		if c.Err == nil {
+			c.Success(nil)
+		} else {
+			c.Failure(c.Err)
+		}
+	}
 }
 
 func releaseContext(c *Context) {

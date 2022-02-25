@@ -19,39 +19,48 @@ import "net/http"
 // Response represents a response result.
 type Response struct {
 	RequestID string      `json:"RequestId,omitempty" xml:"RequestId,omitempty"`
-	Error     Error       `json:",omitempty" xml:",omitempty"`
+	Error     error       `json:",omitempty" xml:",omitempty"`
 	Data      interface{} `json:",omitempty" xml:",omitempty"`
+}
+
+func respond(c *Context, resp Response) {
+	var err error
+	if c.respond != nil {
+		err = c.respond(c, resp)
+	} else {
+		err = c.JSON(200, resp)
+	}
+
+	if err != nil {
+		c.Err = err
+	}
 }
 
 // Respond is equal to
 //   r := Response{Data: data, Error: Error{Code: code, Message: msg, Causes: errs}}
 //   c.JSON(200, r).
 func (c *Context) Respond(code, msg string, data interface{}, errs ...error) {
+	resp := Response{Data: data}
 	if code != "" {
-		c.Err = NewError(code, msg)
+		c.Err = NewError(code, msg).AppendCauses(errs...)
 	}
-
-	c.Err = c.JSON(200, Response{
-		Error: Error{Code: code, Message: msg, Causes: errs},
-		Data:  data,
-	})
+	respond(c, resp)
 }
 
-// Success is equal to c.JSON(200, Response{Data: data}).
+// Success is equal to c.Respond("", "", data).
 func (c *Context) Success(data interface{}) {
-	c.Err = c.JSON(200, Response{Data: data})
+	respond(c, Response{Data: data})
 }
 
 // Failure is the same as c.JSON(200, Response{Error: err}).
 func (c *Context) Failure(err error) {
-	var ok bool
-	var resp Response
-	if resp.Error, ok = err.(Error); !ok {
-		resp.Error = ErrServerError.WithMessage(err.Error())
+	resp := Response{Error: err}
+	if _, ok := err.(Error); !ok {
+		resp.Error = ErrInternalServerError.WithMessage(err.Error())
 	}
 
 	c.Err = err
-	c.Err = c.JSON(200, resp)
+	respond(c, resp)
 }
 
 func notFoundHandler(resp http.ResponseWriter, req *http.Request) {
