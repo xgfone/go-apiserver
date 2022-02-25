@@ -32,10 +32,10 @@ var (
 	ErrAuthFailureSignatureExpire  = NewError("AuthFailure.SignatureExpire", "signature is expired")
 	ErrUnauthorizedOperation       = NewError("UnauthorizedOperation", "operation is unauthorized")
 
-	ErrFailedOperation    = NewError("FailedOperation", "operation failed")
-	ErrServerError        = NewError("ServerError", "server error")
-	ErrGatewayTimeout     = NewError("GatewayTimeout", "gateway timeout")
-	ErrServiceUnavailable = NewError("ServiceUnavailable", "service is unavailable")
+	ErrFailedOperation     = NewError("FailedOperation", "operation failed")
+	ErrInternalServerError = NewError("InternalServerError", "internal server error")
+	ErrGatewayTimeout      = NewError("GatewayTimeout", "gateway timeout")
+	ErrServiceUnavailable  = NewError("ServiceUnavailable", "service is unavailable")
 
 	ErrQuotaLimitExceeded   = NewError("QuotaLimitExceeded", "exceed the quota limit")
 	ErrRequestLimitExceeded = NewError("RequestLimitExceeded", "exceed the request limit")
@@ -134,6 +134,8 @@ func (e Error) WithCauses(errs ...error) Error {
 // AppendCauses appends the error causes into the original causes,
 // and returns itself.
 func (e Error) AppendCauses(errs ...error) Error {
-	e.Causes = append(e.Causes, errs...)
+	if len(errs) > 0 {
+		e.Causes = append(e.Causes, errs...)
+	}
 	return e
 }

@@ -15,12 +15,41 @@
 package action
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	mw "github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/log"
 )
+
+func wrapPanic(r *http.Request) {
+	switch e := recover().(type) {
+	case nil:
+	case Error:
+		GetContext(r).Err = e
+
+	case string:
+		GetContext(r).Err = ErrInternalServerError.WithMessage(e)
+
+	case error:
+		GetContext(r).Err = ErrInternalServerError.WithMessage(e.Error())
+
+	default:
+		GetContext(r).Err = ErrInternalServerError.WithMessage(fmt.Sprint(e))
+	}
+}
+
+// Recover returns a new http handler middleware to wrap the panic as an error
+// and recover the handling process.
+func Recover(priority int) mw.Middleware {
+	return mw.NewMiddleware("recover", priority, func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			defer wrapPanic(r)
+			h.ServeHTTP(rw, r)
+		})
+	})
+}
 
 // Logger returns a new http handler middleware to log the http request.
 func Logger(priority int) mw.Middleware {
@@ -31,6 +60,13 @@ func Logger(priority int) mw.Middleware {
 			cost := time.Since(start)
 
 			c := GetContext(r)
+			if !c.WroteHeader() {
+				if c.Err == nil {
+					c.Success(nil)
+				} else {
+					c.Failure(c.Err)
+				}
+			}
 
 			level := log.LvlInfo
 			if c.Err != nil {
@@ -44,6 +80,7 @@ func Logger(priority int) mw.Middleware {
 			kvs := make([]interface{}, 0, 12)
 			kvs = append(kvs,
 				"addr", r.RemoteAddr,
+				"code", c.StatusCode(),
 				"method", r.Method,
 				"action", c.Action,
 				"start", start.Unix(),
