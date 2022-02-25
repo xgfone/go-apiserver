@@ -27,6 +27,7 @@ import (
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/binder"
 	"github.com/xgfone/go-apiserver/http/header"
+	"github.com/xgfone/go-apiserver/http/render"
 )
 
 type builder struct{ buf []byte }
@@ -70,6 +71,10 @@ var DefaultBinder binder.Binder = &binder.DefaultValidateBinder{
 	SetDefault: helper.SetStructFieldToDefault,
 	Binder:     binder.NewMuxBinder(),
 }
+
+// DefaultRenderer is the default renderer, which will be used by the context
+// when no renderer is set.
+var DefaultRenderer render.Renderer = render.NewMuxRenderer()
 
 // ContextAllocator is used to allocate or release the request context.
 type ContextAllocator interface {
@@ -219,10 +224,11 @@ type Context struct {
 	ResponseWriter
 	*http.Request
 
-	Err    error                  // used to store the error
-	Any    interface{}            // any single-value data
-	Datas  map[string]interface{} // a set of any key-value datas
-	Binder binder.Binder
+	Err      error                  // Be used to save the error
+	Any      interface{}            // Any single-value data
+	Datas    map[string]interface{} // A set of any key-value datas
+	Binder   binder.Binder          // Bind the value to the request
+	Renderer render.Renderer        // Render the content to the client
 
 	// Query and Cookies are used to cache the parsed request query and cookies.
 	Cookies []*http.Cookie
@@ -248,7 +254,12 @@ func (c *Context) Reset() {
 		reset.Reset()
 	}
 
-	*c = Context{Any: c.Any, Datas: c.Datas, Binder: c.Binder}
+	*c = Context{
+		Any:      c.Any,
+		Datas:    c.Datas,
+		Binder:   c.Binder,
+		Renderer: c.Renderer,
+	}
 }
 
 // Bind extracts the data information from the request and assigns it to v.
@@ -351,6 +362,16 @@ func (c *Context) Redirect(code int, toURL string) {
 
 	c.ResponseWriter.Header().Set(header.HeaderLocation, toURL)
 	c.WriteHeader(code)
+}
+
+// Render renders the response with the name and the the data.
+func (c *Context) Render(code int, name string, data interface{}) (err error) {
+	if c.Renderer == nil {
+		err = DefaultRenderer.Render(c.ResponseWriter, code, name, data)
+	} else {
+		err = c.Renderer.Render(c.ResponseWriter, code, name, data)
+	}
+	return
 }
 
 // Blob sends a blob response with the status code and the content type.
