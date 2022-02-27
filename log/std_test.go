@@ -28,11 +28,13 @@ func TestStdLogger(t *testing.T) {
 	Info("msg1", "k1", "v1")
 	Log(LvlInfo, 0, "msg2", "k2", "v2")
 	StdLogger("stdlog: ", LvlDebug).Print("msg3")
+	Infof("msg4: %s=%s", "k3", "v3")
 
 	expects := []string{
 		`prefix: std_test.go:28: msg1; k1=v1`,
 		`prefix: std_test.go:29: msg2; k2=v2`,
 		`stdlog: std_test.go:30: msg3`,
+		`prefix: std_test.go:31: msg4: k3=v3`,
 		``,
 	}
 	results := strings.Split(buf.String(), "\n")

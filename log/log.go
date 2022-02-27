@@ -16,6 +16,7 @@
 package log
 
 import (
+	"fmt"
 	"log"
 	"os"
 )
@@ -82,3 +83,28 @@ func Error(msg string, keysAndValues ...interface{}) {
 func Alert(msg string, keysAndValues ...interface{}) {
 	DefaultLogger.Log(LvlAlert, 1, msg, keysAndValues...)
 }
+
+func fmtLog(level int, msg string, args ...interface{}) {
+	if len(args) > 0 {
+		msg = fmt.Sprintf(msg, args...)
+	}
+	DefaultLogger.Log(level, 2, msg)
+}
+
+// Tracef is used to emit the log based on the string format with the Trace level.
+func Tracef(fmt string, args ...interface{}) { fmtLog(LvlTrace, fmt, args...) }
+
+// Debugf is used to emit the log based on the string format with the Debug level.
+func Debugf(fmt string, args ...interface{}) { fmtLog(LvlDebug, fmt, args...) }
+
+// Infof is used to emit the log based on the string format with the Info level.
+func Infof(fmt string, args ...interface{}) { fmtLog(LvlInfo, fmt, args...) }
+
+// Warnf is used to emit the log based on the string format with the Warn level.
+func Warnf(fmt string, args ...interface{}) { fmtLog(LvlWarn, fmt, args...) }
+
+// Errorf is used to emit the log based on the string format with the Error level.
+func Errorf(fmt string, args ...interface{}) { fmtLog(LvlError, fmt, args...) }
+
+// Alertf is used to emit the log based on the string format with the Alert level.
+func Alertf(fmt string, args ...interface{}) { fmtLog(LvlAlert, fmt, args...) }

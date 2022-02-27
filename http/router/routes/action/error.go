@@ -106,6 +106,11 @@ func (e Error) WithCode(code string) Error {
 	return ne
 }
 
+// WithError is equal to e.WithMessage(err.Error()).
+func (e Error) WithError(err error) Error {
+	return e.WithMessage(err.Error())
+}
+
 // WithMessage clones itself and returns a new Error with the message.
 func (e Error) WithMessage(msgfmt string, msgargs ...interface{}) Error {
 	ne := e.Clone()
