@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"sync"
+
+	"github.com/xgfone/go-apiserver/log"
 )
 
 // CertUpdater is used to update the certificates.
@@ -30,6 +32,26 @@ type noopCertUpdater struct{}
 
 func (u noopCertUpdater) AddCertificate(name string, cert Certificate) {}
 func (u noopCertUpdater) DelCertificate(name string)                   {}
+
+// LogCertUpdater returns a new certificate updater to log the change
+// of the certificates.
+func LogCertUpdater(u CertUpdater) CertUpdater { return logCertUpdater{u} }
+
+type logCertUpdater struct{ updater CertUpdater }
+
+func (u logCertUpdater) AddCertificate(name string, cert Certificate) {
+	log.Info("add the certificate", "name", name)
+	if u.updater != nil {
+		u.updater.AddCertificate(name, cert)
+	}
+}
+
+func (u logCertUpdater) DelCertificate(name string) {
+	log.Info("delete the certificate", "name", name)
+	if u.updater != nil {
+		u.updater.DelCertificate(name)
+	}
+}
 
 // CertUpdaters is a set of CertUpdaters.
 type CertUpdaters []CertUpdater
