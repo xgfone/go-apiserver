@@ -152,6 +152,7 @@ func (p *FileProvider) OnChanged(ctx context.Context, updater CertUpdater) {
 	ticker := time.NewTicker(p.interval)
 	defer ticker.Stop()
 
+	p.update(updater)
 	for {
 		select {
 		case <-ctx.Done():
