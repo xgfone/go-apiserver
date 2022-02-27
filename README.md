@@ -46,23 +46,23 @@ func StartHTTPServer(addr string, handler http.Handler) error {
 }
 
 func main() {
-	routers := ruler.NewRouteManager()
+	routeManager := ruler.NewRouteManager()
 
 	// Route 1: Build the route by the matcher rule string
-	routers.
+	routeManager.
 		Rule("Method(`GET`) && Path(`/path1/{id}`)"). // Build the matcher
 		Handler(httpHandler("route1"))                // Set the handler
 
 	// Route 2: Build the route by assembling the matcher.
-	routers.
+	routeManager.
 		Path("/path2/{id}").Method("GET"). // Assemble the matchers
 		Handler(httpHandler("route2"))     // Set the handler
 
-	routers.
+	routeManager.
 		Path("/path3/{id}").Method("GET"). // Assemble the matchers
 		HandlerFunc(httpHandler("route3")) // Set the handler function
 
-	router := router.NewRouter(routers)
+	router := router.NewRouter(routeManager)
 	router.Middlewares.Use(middlewares.Logger(0), middlewares.Recover(1))
 
 	// err := http.ListenAndServe("127.0.0.1:80", router)
