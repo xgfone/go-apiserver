@@ -70,8 +70,8 @@ type RouteManager struct {
 	// HandleResponse is used to wrap the response and handle it by itself,
 	// which is used by the methods of Context: Respond, Success, Failure.
 	//
-	// Default: nil
-	HandleResponse func(*Context, Response) error
+	// Default: c.JSON(200, resp)
+	HandleResponse func(c *Context, resp Response) error
 
 	alock   sync.RWMutex
 	amaps   map[string]http.Handler
