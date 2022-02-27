@@ -47,8 +47,11 @@ type EntryPoint struct {
 	// Format: [(http|tcp|udp)://][host]:port
 	//
 	// If missing the protocol, it is "http" by default.
-	Addr   string
-	Config *tls.Config
+	Addr string
+
+	// TLSConfig is used to configure the TLS.
+	TLSConfig *tls.Config
+	ForceTLS  bool
 
 	server      server
 	protocol    string
@@ -121,7 +124,8 @@ func (ep *EntryPoint) OnShutdown(callbacks ...func()) {
 func (ep *EntryPoint) Start() {
 	switch server := ep.server.(type) {
 	case *tcp.Server:
-		server.TLSConfig = ep.Config
+		server.TLSConfig = ep.TLSConfig
+		server.ForceTLS = ep.ForceTLS
 
 	// case *udp.Server:
 	default:

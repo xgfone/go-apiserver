@@ -52,9 +52,14 @@ type Handler interface {
 
 // Server implements a server based on the stream.
 type Server struct {
-	Handler   Handler
-	Listener  net.Listener
-	TLSConfig *tls.Config
+	Handler  Handler
+	Listener net.Listener
+
+	// If TLSConfig is set and ForeceTLS is true, the client must use TLS.
+	// If TLSConfig is set and ForeceTLS is false, the client maybe use TLS or not-TLS.
+	// If TLSConfig is not set, ForceTLS is ignored and the client must use not-TLS.
+	TLSConfig *tls.Config // Default: nil
+	ForceTLS  bool        // Default: false
 
 	stopped int32
 	stops   []func()
@@ -111,7 +116,12 @@ func (s *Server) Start() {
 		}
 
 		if s.TLSConfig != nil {
-			conn = &tlsConn{Conn: conn, config: s.TLSConfig, first: true}
+			conn = &tlsConn{
+				Conn:   conn,
+				first:  true,
+				force:  s.ForceTLS,
+				config: s.TLSConfig,
+			}
 		}
 
 		s.Handler.OnConnection(conn)
@@ -120,6 +130,7 @@ func (s *Server) Start() {
 
 type tlsConn struct {
 	config *tls.Config
+	force  bool
 	istls  bool
 	first  bool
 	err    error
@@ -159,7 +170,7 @@ func (c *tlsConn) ensureTLSConn() {
 
 		var bs [1]byte
 		if _, c.err = c.Conn.Read(bs[:]); c.err != nil {
-			log.Error("fail to read the first byte from the tcp conneciton",
+			log.Error("fail to read the first byte from the conneciton",
 				"remoteaddr", c.RemoteAddr().String(), "err", c.err)
 			c.Close()
 			return
@@ -179,9 +190,18 @@ func (c *tlsConn) ensureTLSConn() {
 		if bs[0] == recordTypeHandshake || bs[0] == recordTypeSSLv2 { // For TLS
 			c.Conn = tls.Server(c.Conn, c.config)
 			c.istls = true
+		} else if c.force {
+			log.Error("not support the not-TLS conneciton",
+				"remoteaddr", c.RemoteAddr().String())
+
+			c.err = errNotSupportNotTLS
+			c.Close()
+			return
 		}
 	}
 }
+
+var errNotSupportNotTLS = errors.New("not support the not-TLS connection")
 
 type peekedConn struct {
 	Peeked int16
