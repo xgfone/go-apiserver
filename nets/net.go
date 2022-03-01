@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package nets
 
 import (
 	"errors"
+	"fmt"
+	"net"
 	"strings"
 )
 
@@ -64,4 +66,74 @@ func validOptionalPort(port string) bool {
 		}
 	}
 	return true
+}
+
+// IPChecker is used to check whether the ip is legal or allowed.
+type IPChecker interface {
+	CheckIPString(ip string) (ok bool)
+	fmt.Stringer
+}
+
+// IPCheckers is a set of IPChecker.
+type IPCheckers []IPChecker
+
+func (cs IPCheckers) String() string {
+	_len := len(cs)
+	if _len == 0 {
+		return ""
+	}
+
+	var buf strings.Builder
+	buf.Grow(128)
+	for i := 0; i < _len; i++ {
+		buf.WriteString(cs[i].String())
+	}
+	return buf.String()
+}
+
+// CheckIPString implements the interface IPChecker, which returns true
+// if any ip checker return true.
+func (cs IPCheckers) CheckIPString(ip string) bool {
+	for i, _len := 0, len(cs); i < _len; i++ {
+		if cs[i].CheckIPString(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// NewIPChecker returns a new IPChecker based on an IP or CIDR.
+func NewIPChecker(ipOrCidr string) (IPChecker, error) {
+	if strings.IndexByte(ipOrCidr, '/') > -1 { // For CIDR
+		_, ipnet, err := net.ParseCIDR(ipOrCidr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid cidr network address '%s'", ipOrCidr)
+		}
+		return ipChecker{ipnet}, nil
+	}
+
+	cidr := ipOrCidr
+	if strings.IndexByte(cidr, '.') == -1 { // For IPv6
+		cidr += "/128"
+	} else { // For IPv4
+		cidr += "/32"
+	}
+
+	_, ipnet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ip address '%s'", ipOrCidr)
+	}
+	return ipChecker{ipnet}, nil
+}
+
+type ipChecker struct{ *net.IPNet }
+
+func (c ipChecker) String() string { return c.IPNet.String() }
+
+func (c ipChecker) CheckIPString(ip string) bool {
+	_ip := net.ParseIP(ip)
+	if _ip == nil {
+		return false
+	}
+	return c.Contains(_ip)
 }

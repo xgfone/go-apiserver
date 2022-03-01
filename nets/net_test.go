@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,4 +63,48 @@ func ExampleSplitHostPort() {
 	// host=fe80::215:5dff:fe34:8e60, port=
 	// host=fe80::215:5dff:fe34:8e60, port=
 	// host=fe80::215:5dff:fe34:8e60, port=80
+}
+
+func ExampleIPChecker() {
+	checkip := func(checker IPChecker, ip string) {
+		if checker.CheckIPString(ip) {
+			fmt.Printf("'%s' contains the ip '%s'\n", checker.String(), ip)
+		} else {
+			fmt.Printf("'%s' does not contain the ip '%s'\n", checker.String(), ip)
+		}
+	}
+
+	ipv4checker, _ := NewIPChecker("1.2.3.4")
+	checkip(ipv4checker, "1.2.3.4")
+	checkip(ipv4checker, "5.6.7.8")
+	checkip(ipv4checker, "fe80::215:5dff:fe8c:6de7")
+
+	cidrv4checker, _ := NewIPChecker("10.0.0.0/8")
+	checkip(cidrv4checker, "10.1.2.3")
+	checkip(cidrv4checker, "192.168.1.2")
+	checkip(cidrv4checker, "fe80::215:5dff:fe8c:6de7")
+
+	ipv6checker, _ := NewIPChecker("fe80::215:5dff:fe8c:6de7")
+	checkip(ipv6checker, "fe80::215:5dff:fe8c:6de7")
+	checkip(ipv6checker, "fe80::215:5dff:fe8c:1234")
+	checkip(ipv6checker, "1.2.3.4")
+
+	cidrv6checker, _ := NewIPChecker("fe80::/16")
+	checkip(cidrv6checker, "fe80::215:5dff:fe8c:6de7")
+	checkip(cidrv6checker, "2408::215:5dff:fe8c:6de7")
+	checkip(cidrv6checker, "1.2.3.4")
+
+	// Output:
+	// '1.2.3.4/32' contains the ip '1.2.3.4'
+	// '1.2.3.4/32' does not contain the ip '5.6.7.8'
+	// '1.2.3.4/32' does not contain the ip 'fe80::215:5dff:fe8c:6de7'
+	// '10.0.0.0/8' contains the ip '10.1.2.3'
+	// '10.0.0.0/8' does not contain the ip '192.168.1.2'
+	// '10.0.0.0/8' does not contain the ip 'fe80::215:5dff:fe8c:6de7'
+	// 'fe80::215:5dff:fe8c:6de7/128' contains the ip 'fe80::215:5dff:fe8c:6de7'
+	// 'fe80::215:5dff:fe8c:6de7/128' does not contain the ip 'fe80::215:5dff:fe8c:1234'
+	// 'fe80::215:5dff:fe8c:6de7/128' does not contain the ip '1.2.3.4'
+	// 'fe80::/16' contains the ip 'fe80::215:5dff:fe8c:6de7'
+	// 'fe80::/16' does not contain the ip '2408::215:5dff:fe8c:6de7'
+	// 'fe80::/16' does not contain the ip '1.2.3.4'
 }

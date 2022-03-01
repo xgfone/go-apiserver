@@ -19,7 +19,6 @@ package matcher
 import (
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"net/textproto"
 	"regexp"
@@ -29,7 +28,6 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/nets"
-	"github.com/xgfone/netaddr"
 )
 
 // MatchFunc is a function to match the request.
@@ -400,37 +398,15 @@ func methodMatcher(method string) (Matcher, error) {
 }
 
 func clientIPMatcher(clientIP string) (Matcher, error) {
-	var err error
-	var ipnet netaddr.IPNetwork
-
-	if strings.IndexByte(clientIP, '/') > -1 {
-		ipnet, err = netaddr.NewIPNetwork(clientIP)
-		if err != nil {
-			return nil, err
-		}
-
-		clientIP = ""
+	ipChecker, err := nets.NewIPChecker(clientIP)
+	if err != nil {
+		return nil, err
 	}
 
 	desc := fmt.Sprintf("ClientIP(%s)", clientIP)
 	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
 		remoteIP, _ := nets.SplitHostPort(r.RemoteAddr)
-		if clientIP != "" {
-			return r, remoteIP == clientIP
-		}
-
-		ip := net.ParseIP(remoteIP)
-		if ip == nil {
-			return r, false
-		}
-
-		version := 4
-		if strings.IndexByte(remoteIP, '.') == -1 {
-			version = 6
-		}
-
-		ipaddr, _ := netaddr.NewIPAddress(ip, version)
-		return r, ipnet.HasIP(ipaddr)
+		return r, ipChecker.CheckIPString(remoteIP)
 	}), nil
 }
 

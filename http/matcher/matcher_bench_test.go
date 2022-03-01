@@ -40,3 +40,16 @@ func BenchmarkPathParameter(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkClientIPMatcher(b *testing.B) {
+	matcher := Must(ClientIP("10.0.0.0/8"))
+	req := &http.Request{RemoteAddr: "10.1.2.3:80"}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			matcher.Match(req)
+		}
+	})
+}
