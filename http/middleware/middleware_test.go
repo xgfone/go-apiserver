@@ -109,3 +109,27 @@ func TestRouteMiddleware(t *testing.T) {
 		}
 	}
 }
+
+func TestMiddlewaresClone(t *testing.T) {
+	ms := Middlewares{logMiddleware(nil, "m1", 1), logMiddleware(nil, "m2", 2)}
+	nms := ms.Clone(logMiddleware(nil, "m3", 3), logMiddleware(nil, "m4", 4))
+
+	if len(nms) != 4 {
+		t.Errorf("expect %d middlewares, but got %d", 4, len(nms))
+	} else {
+		for i, mw := range nms {
+			if i == 0 && mw.Name() != "m1" {
+				t.Errorf("%d: expect middleware '%s', but got '%s'", i, "m1", mw.Name())
+			}
+			if i == 1 && mw.Name() != "m2" {
+				t.Errorf("%d: expect middleware '%s', but got '%s'", i, "m2", mw.Name())
+			}
+			if i == 2 && mw.Name() != "m3" {
+				t.Errorf("%d: expect middleware '%s', but got '%s'", i, "m3", mw.Name())
+			}
+			if i == 3 && mw.Name() != "m4" {
+				t.Errorf("%d: expect middleware '%s', but got '%s'", i, "m4", mw.Name())
+			}
+		}
+	}
+}

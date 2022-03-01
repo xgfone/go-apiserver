@@ -60,3 +60,11 @@ func (ms Middlewares) Handler(handler http.Handler) http.Handler {
 	}
 	return handler
 }
+
+// Clone clones itself and appends the new middlewares to the new.
+func (ms Middlewares) Clone(news ...Middleware) Middlewares {
+	mws := make(Middlewares, len(ms)+len(news))
+	copy(mws, ms)
+	copy(mws[len(ms):], news)
+	return mws
+}
