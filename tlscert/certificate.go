@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -152,15 +152,17 @@ func (c Certificate) MatchIP(ip string) bool {
 // MatchHost checks whether there is one of the DNSName SANs to match the host.
 //
 // Notice: It only supports the full domain host or the wild
-func (c Certificate) MatchHost(host string) bool {
+func (c Certificate) MatchHost(host string) (ok bool) {
 	for _, dnsname := range c.DNSNames {
 		if strings.HasPrefix(dnsname, "*.") {
-			dnsname = dnsname[2:]
+			ok = strings.HasSuffix(host, dnsname[1:])
+		} else {
+			ok = dnsname == host
 		}
 
-		if dnsname == host {
-			return true
+		if ok {
+			break
 		}
 	}
-	return false
+	return
 }

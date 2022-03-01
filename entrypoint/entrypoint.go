@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -133,12 +133,14 @@ func (ep *EntryPoint) Start() {
 	}
 
 	log.Info(fmt.Sprintf("start the %s server", ep.protocol),
+		"enabletls", ep.TLSConfig != nil, "forcetls", ep.ForceTLS,
 		"name", ep.Name, "listenaddr", ep.Addr)
 
 	go ep.httpHandler.Start()
 	ep.server.Start()
 
 	log.Info(fmt.Sprintf("stop the %s server", ep.protocol),
+		"enabletls", ep.TLSConfig != nil, "forcetls", ep.ForceTLS,
 		"name", ep.Name, "listenaddr", ep.Addr)
 }
 

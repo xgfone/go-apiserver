@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ func LogCertUpdater(u CertUpdater) CertUpdater { return logCertUpdater{u} }
 type logCertUpdater struct{ updater CertUpdater }
 
 func (u logCertUpdater) AddCertificate(name string, cert Certificate) {
-	log.Info("add the certificate", "name", name)
+	log.Info("add the certificate", "name", name, "dnsnames", cert.DNSNames)
 	if u.updater != nil {
 		u.updater.AddCertificate(name, cert)
 	}

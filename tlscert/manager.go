@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package tlscert
 
 import (
 	"crypto/tls"
+	"fmt"
 	"sync"
 	"sync/atomic"
 )
@@ -149,6 +150,8 @@ func (m *CertManager) GetConfigForClient(chi *tls.ClientHelloInfo) (config *tls.
 		config = m.TLSConfig().Clone()
 		config.GetConfigForClient = nil
 		cert.UpdateTLSConfig(config)
+	} else {
+		err = fmt.Errorf("no certificate for the server name '%s'", chi.ServerName)
 	}
 	return
 }
