@@ -276,16 +276,15 @@ func (b RouteBuilder) HandlerFunc(handler http.HandlerFunc) error {
 }
 
 // Handler registers the route with the handler.
-func (b RouteBuilder) Handler(handler http.Handler) error {
-	if b.err != nil {
-		return b.err
+func (b RouteBuilder) Handler(handler http.Handler) (err error) {
+	if err = b.err; err == nil {
+		err = b.addRoute(handler)
 	}
 
-	err := b.addRoute(handler)
 	if err != nil && b.panic {
 		panic(err)
 	}
-	return err
+	return
 }
 
 func (b RouteBuilder) addRoute(handler http.Handler) (err error) {
