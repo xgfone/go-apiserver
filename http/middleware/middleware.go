@@ -27,8 +27,8 @@ type Middleware interface {
 	// is executed preferentially.
 	Priority() int
 
-	// Handler is used to wrap the http handler and returns a new one.
-	Handler(http.Handler) http.Handler
+	// HTTPHandler is used to wrap the http handler and returns a new one.
+	HTTPHandler(http.Handler) http.Handler
 }
 
 type middleware struct {
@@ -37,9 +37,9 @@ type middleware struct {
 	handler  func(http.Handler) http.Handler
 }
 
-func (m middleware) Name() string                        { return m.name }
-func (m middleware) Priority() int                       { return m.priority }
-func (m middleware) Handler(h http.Handler) http.Handler { return m.handler(h) }
+func (m middleware) Name() string                            { return m.name }
+func (m middleware) Priority() int                           { return m.priority }
+func (m middleware) HTTPHandler(h http.Handler) http.Handler { return m.handler(h) }
 
 // NewMiddleware returns a new HTTP handler middleware.
 func NewMiddleware(name string, prio int, f func(http.Handler) http.Handler) Middleware {
@@ -56,7 +56,7 @@ func (ms Middlewares) Less(i, j int) bool { return ms[i].Priority() < ms[j].Prio
 // Handler wraps the http handler with the middlewares and returns a new one.
 func (ms Middlewares) Handler(handler http.Handler) http.Handler {
 	for _len := len(ms) - 1; _len >= 0; _len-- {
-		handler = ms[_len].Handler(handler)
+		handler = ms[_len].HTTPHandler(handler)
 	}
 	return handler
 }

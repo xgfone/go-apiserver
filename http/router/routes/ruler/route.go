@@ -102,6 +102,6 @@ func (r *Route) Use(mws ...middleware.Middleware) {
 
 	r.handler = r.Handler
 	for _len := len(mws) - 1; _len >= 0; _len-- {
-		r.handler = mws[_len].Handler(r.handler)
+		r.handler = mws[_len].HTTPHandler(r.handler)
 	}
 }

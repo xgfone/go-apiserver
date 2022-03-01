@@ -29,7 +29,7 @@ func TestClientIP(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "http://localhost", nil)
-	handler := clientIP.Handler(handler.Handler400)
+	handler := clientIP.HTTPHandler(handler.Handler400)
 
 	rec1 := httptest.NewRecorder()
 	req.RemoteAddr = "10.1.2.3:12345"
