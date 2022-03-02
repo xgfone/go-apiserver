@@ -22,9 +22,42 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
 )
+
+// Predefine some binder to bind the body, query and header of the request.
+var (
+	BodyBinder   Binder
+	QueryBinder  Binder
+	HeaderBinder Binder
+)
+
+func init() {
+	mb := NewMuxBinder()
+	mb.Add(header.MIMEApplicationXML, XMLBinder())
+	mb.Add(header.MIMEApplicationJSON, JSONBinder())
+	mb.Add(header.MIMEApplicationForm, FormBinder(10<<20))
+	BodyBinder = &DefaultValidateBinder{
+		SetDefault: helper.SetStructFieldToDefault,
+		Binder:     mb,
+	}
+
+	QueryBinder = &DefaultValidateBinder{
+		SetDefault: helper.SetStructFieldToDefault,
+		Binder: BinderFunc(func(dst interface{}, req *http.Request) error {
+			return BindURLValues(dst, req.URL.Query(), "query")
+		}),
+	}
+
+	HeaderBinder = &DefaultValidateBinder{
+		SetDefault: helper.SetStructFieldToDefault,
+		Binder: BinderFunc(func(dst interface{}, req *http.Request) error {
+			return BindURLValues(dst, url.Values(req.Header), "header")
+		}),
+	}
+}
 
 // Binder is used to bind the data to the http request.
 type Binder interface {
