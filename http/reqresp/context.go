@@ -24,7 +24,6 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/binder"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/render"
@@ -57,20 +56,6 @@ func getBuilder() *builder  { return bpool.Get().(*builder) }
 func putBuilder(b *builder) { b.Reset(); bpool.Put(b) }
 
 /// ----------------------------------------------------------------------- ///
-
-func init() {
-	mb := DefaultBinder.(*binder.DefaultValidateBinder).Binder.(*binder.MuxBinder)
-	mb.Add(header.MIMEApplicationXML, binder.XMLBinder())
-	mb.Add(header.MIMEApplicationJSON, binder.JSONBinder())
-	mb.Add(header.MIMEApplicationForm, binder.FormBinder(10<<20))
-}
-
-// DefaultBinder is the default binder, which will be used by the context
-// when no binder is set.
-var DefaultBinder binder.Binder = &binder.DefaultValidateBinder{
-	SetDefault: helper.SetStructFieldToDefault,
-	Binder:     binder.NewMuxBinder(),
-}
 
 // DefaultRenderer is the default renderer, which will be used by the context
 // when no renderer is set.
@@ -265,7 +250,7 @@ func (c *Context) Reset() {
 // Bind extracts the data information from the request and assigns it to v.
 func (c *Context) Bind(v interface{}) (err error) {
 	if c.Binder == nil {
-		err = DefaultBinder.Bind(v, c.Request)
+		err = binder.BodyBinder.Bind(v, c.Request)
 	} else {
 		err = c.Binder.Bind(v, c.Request)
 	}
