@@ -56,6 +56,7 @@ func (m *Manager) updateMiddlewares() {
 
 	sort.Stable(mdws)
 	m.mdws.Store(middlewaresWrapper{mdws})
+	m.handler.Set(mdws.Handler(m.GetHandler()))
 }
 
 // SwapHandler stores the new handler and returns the old.
