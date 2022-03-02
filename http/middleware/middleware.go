@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package middleware provides the middleware functions for the http handler.
 package middleware
 
 import (

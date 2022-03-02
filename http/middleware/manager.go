@@ -70,6 +70,13 @@ func (m *Manager) Reset() {
 	m.lock.Unlock()
 }
 
+// SwapHandler stores the new handler and returns the old.
+func (m *Manager) SwapHandler(new http.Handler) (old http.Handler) {
+	old = m.orig.Swap(new)
+	m.updateHandler()
+	return
+}
+
 // SetHandler resets the http handler.
 func (m *Manager) SetHandler(handler http.Handler) {
 	m.orig.Set(handler)
