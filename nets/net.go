@@ -77,6 +77,19 @@ type IPChecker interface {
 // IPCheckers is a set of IPChecker.
 type IPCheckers []IPChecker
 
+// NewIPCheckers parses a group of the ip or cidr strings to IPCheckers.
+func NewIPCheckers(ipOrCidrs ...string) (IPCheckers, error) {
+	checkers := make(IPCheckers, len(ipOrCidrs))
+	for i, ip := range ipOrCidrs {
+		c, err := NewIPChecker(ip)
+		if err != nil {
+			return nil, err
+		}
+		checkers[i] = c
+	}
+	return checkers, nil
+}
+
 func (cs IPCheckers) String() string {
 	_len := len(cs)
 	if _len == 0 {

@@ -33,13 +33,9 @@ func ClientIP(prioirty int, handler http.Handler, ipOrCidrs ...string) (middlewa
 		return nil, errors.New("MiddlewareClientIP: no ips or cidrs")
 	}
 
-	checkers := make(nets.IPCheckers, len(ipOrCidrs))
-	for i, ip := range ipOrCidrs {
-		c, err := nets.NewIPChecker(ip)
-		if err != nil {
-			return nil, err
-		}
-		checkers[i] = c
+	checkers, err := nets.NewIPCheckers(ipOrCidrs...)
+	if err != nil {
+		return nil, err
 	}
 
 	if handler == nil {
