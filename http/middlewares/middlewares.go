@@ -12,22 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package middlewares is a collection of some middlewares.
 package middlewares
 
-import (
-	"net/http"
+import "github.com/xgfone/go-apiserver/middleware"
 
-	mw "github.com/xgfone/go-apiserver/http/middleware"
-	"github.com/xgfone/go-apiserver/http/reqresp"
-)
-
-// ResponseWriter returns a new http handler middleware, which converts
-// http.ResponseWriter to the extended http ResponseWriter that supports
-// to get the status code of the response.
-func ResponseWriter(priority int) mw.Middleware {
-	return mw.NewMiddleware("responsewriter", priority, func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			h.ServeHTTP(reqresp.NewResponseWriter(w), r)
-		})
-	})
-}
+// DefaultMiddlewares is a set of the default middlewares.
+var DefaultMiddlewares = middleware.Middlewares{Logger(1), Recover(10)}

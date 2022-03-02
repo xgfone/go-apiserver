@@ -23,8 +23,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/internal/test"
+	"github.com/xgfone/go-apiserver/middleware"
 )
 
 type rmFunc func(http.ResponseWriter, *http.Request, http.Handler)
@@ -34,10 +34,10 @@ func (f rmFunc) Route(w http.ResponseWriter, r *http.Request, no http.Handler) {
 }
 
 func logMiddleware(buf *bytes.Buffer, name string, prio int) middleware.Middleware {
-	return middleware.NewMiddleware(name, prio, func(h http.Handler) http.Handler {
+	return middleware.NewMiddleware(name, prio, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(buf, "middleware '%s' before\n", name)
-			h.ServeHTTP(rw, r)
+			h.(http.Handler).ServeHTTP(rw, r)
 			fmt.Fprintf(buf, "middleware '%s' after\n", name)
 		})
 	})

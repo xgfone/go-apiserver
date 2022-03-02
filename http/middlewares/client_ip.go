@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/http/middleware"
+	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/nets"
 )
 
@@ -42,11 +42,11 @@ func ClientIP(prioirty int, handler http.Handler, ipOrCidrs ...string) (middlewa
 		handler = http.HandlerFunc(handleClientIP)
 	}
 
-	return middleware.NewMiddleware("client_ip", prioirty, func(h http.Handler) http.Handler {
+	return middleware.NewMiddleware("client_ip", prioirty, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			ip, _ := nets.SplitHostPort(r.RemoteAddr)
 			if checkers.CheckIPString(ip) {
-				h.ServeHTTP(rw, r)
+				h.(http.Handler).ServeHTTP(rw, r)
 			} else {
 				handler.ServeHTTP(rw, r)
 			}

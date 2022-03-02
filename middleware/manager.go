@@ -18,21 +18,23 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"sort"
 	"sync"
-	"sync/atomic"
 
+	"github.com/xgfone/go-apiserver/internal/atomic"
 	"github.com/xgfone/go-apiserver/tcp"
 )
 
+type handlerWrapper struct{ Handler interface{} }
 type middlewaresWrapper struct{ Middlewares }
 
-// Manager is used to manage a group of the tcp middlewares,
-// which has also implemented the interface tcp.Handler
-// to be used as a TCP Handler.
+// Manager is used to manage a group of the common middlewares,
+// which has also implemented the interface http.Handler and tcp.Handler
+// to be used as a HTTP or TCP Handler.
 type Manager struct {
-	orig    tcp.SwitchHandler
-	handler tcp.SwitchHandler
+	orig    atomic.Value
+	handler atomic.Value
 
 	maps map[string]Middleware
 	lock sync.RWMutex
@@ -40,15 +42,17 @@ type Manager struct {
 }
 
 // NewManager returns a new middleware manager.
-func NewManager(handler tcp.Handler) *Manager {
+func NewManager(handler interface{}) *Manager {
 	m := &Manager{maps: make(map[string]Middleware, 8)}
-	m.orig.Set(handler)
+	m.orig.Store(handlerWrapper{Handler: handler})
 	m.updateMiddlewares()
 	return m
 }
 
-func (m *Manager) updateHandler(handler tcp.Handler) {
-	m.handler.Set(m.GetMiddlewares().Handler(handler))
+func (m *Manager) updateHandler(handler interface{}) {
+	if handler != nil {
+		m.handler.Store(handlerWrapper{m.GetMiddlewares().Handler(handler)})
+	}
 }
 
 func (m *Manager) updateMiddlewares() {
@@ -59,23 +63,27 @@ func (m *Manager) updateMiddlewares() {
 
 	sort.Stable(mdws)
 	m.mdws.Store(middlewaresWrapper{mdws})
-	m.handler.Set(mdws.Handler(m.GetHandler()))
+	if handler := m.GetHandler(); handler != nil {
+		m.handler.Store(handlerWrapper{mdws.Handler(handler)})
+	}
 }
 
 // SwapHandler stores the new handler and returns the old.
-func (m *Manager) SwapHandler(new tcp.Handler) (old tcp.Handler) {
+func (m *Manager) SwapHandler(new interface{}) (old interface{}) {
 	m.updateHandler(new)
-	return m.orig.Swap(new)
+	return m.orig.Swap(new).(handlerWrapper).Handler
 }
 
-// SetHandler resets the tcp handler.
-func (m *Manager) SetHandler(handler tcp.Handler) {
+// SetHandler resets the handler.
+func (m *Manager) SetHandler(handler interface{}) {
 	m.updateHandler(handler)
-	m.orig.Set(handler)
+	m.orig.Store(handlerWrapper{handler})
 }
 
-// GetHandler returns the tcp handler.
-func (m *Manager) GetHandler() tcp.Handler { return m.orig.Get() }
+// GetHandler returns the handler.
+func (m *Manager) GetHandler() interface{} {
+	return m.orig.Load().(handlerWrapper).Handler
+}
 
 // Use is a convenient function to add a group of the given middlewares,
 // which will panic with an error when the given middleware has been added.
@@ -151,15 +159,38 @@ func (m *Manager) GetMiddlewares() Middlewares {
 }
 
 // WrapHandler uses the inner middlewares to wrap the given handler.
-func (m *Manager) WrapHandler(handler tcp.Handler) tcp.Handler {
+func (m *Manager) WrapHandler(handler interface{}) interface{} {
 	return m.GetMiddlewares().Handler(handler)
 }
 
-// OnConnection implements the interface Handler.
-func (m *Manager) OnConnection(c net.Conn) { m.handler.OnConnection(c) }
+func (m *Manager) getHandler() interface{} {
+	return m.handler.Load().(handlerWrapper).Handler
+}
 
-// OnServerExit implements the interface Handler.
-func (m *Manager) OnServerExit(err error) { m.handler.OnServerExit(err) }
+// OnConnection implements the interface http.Handler.
+//
+// Notice: the handler must be a http.Handler.
+func (m *Manager) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	m.getHandler().(http.Handler).ServeHTTP(rw, r)
+}
 
-// OnShutdown implements the interface Handler.
-func (m *Manager) OnShutdown(c context.Context) { m.handler.OnShutdown(c) }
+// OnConnection implements the interface tcp.Handler.
+//
+// Notice: the handler must be a tcp.Handler.
+func (m *Manager) OnConnection(c net.Conn) {
+	m.getHandler().(tcp.Handler).OnConnection(c)
+}
+
+// OnServerExit implements the interface tcp.Handler.
+//
+// Notice: the handler must be a tcp.Handler.
+func (m *Manager) OnServerExit(err error) {
+	m.getHandler().(tcp.Handler).OnServerExit(err)
+}
+
+// OnShutdown implements the interface tcp.Handler.
+//
+// Notice: the handler must be a tcp.Handler.
+func (m *Manager) OnShutdown(c context.Context) {
+	m.getHandler().(tcp.Handler).OnShutdown(c)
+}

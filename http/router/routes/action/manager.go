@@ -20,8 +20,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
+	"github.com/xgfone/go-apiserver/middleware"
 )
 
 var ctxpool = sync.Pool{New: func() interface{} { return &Context{} }}
@@ -82,7 +82,7 @@ type RouteManager struct {
 func NewRouteManager() *RouteManager {
 	r := &RouteManager{amaps: make(map[string]http.Handler, 16)}
 	r.NotFound = http.HandlerFunc(notFoundHandler)
-	r.Middlewares = middleware.NewManager()
+	r.Middlewares = middleware.NewManager(nil)
 	r.Middlewares.SetHandler(http.HandlerFunc(r.serveHTTP))
 	r.updateActions()
 	return r

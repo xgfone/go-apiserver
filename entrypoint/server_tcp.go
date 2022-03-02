@@ -18,8 +18,8 @@ import (
 	"crypto/tls"
 	"net"
 
+	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/tcp"
-	"github.com/xgfone/go-apiserver/tcp/middleware"
 )
 
 var _ Server = TCPServer{}

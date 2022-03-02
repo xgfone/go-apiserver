@@ -1,4 +1,4 @@
-// Copyright 2021~2022 xgfone
+// Copyright 2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package middlewares is a collection of some middlewares.
+// Package middlewares provides some middlewares of the tcp handler.
 package middlewares
-
-import "github.com/xgfone/go-apiserver/http/middleware"
-
-// DefaultMiddlewares is a set of the default middlewares.
-var DefaultMiddlewares = middleware.Middlewares{Logger(1), Recover(10)}

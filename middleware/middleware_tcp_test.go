@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,13 +26,15 @@ import (
 	"github.com/xgfone/go-apiserver/tcp"
 )
 
-type testHandler struct {
+var _ tcp.Handler = testTCPHandler{}
+
+type testTCPHandler struct {
 	buf     *bytes.Buffer
 	name    string
 	handler tcp.Handler
 }
 
-func (h testHandler) OnShutdown(c context.Context) {
+func (h testTCPHandler) OnShutdown(c context.Context) {
 	if h.handler == nil {
 		fmt.Fprintf(h.buf, "'%s' onshutdown handler\n", h.name)
 		return
@@ -43,7 +45,7 @@ func (h testHandler) OnShutdown(c context.Context) {
 	fmt.Fprintf(h.buf, "'%s' onshutdown after middleware\n", h.name)
 }
 
-func (h testHandler) OnServerExit(err error) {
+func (h testTCPHandler) OnServerExit(err error) {
 	if h.handler == nil {
 		fmt.Fprintf(h.buf, "'%s' onserverexit handler\n", h.name)
 		return
@@ -54,7 +56,7 @@ func (h testHandler) OnServerExit(err error) {
 	fmt.Fprintf(h.buf, "'%s' onserverexit after middleware\n", h.name)
 }
 
-func (h testHandler) OnConnection(c net.Conn) {
+func (h testTCPHandler) OnConnection(c net.Conn) {
 	if h.handler == nil {
 		fmt.Fprintf(h.buf, "'%s' onconnection handler\n", h.name)
 		return
@@ -65,24 +67,25 @@ func (h testHandler) OnConnection(c net.Conn) {
 	fmt.Fprintf(h.buf, "'%s' onconnection after middleware\n", h.name)
 }
 
-func handlerMiddleware(name string, priority int, buf *bytes.Buffer) Middleware {
-	return NewMiddleware(name, priority, func(h tcp.Handler) tcp.Handler {
-		return testHandler{handler: h, name: name, buf: buf}
+func tcpMiddleware(name string, priority int, buf *bytes.Buffer) Middleware {
+	return NewMiddleware(name, priority, func(h interface{}) interface{} {
+		return testTCPHandler{handler: h.(tcp.Handler), name: name, buf: buf}
 	})
 }
 
-func TestMiddleware(t *testing.T) {
+func TestMiddlewareManagerTCP(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
+	tcpHandler := testTCPHandler{buf: buf, name: "handler"}
 
 	manager := NewManager(nil)
-	manager.Use(handlerMiddleware("mw2", 2, buf), handlerMiddleware("mw1", 1, buf))
-	handler := manager.WrapHandler(testHandler{buf: buf, name: "handler"})
+	manager.Use(tcpMiddleware("mw2", 2, buf), tcpMiddleware("mw1", 1, buf))
 
+	handler := manager.WrapHandler(tcpHandler).(tcp.Handler)
 	handler.OnConnection(nil)
 	handler.OnServerExit(nil)
 	handler.OnShutdown(context.Background())
 
-	expectedResults := []string{
+	expects := []string{
 		// OnConnection
 		"'mw1' onconnection before middleware",
 		"'mw2' onconnection before middleware",
@@ -107,6 +110,12 @@ func TestMiddleware(t *testing.T) {
 		// End
 		"",
 	}
+	test.CheckStrings(t, "MiddlewareManagerTCP", strings.Split(buf.String(), "\n"), expects)
 
-	test.CheckStrings(t, "tcp middleware", strings.Split(buf.String(), "\n"), expectedResults)
+	buf.Reset()
+	manager.SetHandler(tcpHandler)
+	manager.OnConnection(nil)
+	manager.OnServerExit(nil)
+	manager.OnShutdown(context.Background())
+	test.CheckStrings(t, "MiddlewareManagerTCP", strings.Split(buf.String(), "\n"), expects)
 }

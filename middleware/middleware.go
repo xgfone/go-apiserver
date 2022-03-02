@@ -12,14 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package middleware provides the middleware functions for the http handler.
+// Package middleware provides the common middleware functions for the handler.
 package middleware
 
-import (
-	"net/http"
-)
-
-// Middleware is the http handler middleware.
+// Middleware is the common handler middleware.
 type Middleware interface {
 	// Name returns the name of the middleware.
 	Name() string
@@ -28,36 +24,36 @@ type Middleware interface {
 	// is executed preferentially.
 	Priority() int
 
-	// HTTPHandler is used to wrap the http handler and returns a new one.
-	HTTPHandler(http.Handler) http.Handler
+	// Handler is used to wrap the handler and returns a new one.
+	Handler(wrappedhandler interface{}) (newHandler interface{})
 }
 
 type middleware struct {
 	name     string
 	priority int
-	handler  func(http.Handler) http.Handler
+	handler  func(interface{}) interface{}
 }
 
-func (m middleware) Name() string                            { return m.name }
-func (m middleware) Priority() int                           { return m.priority }
-func (m middleware) HTTPHandler(h http.Handler) http.Handler { return m.handler(h) }
+func (m middleware) Name() string                      { return m.name }
+func (m middleware) Priority() int                     { return m.priority }
+func (m middleware) Handler(h interface{}) interface{} { return m.handler(h) }
 
-// NewMiddleware returns a new HTTP handler middleware.
-func NewMiddleware(name string, prio int, f func(http.Handler) http.Handler) Middleware {
+// NewMiddleware returns a new common handler middleware.
+func NewMiddleware(name string, prio int, f func(h interface{}) interface{}) Middleware {
 	return middleware{name: name, priority: prio, handler: f}
 }
 
-// Middlewares is a group of the http handler middlewares.
+// Middlewares is a group of the common handler middlewares.
 type Middlewares []Middleware
 
 func (ms Middlewares) Len() int           { return len(ms) }
 func (ms Middlewares) Swap(i, j int)      { ms[i], ms[j] = ms[j], ms[i] }
 func (ms Middlewares) Less(i, j int) bool { return ms[i].Priority() < ms[j].Priority() }
 
-// Handler wraps the http handler with the middlewares and returns a new one.
-func (ms Middlewares) Handler(handler http.Handler) http.Handler {
+// Handler wraps the handler with the middlewares and returns a new one.
+func (ms Middlewares) Handler(handler interface{}) interface{} {
 	for _len := len(ms) - 1; _len >= 0; _len-- {
-		handler = ms[_len].HTTPHandler(handler)
+		handler = ms[_len].Handler(handler)
 	}
 	return handler
 }

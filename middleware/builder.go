@@ -19,7 +19,7 @@ import (
 	"sync"
 )
 
-// BuilderFunc is a function to build the tcp middleware.
+// BuilderFunc is a function to build the common middleware.
 type BuilderFunc func(name string, config map[string]interface{}) (Middleware, error)
 
 // Builder is used to build a new middleware with the middleware config.
@@ -38,7 +38,7 @@ func (b builder) Build(n string, c map[string]interface{}) (Middleware, error) {
 	return b.new(n, c)
 }
 
-// NewBuilder returns a new tcp middleware builder.
+// NewBuilder returns a new common middleware builder.
 func NewBuilder(typ string, build BuilderFunc) Builder {
 	return builder{typ: typ, new: build}
 }
@@ -107,5 +107,5 @@ func (m *BuilderManager) Build(typ, name string, config map[string]interface{}) 
 	if builder := m.GetBuilder(typ); builder != nil {
 		return builder.Build(name, config)
 	}
-	return nil, fmt.Errorf("no the tcp middleware builder typed '%s'", typ)
+	return nil, fmt.Errorf("no the middleware builder typed '%s'", typ)
 }

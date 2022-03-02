@@ -18,17 +18,17 @@ import (
 	"net/http"
 	"time"
 
-	mw "github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/log"
+	mw "github.com/xgfone/go-apiserver/middleware"
 )
 
 // Logger returns a new http handler middleware to log the http request.
 func Logger(priority int) mw.Middleware {
-	return mw.NewMiddleware("logger", priority, func(h http.Handler) http.Handler {
+	return mw.NewMiddleware("logger", priority, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			h.ServeHTTP(w, r)
+			h.(http.Handler).ServeHTTP(w, r)
 			cost := time.Since(start)
 
 			var err error

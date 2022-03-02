@@ -19,7 +19,7 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/handler"
-	"github.com/xgfone/go-apiserver/http/middleware"
+	"github.com/xgfone/go-apiserver/middleware"
 )
 
 // RouteManager is used to manage the routes.
@@ -45,7 +45,7 @@ type Router struct {
 func NewRouter(routeManager RouteManager) *Router {
 	r := &Router{
 		RouteManager: routeManager,
-		Middlewares:  middleware.NewManager(),
+		Middlewares:  middleware.NewManager(nil),
 		NotFound:     handler.Handler404,
 	}
 
