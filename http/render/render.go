@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package render provides the response renderer function.
 package render
 
 import (
@@ -29,7 +30,7 @@ type Renderer interface {
 var _ Renderer = RendererFunc(nil)
 
 // RendererFunc is the function type implementing the interface Renderer.
-type RendererFunc func(http.ResponseWriter, int, string, interface{}) error
+type RendererFunc func(w http.ResponseWriter, code int, name string, data interface{}) error
 
 // Render implements the interface Renderer.
 func (f RendererFunc) Render(w http.ResponseWriter, code int, name string, data interface{}) error {

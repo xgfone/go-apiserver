@@ -25,10 +25,7 @@ import (
 	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/http/header"
-	"github.com/xgfone/go-apiserver/http/render"
 )
-
-var _ render.Renderer = &Template{}
 
 // NewTemplate returns a new template renderer to render the html.
 func NewTemplate(loader Loader) *Template {
