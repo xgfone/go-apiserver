@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tcp
+package middleware
 
 import (
 	"bytes"
@@ -21,12 +21,15 @@ import (
 	"net"
 	"strings"
 	"testing"
+
+	"github.com/xgfone/go-apiserver/internal/test"
+	"github.com/xgfone/go-apiserver/tcp"
 )
 
 type testHandler struct {
 	buf     *bytes.Buffer
 	name    string
-	handler Handler
+	handler tcp.Handler
 }
 
 func (h testHandler) OnShutdown(c context.Context) {
@@ -62,19 +65,18 @@ func (h testHandler) OnConnection(c net.Conn) {
 	fmt.Fprintf(h.buf, "'%s' onconnection after middleware\n", h.name)
 }
 
-func handlerMiddleware(name string, buf *bytes.Buffer) Middleware {
-	return func(h Handler) Handler {
-		return testHandler{buf: buf, name: name, handler: h}
-	}
+func handlerMiddleware(name string, priority int, buf *bytes.Buffer) Middleware {
+	return NewMiddleware(name, priority, func(h tcp.Handler) tcp.Handler {
+		return testHandler{handler: h, name: name, buf: buf}
+	})
 }
 
 func TestMiddleware(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	handler := NewMiddlewareHandler(testHandler{buf: buf, name: "h"},
-		handlerMiddleware("mw1", buf),
-		handlerMiddleware("mw2", buf),
-		handlerMiddleware("mw3", buf),
-	)
+
+	manager := NewManager(nil)
+	manager.Use(handlerMiddleware("mw2", 2, buf), handlerMiddleware("mw1", 1, buf))
+	handler := manager.WrapHandler(testHandler{buf: buf, name: "handler"})
 
 	handler.OnConnection(nil)
 	handler.OnServerExit(nil)
@@ -84,41 +86,27 @@ func TestMiddleware(t *testing.T) {
 		// OnConnection
 		"'mw1' onconnection before middleware",
 		"'mw2' onconnection before middleware",
-		"'mw3' onconnection before middleware",
-		"'h' onconnection handler",
-		"'mw3' onconnection after middleware",
+		"'handler' onconnection handler",
 		"'mw2' onconnection after middleware",
 		"'mw1' onconnection after middleware",
 
 		// OnServerExit
 		"'mw1' onserverexit before middleware",
 		"'mw2' onserverexit before middleware",
-		"'mw3' onserverexit before middleware",
-		"'h' onserverexit handler",
-		"'mw3' onserverexit after middleware",
+		"'handler' onserverexit handler",
 		"'mw2' onserverexit after middleware",
 		"'mw1' onserverexit after middleware",
 
 		// OnShutdown
 		"'mw1' onshutdown before middleware",
 		"'mw2' onshutdown before middleware",
-		"'mw3' onshutdown before middleware",
-		"'h' onshutdown handler",
-		"'mw3' onshutdown after middleware",
+		"'handler' onshutdown handler",
 		"'mw2' onshutdown after middleware",
 		"'mw1' onshutdown after middleware",
 
 		// End
 		"",
 	}
-	lines := strings.Split(buf.String(), "\n")
-	if len(lines) != len(expectedResults) {
-		t.Errorf("expect %d lines, but got %d lines", len(expectedResults), len(lines))
-	} else {
-		for i, line := range expectedResults {
-			if lines[i] != line {
-				t.Errorf("%d line: expect '%s', but got '%s'", i, line, lines[i])
-			}
-		}
-	}
+
+	test.CheckStrings(t, "tcp middleware", strings.Split(buf.String(), "\n"), expectedResults)
 }

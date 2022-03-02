@@ -26,6 +26,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/tcp"
+	"github.com/xgfone/go-apiserver/tcp/middleware"
 )
 
 type server interface {
@@ -55,7 +56,7 @@ type EntryPoint struct {
 
 	server      server
 	protocol    string
-	mwHandler   *tcp.MiddlewareHandler
+	mwHandler   *middleware.Manager
 	httpHandler *tcp.HTTPServerHandler
 }
 
@@ -72,7 +73,7 @@ func NewHTTPEntryPoint(name, addr string, handler http.Handler) (*EntryPoint, er
 
 	ep := &EntryPoint{Name: name, Addr: addr, protocol: "http"}
 	ep.httpHandler = tcp.NewHTTPServerHandler(ln.Addr(), handler)
-	ep.mwHandler = tcp.NewMiddlewareHandler(ep.httpHandler)
+	ep.mwHandler = middleware.NewManager(ep.httpHandler)
 	ep.server = tcp.NewServer(ln, ep.mwHandler, nil)
 	return ep, nil
 }
@@ -110,8 +111,8 @@ func (ep *EntryPoint) SwitchHTTPHandler(new http.Handler) (old http.Handler) {
 }
 
 // AppendTCPHandlerMiddlewares appends the tcp handler middlewares.
-func (ep *EntryPoint) AppendTCPHandlerMiddlewares(mws ...tcp.Middleware) {
-	ep.mwHandler.Append(mws...)
+func (ep *EntryPoint) AppendTCPHandlerMiddlewares(mws ...middleware.Middleware) {
+	ep.mwHandler.Use(mws...)
 }
 
 // OnShutdown registers the callback functions, which are called

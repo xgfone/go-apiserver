@@ -33,23 +33,6 @@ type TLSConn interface {
 	net.Conn
 }
 
-// Handler is used to handle the TCP connection.
-type Handler interface {
-	// OnConnection is called when a new connection comes.
-	//
-	// For the TCP connection, you can assert the connection to TLSConn
-	// to get the TLS connection.
-	//
-	// Notice: it is the responsibility of the handler to close the connection.
-	OnConnection(net.Conn)
-
-	// OnServerExit is called when the server exits unexpectedly.
-	OnServerExit(err error)
-
-	// OnShutdown is called when the server is stopped.
-	OnShutdown(context.Context)
-}
-
 // Server implements a server based on the stream.
 type Server struct {
 	Handler  Handler
