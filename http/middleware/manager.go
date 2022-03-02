@@ -60,16 +60,6 @@ func (m *Manager) updateMiddlewares() {
 	m.mdws.Store(middlewaresWrapper{mdws})
 }
 
-// Reset resets the middlewares.
-func (m *Manager) Reset() {
-	m.lock.Lock()
-	for name := range m.maps {
-		delete(m.maps, name)
-	}
-	m.updateMiddlewares()
-	m.lock.Unlock()
-}
-
 // SwapHandler stores the new handler and returns the old.
 func (m *Manager) SwapHandler(new http.Handler) (old http.Handler) {
 	old = m.orig.Swap(new)
@@ -101,6 +91,19 @@ func (m *Manager) Cancel(names ...string) {
 	for _, name := range names {
 		m.DelMiddleware(name)
 	}
+}
+
+// ResetMiddlewares resets the middlewares.
+func (m *Manager) ResetMiddlewares(mws ...Middleware) {
+	m.lock.Lock()
+	for name := range m.maps {
+		delete(m.maps, name)
+	}
+	for _, mw := range mws {
+		m.maps[mw.Name()] = mw
+	}
+	m.updateMiddlewares()
+	m.lock.Unlock()
 }
 
 // AddMiddleware adds the middleware.
