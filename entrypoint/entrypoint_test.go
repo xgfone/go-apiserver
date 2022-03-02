@@ -15,6 +15,7 @@
 package entrypoint
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -22,20 +23,18 @@ import (
 	"github.com/xgfone/go-apiserver/http/handler"
 )
 
-func TestEntryPoint(t *testing.T) {
+func TestHTTPEntryPoint(t *testing.T) {
 	manager := NewManager()
 
-	ep1, err := NewEntryPoint("http8001", "127.0.0.1:8001")
-	if err != nil {
+	ep1 := NewEntryPoint("http8001", "127.0.0.1:8001", handler.Handler200)
+	if err := ep1.Init(); err != nil {
 		t.Fatal(err)
 	}
-	ep1.SwitchHTTPHandler(handler.Handler200)
 
-	ep2, err := NewEntryPoint("http8002", "127.0.0.1:8002")
-	if err != nil {
+	ep2 := NewEntryPoint("http8002", "127.0.0.1:8002", handler.Handler200)
+	if err := ep2.Init(); err != nil {
 		t.Fatal(err)
 	}
-	ep2.SwitchHTTPHandler(handler.Handler200)
 
 	go ep1.Start()
 	go ep2.Start()
@@ -89,11 +88,11 @@ func TestEntryPoint(t *testing.T) {
 	}
 
 	if ep := manager.DelEntryPoint(ep1.Name); ep != nil {
-		ep.Stop()
+		ep.Shutdown(context.Background())
 	}
 
 	if ep := manager.DelEntryPoint(ep2.Name); ep != nil {
-		ep.Stop()
+		ep.Shutdown(context.Background())
 	}
 
 	eps = manager.GetEntryPoints()

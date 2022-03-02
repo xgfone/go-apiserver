@@ -22,21 +22,17 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/xgfone/go-apiserver/http/router"
-	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/tcp"
-	"github.com/xgfone/go-apiserver/tcp/middleware"
 )
 
-type server interface {
+// Server represents an entrypoint server.
+type Server interface {
+	Protocal() string
 	OnShutdown(...func())
 	Shutdown(context.Context)
 	Start()
-	Stop()
 }
-
-var _ server = &EntryPoint{}
 
 // EntryPoint represents an entrypoint of the services.
 type EntryPoint struct {
@@ -50,36 +46,32 @@ type EntryPoint struct {
 	// If missing the protocol, it is "http" by default.
 	Addr string
 
+	// Handler is the handler of the entrypoint server.
+	//
+	// For the tcp entrypoint, it must be the type of tcp.Handler.
+	// For the http entrypoint, it may be nil or the type of http.Handler.
+	// If nil, it is router.NewRouter(ruler.NewRouteManager()) by default.
+	Handler interface{}
+
 	// TLSConfig is used to configure the TLS.
 	TLSConfig *tls.Config
 	ForceTLS  bool
 
-	server      server
-	protocol    string
-	mwHandler   *middleware.Manager
-	httpHandler *tcp.HTTPServerHandler
-}
-
-// NewHTTPEntryPoint returns a new http entrypoint.
-func NewHTTPEntryPoint(name, addr string, handler http.Handler) (*EntryPoint, error) {
-	ln, err := tcp.Listen(addr)
-	if err != nil {
-		return nil, err
-	}
-
-	if handler == nil {
-		handler = router.NewRouter(ruler.NewRouteManager())
-	}
-
-	ep := &EntryPoint{Name: name, Addr: addr, protocol: "http"}
-	ep.httpHandler = tcp.NewHTTPServerHandler(ln.Addr(), handler)
-	ep.mwHandler = middleware.NewManager(ep.httpHandler)
-	ep.server = tcp.NewServer(ln, ep.mwHandler, nil)
-	return ep, nil
+	Server
 }
 
 // NewEntryPoint returns a new entrypoint.
-func NewEntryPoint(name, addr string) (*EntryPoint, error) {
+func NewEntryPoint(name, addr string, handler interface{}) *EntryPoint {
+	return &EntryPoint{Name: name, Addr: addr, Handler: handler}
+}
+
+// Init initializes the entrypoint server.
+func (ep *EntryPoint) Init() (err error) {
+	if ep.Server != nil {
+		return
+	}
+
+	addr := ep.Addr
 	var protocol string
 	if index := strings.Index(addr, "://"); index > -1 {
 		protocol = addr[:index]
@@ -88,65 +80,63 @@ func NewEntryPoint(name, addr string) (*EntryPoint, error) {
 
 	switch protocol {
 	case "", "http":
-		return NewHTTPEntryPoint(name, addr, nil)
+		ln, err := tcp.Listen(addr)
+		if err != nil {
+			return err
+		}
 
-	// case "tcp":
+		var httpHandler http.Handler
+		switch handler := ep.Handler.(type) {
+		case nil:
+		case http.Handler:
+			httpHandler = handler
+		default:
+			panic(fmt.Errorf("unknown http handler type '%T'", ep.Handler))
+		}
+
+		httpServer := NewHTTPServer(ln, httpHandler)
+		httpServer.SetTLSConfig(ep.TLSConfig, ep.ForceTLS)
+		ep.Server = httpServer
+
+	case "tcp":
+		ln, err := tcp.Listen(addr)
+		if err != nil {
+			return err
+		}
+
+		var tcpHandler tcp.Handler
+		switch handler := ep.Handler.(type) {
+		case nil:
+		case tcp.Handler:
+			tcpHandler = handler
+		default:
+			panic(fmt.Errorf("unknown http handler type '%T'", ep.Handler))
+		}
+
+		tcpServer := NewTCPServer(ln, tcpHandler)
+		tcpServer.SetTLSConfig(ep.TLSConfig, ep.ForceTLS)
+		ep.Server = tcpServer
+
 	// case "udp":
 	default:
-		return nil, fmt.Errorf("unknown entrypoint protocol '%s'", protocol)
+		return fmt.Errorf("unknown entrypoint protocol '%s'", protocol)
 	}
+
+	return
 }
 
-// Protocol returns the protocol of the entrypoint, such as "http", "tcp" or "udp".
-func (ep *EntryPoint) Protocol() string { return ep.protocol }
-
-// GetHTTPHandler returns the http handler.
-func (ep *EntryPoint) GetHTTPHandler() http.Handler {
-	return ep.httpHandler.Get()
-}
-
-// SwitchHTTPHandler swaps out the old http handler with the new.
-func (ep *EntryPoint) SwitchHTTPHandler(new http.Handler) (old http.Handler) {
-	return ep.httpHandler.Swap(new)
-}
-
-// AppendTCPHandlerMiddlewares appends the tcp handler middlewares.
-func (ep *EntryPoint) AppendTCPHandlerMiddlewares(mws ...middleware.Middleware) {
-	ep.mwHandler.Use(mws...)
-}
-
-// OnShutdown registers the callback functions, which are called
-// when the entrypoint is shut down.
-func (ep *EntryPoint) OnShutdown(callbacks ...func()) {
-	ep.server.OnShutdown(callbacks...)
-}
+// Stop is equal to ep.Shutdown(context.Background()).
+func (ep *EntryPoint) Stop() { ep.Shutdown(context.Background()) }
 
 // Start starts the entrypoint.
 func (ep *EntryPoint) Start() {
-	switch server := ep.server.(type) {
-	case *tcp.Server:
-		server.TLSConfig = ep.TLSConfig
-		server.ForceTLS = ep.ForceTLS
-
-	// case *udp.Server:
-	default:
-		panic("unknown the entrypoint server type")
-	}
-
-	log.Info(fmt.Sprintf("start the %s server", ep.protocol),
+	log.Info(fmt.Sprintf("start the %s server", ep.Protocal()),
 		"enabletls", ep.TLSConfig != nil, "forcetls", ep.ForceTLS,
 		"name", ep.Name, "listenaddr", ep.Addr)
 
-	go ep.httpHandler.Start()
-	ep.server.Start()
+	ep.Server.Start()
 
-	log.Info(fmt.Sprintf("stop the %s server", ep.protocol),
+	log.Info(fmt.Sprintf("stop the %s server", ep.Protocal()),
 		"enabletls", ep.TLSConfig != nil, "forcetls", ep.ForceTLS,
 		"name", ep.Name, "listenaddr", ep.Addr)
 }
-
-// Stop stops the entrypoint and waits until all the connections are closed.
-func (ep *EntryPoint) Stop() { ep.server.Stop() }
-
-// Shutdown shuts down the entrypoint gracefully.
-func (ep *EntryPoint) Shutdown(c context.Context) { ep.server.Shutdown(c) }

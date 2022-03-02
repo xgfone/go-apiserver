@@ -19,6 +19,29 @@ import (
 	"sync"
 )
 
+// DefaultManager is the default global entrypoint manager.
+var DefaultManager = NewManager()
+
+// AddEntryPoint is equal to DefaultManager.AddEntryPoint(ep).
+func AddEntryPoint(ep *EntryPoint) error {
+	return DefaultManager.AddEntryPoint(ep)
+}
+
+// DelEntryPoint is equal to DefaultManager.DelEntryPoint(name).
+func DelEntryPoint(name string) *EntryPoint {
+	return DefaultManager.DelEntryPoint(name)
+}
+
+// GetEntryPoint is equal to DefaultManager.GetEntryPoint(name).
+func GetEntryPoint(name string) *EntryPoint {
+	return DefaultManager.GetEntryPoint(name)
+}
+
+// GetEntryPoints is equal to DefaultManager.GetEntryPoints().
+func GetEntryPoints() []*EntryPoint {
+	return DefaultManager.GetEntryPoints()
+}
+
 // Manager manages a group of entrypoints.
 type Manager struct {
 	lock sync.RWMutex
