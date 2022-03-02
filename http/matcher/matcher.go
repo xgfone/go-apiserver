@@ -315,7 +315,7 @@ func (p urlPath) Match(old *http.Request) (new *http.Request, ok bool) {
 	if ok {
 		c, isnew := reqresp.GetOrNewContext(old)
 		for i, _len := 0, len(args); i < _len; i++ {
-			c.Datas[args[i].key] = args[i].value
+			c.Data[args[i].key] = args[i].value
 		}
 		if isnew {
 			new = reqresp.SetContext(old, c)

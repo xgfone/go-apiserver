@@ -38,7 +38,7 @@ func ExampleBuild() {
 		Rule("Method(`GET`) && Path(`/path1/{id}`)").              // Build the matcher
 		HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // Set the handler
 			c := reqresp.GetContext(r)
-			fmt.Fprintf(w, "route1: %s", c.Datas["id"])
+			fmt.Fprintf(w, "route1: %s", c.Data["id"])
 		})
 
 	// Route 2
@@ -46,7 +46,7 @@ func ExampleBuild() {
 		Rule("Method(`GET`) && Path(`/path2/{id}`)").              // Build the matcher
 		HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // Set the handler
 			c := reqresp.GetContext(r)
-			fmt.Fprintf(w, "route2: %s", c.Datas["id"])
+			fmt.Fprintf(w, "route2: %s", c.Data["id"])
 		})
 
 	router := router.NewRouter(routeManger)

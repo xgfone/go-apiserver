@@ -91,7 +91,7 @@ var DefaultContextAllocator = NewContextAllocator(8)
 func NewContextAllocator(dataCap int) ContextAllocator {
 	var alloc contextAllocator
 	alloc.ctxPool.New = func() interface{} {
-		return &Context{Datas: make(map[string]interface{}, dataCap)}
+		return &Context{Data: make(map[string]interface{}, dataCap)}
 	}
 	return &alloc
 }
@@ -134,7 +134,7 @@ func GetOrNewContext(req *http.Request) (c *Context, new bool) {
 // GetReqDatas returns the all request parameters from the http request context.
 func GetReqDatas(req *http.Request) (datas map[string]interface{}) {
 	if c := GetContext(req); c != nil {
-		datas = c.Datas
+		datas = c.Data
 	}
 	return
 }
@@ -144,8 +144,8 @@ func GetReqDatas(req *http.Request) (datas map[string]interface{}) {
 //
 // If the key does not exist, return nil.
 func GetReqData(req *http.Request, key string) (value interface{}) {
-	if c := GetContext(req); c != nil && c.Datas != nil {
-		value = c.Datas[key]
+	if c := GetContext(req); c != nil && c.Data != nil {
+		value = c.Data[key]
 	}
 	return
 }
@@ -170,10 +170,10 @@ func SetReqData(req *http.Request, key string, value interface{}) (newreq *http.
 		c.Request = req
 	}
 
-	if c.Datas == nil {
-		c.Datas = make(map[string]interface{}, 8)
+	if c.Data == nil {
+		c.Data = make(map[string]interface{}, 8)
 	}
-	c.Datas[key] = value
+	c.Data[key] = value
 
 	return req
 }
@@ -191,12 +191,12 @@ func SetReqDatas(req *http.Request, datas map[string]interface{}) (newreq *http.
 		c.Request = req
 	}
 
-	if c.Datas == nil {
-		c.Datas = make(map[string]interface{}, 8+len(datas))
+	if c.Data == nil {
+		c.Data = make(map[string]interface{}, 8+len(datas))
 	}
 
 	for key, value := range datas {
-		c.Datas[key] = value
+		c.Data[key] = value
 	}
 
 	return req
@@ -209,9 +209,13 @@ type Context struct {
 	ResponseWriter
 	*http.Request
 
-	Err   error                  // Be used to save the error
-	Any   interface{}            // Any single-value data
-	Datas map[string]interface{} // A set of any key-value datas
+	// The context information, which will be reset to ZERO after finishing
+	// to handle the request.
+	Err  error                  // Be used to save the context error
+	Reg1 interface{}            // The register to save the temporary context value.
+	Reg2 interface{}            // The register to save the temporary context value.
+	Reg3 interface{}            // The register to save the temporary context value.
+	Data map[string]interface{} // A set of any key-value data
 
 	Renderer     render.Renderer // Render the content to the client
 	BodyBinder   binder.Binder   // Bind the value to the request body
@@ -225,27 +229,20 @@ type Context struct {
 
 // NewContext returns a new Context.
 func NewContext(dataCapSize int) *Context {
-	return &Context{Datas: make(map[string]interface{}, dataCapSize)}
+	return &Context{Data: make(map[string]interface{}, dataCapSize)}
 }
 
 // Reset resets the context itself.
 func (c *Context) Reset() {
 	// Clean the datas.
-	if len(c.Datas) > 0 {
-		for key := range c.Datas {
-			delete(c.Datas, key)
+	if len(c.Data) > 0 {
+		for key := range c.Data {
+			delete(c.Data, key)
 		}
 	}
 
-	// Reset the field Any.
-	if reset, ok := c.Any.(interface{ Reset() }); ok {
-		reset.Reset()
-	}
-
 	*c = Context{
-		Any:   c.Any,
-		Datas: c.Datas,
-
+		Data:         c.Data,
 		Renderer:     c.Renderer,
 		BodyBinder:   c.BodyBinder,
 		QueryBinder:  c.QueryBinder,

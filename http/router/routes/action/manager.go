@@ -33,7 +33,7 @@ var (
 
 // GetContext returns the Context from the http request.
 func GetContext(req *http.Request) *Context {
-	return reqresp.GetContext(req).Any.(*Context)
+	return reqresp.GetContext(req).Reg3.(*Context)
 }
 
 type actionsWrapper struct{ actions map[string]http.Handler }
@@ -134,14 +134,14 @@ func (m *RouteManager) respond(action string, handler http.Handler,
 		w = ctx.ResponseWriter
 	}
 
-	c, ok := ctx.Any.(*Context)
+	c, ok := ctx.Reg3.(*Context)
 	if ok {
 		c.Action = action
 	} else {
 		c = ctxpool.Get().(*Context)
 		c.Context = ctx
 		c.Action = action
-		ctx.Any = c
+		ctx.Reg3 = c
 		defer releaseContext(c)
 	}
 
@@ -158,7 +158,6 @@ func (m *RouteManager) respond(action string, handler http.Handler,
 }
 
 func releaseContext(c *Context) {
-	c.Context.Any = nil
 	c.Reset()
 	ctxpool.Put(c)
 }
