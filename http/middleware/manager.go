@@ -44,33 +44,30 @@ func NewManager() *Manager {
 	return m
 }
 
-func (m *Manager) updateHandler() Middlewares {
+func (m *Manager) updateHandler(handler http.Handler) {
+	m.handler.Set(m.GetMiddlewares().Handler(handler))
+}
+
+func (m *Manager) updateMiddlewares() {
 	mdws := make(Middlewares, 0, len(m.maps))
 	for _, mw := range m.maps {
 		mdws = append(mdws, mw)
 	}
 
 	sort.Stable(mdws)
-	m.handler.Set(mdws.Handler(m.orig.Get()))
-	return mdws
-}
-
-func (m *Manager) updateMiddlewares() {
-	mdws := m.updateHandler()
 	m.mdws.Store(middlewaresWrapper{mdws})
 }
 
 // SwapHandler stores the new handler and returns the old.
 func (m *Manager) SwapHandler(new http.Handler) (old http.Handler) {
-	old = m.orig.Swap(new)
-	m.updateHandler()
-	return
+	m.updateHandler(new)
+	return m.orig.Swap(new)
 }
 
 // SetHandler resets the http handler.
 func (m *Manager) SetHandler(handler http.Handler) {
+	m.updateHandler(handler)
 	m.orig.Set(handler)
-	m.updateHandler()
 }
 
 // GetHandler returns the http handler.
