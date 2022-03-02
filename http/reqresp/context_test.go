@@ -73,7 +73,7 @@ func TestContextBinder(t *testing.T) {
 	c.Request, _ = http.NewRequest("GET", "http://localhost", body)
 	c.Request.Header.Set(header.HeaderContentType, header.MIMEApplicationJSON)
 
-	err := c.Bind(&req)
+	err := c.BindBody(&req)
 	if err != nil {
 		t.Error(err)
 	}

@@ -209,11 +209,14 @@ type Context struct {
 	ResponseWriter
 	*http.Request
 
-	Err      error                  // Be used to save the error
-	Any      interface{}            // Any single-value data
-	Datas    map[string]interface{} // A set of any key-value datas
-	Binder   binder.Binder          // Bind the value to the request
-	Renderer render.Renderer        // Render the content to the client
+	Err   error                  // Be used to save the error
+	Any   interface{}            // Any single-value data
+	Datas map[string]interface{} // A set of any key-value datas
+
+	Renderer     render.Renderer // Render the content to the client
+	BodyBinder   binder.Binder   // Bind the value to the request body
+	QueryBinder  binder.Binder   // Bind the value to the request query
+	HeaderBinder binder.Binder   // Bind the value to the request header
 
 	// Query and Cookies are used to cache the parsed request query and cookies.
 	Cookies []*http.Cookie
@@ -240,19 +243,42 @@ func (c *Context) Reset() {
 	}
 
 	*c = Context{
-		Any:      c.Any,
-		Datas:    c.Datas,
-		Binder:   c.Binder,
-		Renderer: c.Renderer,
+		Any:   c.Any,
+		Datas: c.Datas,
+
+		Renderer:     c.Renderer,
+		BodyBinder:   c.BodyBinder,
+		QueryBinder:  c.QueryBinder,
+		HeaderBinder: c.HeaderBinder,
 	}
 }
 
-// Bind extracts the data information from the request and assigns it to v.
-func (c *Context) Bind(v interface{}) (err error) {
-	if c.Binder == nil {
+// BindBody extracts the data from the request body and assigns it to v.
+func (c *Context) BindBody(v interface{}) (err error) {
+	if c.BodyBinder == nil {
 		err = binder.BodyBinder.Bind(v, c.Request)
 	} else {
-		err = c.Binder.Bind(v, c.Request)
+		err = c.BodyBinder.Bind(v, c.Request)
+	}
+	return
+}
+
+// BindQuery extracts the data from the request query and assigns it to v.
+func (c *Context) BindQuery(v interface{}) (err error) {
+	if c.QueryBinder == nil {
+		err = binder.QueryBinder.Bind(v, c.Request)
+	} else {
+		err = c.QueryBinder.Bind(v, c.Request)
+	}
+	return
+}
+
+// BindHeader extracts the data from the request header and assigns it to v.
+func (c *Context) BindHeader(v interface{}) (err error) {
+	if c.HeaderBinder == nil {
+		err = binder.HeaderBinder.Bind(v, c.Request)
+	} else {
+		err = c.HeaderBinder.Bind(v, c.Request)
 	}
 	return
 }
