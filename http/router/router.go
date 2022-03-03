@@ -30,8 +30,8 @@ type RouteManager interface {
 // Router is the http router to dispatch the request to the different handlers
 // by the route rule matcher.
 type Router struct {
-	// Middlewares is used to manage the middlewares of the routes,
-	// which will wrap the handler of all the routes.
+	// Middlewares is used to manage the middlewares and takes effect
+	// before the route manager routes the request.
 	Middlewares *middleware.Manager
 
 	// NotFound is used when no route is found.

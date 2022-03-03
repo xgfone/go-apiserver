@@ -21,7 +21,7 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/entrypoint"
-	"github.com/xgfone/go-apiserver/http/middleware/middlewares"
+	"github.com/xgfone/go-apiserver/http/middlewares"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
 	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
@@ -30,19 +30,17 @@ import (
 func httpHandler(route string) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		c := reqresp.GetContext(r)
-		fmt.Fprintf(rw, "%s: %s", route, c.Datas["id"])
+		fmt.Fprintf(rw, "%s: %s", route, c.Data["id"])
 	}
 }
 
 // StartHTTPServer is a simple convenient function to start a http server.
-func StartHTTPServer(addr string, handler http.Handler) error {
-	ep, err := entrypoint.NewHTTPEntryPoint("test", addr, handler)
-	if err != nil {
-		return err
+func StartHTTPServer(addr string, handler http.Handler) (err error) {
+	ep := entrypoint.NewEntryPoint("test", addr, handler)
+	if err = ep.Init(); err == nil {
+		ep.Start()
 	}
-
-	ep.Start()
-	return nil
+	return
 }
 
 func main() {
@@ -98,7 +96,7 @@ import (
 func httpHandler(route string) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		c := reqresp.GetContext(r)
-		fmt.Fprintf(rw, "%s: %s", route, c.Datas["id"])
+		fmt.Fprintf(rw, "%s: %s", route, c.Data["id"])
 	}
 }
 
@@ -167,7 +165,7 @@ import (
 )
 
 var (
-	addr     = flag.String("addr", ":80", "The address to listen to.")
+	addr     = flag.String("addr", "127.0.0.1:80", "The address to listen to.")
 	caFile   = flag.String("cafile", "", "The CA file.")
 	keyFile  = flag.String("keyfile", "", "The Key file.")
 	certFile = flag.String("certfile", "", "The Certificate file.")
@@ -183,8 +181,8 @@ func main() {
 	router.Path("/").ContextHandler(func(c *reqresp.Context) { c.Text(200, "OK") })
 
 	// New an entrypoint based on HTTP.
-	ep, err := entrypoint.NewHTTPEntryPoint("entrypoint_name", *addr, router)
-	if err != nil {
+	ep := entrypoint.NewEntryPoint("entrypoint_name", *addr, router)
+	if err := ep.Init(); err != nil {
 		fmt.Println(err)
 		return
 	}

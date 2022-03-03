@@ -53,7 +53,8 @@ func (c *Context) Reset() { *c = Context{} }
 // RouteManager is used to manage the routes based on the action service.
 type RouteManager struct {
 	// Middlewares is used to manage the middlewares of the action handlers,
-	// which will wrap the handlers of all the actions.
+	// which will wrap the handlers of all the actions and take effect
+	// after finding the action and before the action handler is executed.
 	Middlewares *middleware.Manager
 
 	// GetAction is used to get the action name from the http request.
