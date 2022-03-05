@@ -15,7 +15,6 @@
 package entrypoint
 
 import (
-	"crypto/tls"
 	"net"
 
 	"github.com/xgfone/go-apiserver/middleware"
@@ -40,15 +39,9 @@ func NewTCPServer(ln net.Listener, handler tcp.Handler) (server TCPServer) {
 	}
 
 	server.Middlewares = middleware.NewManager(handler)
-	server.Server = tcp.NewServer(ln, server.Middlewares, nil)
+	server.Server = tcp.NewServer(ln, server.Middlewares)
 	return
 }
 
 // Protocal returns the protocal of the http server, which is a fixed "tcp".
 func (s TCPServer) Protocal() string { return "tcp" }
-
-// SetTLSConfig sets the TLS configuration.
-func (s TCPServer) SetTLSConfig(config *tls.Config, forceTLS bool) {
-	s.Server.TLSConfig = config
-	s.Server.ForceTLS = forceTLS
-}

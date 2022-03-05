@@ -25,32 +25,39 @@ import (
 	"github.com/xgfone/go-apiserver/nets"
 )
 
-// TLSConn is used to support to check whether the connection is based on TLS.
-type TLSConn interface {
-	// TLSConn returns the TLS connection if it is based on TLS. Or, reutrn nil.
-	TLSConn() *tls.Conn
-
-	net.Conn
+type tlsOption struct {
+	TLSConfig *tls.Config
+	ForceTLS  bool
 }
 
 // Server implements a server based on the stream.
 type Server struct {
 	Handler  Handler
 	Listener net.Listener
-
-	// If TLSConfig is set and ForeceTLS is true, the client must use TLS.
-	// If TLSConfig is set and ForeceTLS is false, the client maybe use TLS or not-TLS.
-	// If TLSConfig is not set, ForceTLS is ignored and the client must use not-TLS.
-	TLSConfig *tls.Config // Default: nil
-	ForceTLS  bool        // Default: false
+	tlsconf  atomic.Value
 
 	stopped int32
 	stops   []func()
 }
 
 // NewServer returns a new Server.
-func NewServer(ln net.Listener, handler Handler, config *tls.Config) *Server {
-	return &Server{Listener: ln, Handler: handler, TLSConfig: config}
+func NewServer(ln net.Listener, handler Handler) *Server {
+	return &Server{Listener: ln, Handler: handler}
+}
+
+// SetTLSConfig sets the TLS configuration.
+//
+// If tlsConfig is set and forceTLS is true, the client must use TLS.
+// If tlsConfig is set and forceTLS is false, the client maybe use TLS or not-TLS.
+// If tlsConfig is not set, forceTLS is ignored and the client must use not-TLS.
+func (s *Server) SetTLSConfig(tlsConfig *tls.Config, forceTLS bool) {
+	s.tlsconf.Store(tlsOption{TLSConfig: tlsConfig, ForceTLS: forceTLS})
+}
+
+// GetTLSConfig returns the TLS configuration.
+func (s *Server) GetTLSConfig() (tlsConfig *tls.Config, forceTLS bool) {
+	opt := s.tlsconf.Load().(tlsOption)
+	return opt.TLSConfig, opt.ForceTLS
 }
 
 func (s *Server) shutdown(ctx context.Context) {
@@ -98,12 +105,9 @@ func (s *Server) Start() {
 			return
 		}
 
-		if s.TLSConfig != nil {
-			conn = &tlsConn{
-				Conn:   conn,
-				first:  true,
-				force:  s.ForceTLS,
-				config: s.TLSConfig,
+		if tlsConfig, forceTLS := s.GetTLSConfig(); tlsConfig != nil {
+			if conn = s.checkTLS(conn, tlsConfig, forceTLS); conn == nil {
+				continue
 			}
 		}
 
@@ -111,80 +115,37 @@ func (s *Server) Start() {
 	}
 }
 
-type tlsConn struct {
-	config *tls.Config
-	force  bool
-	istls  bool
-	first  bool
-	err    error
-
-	net.Conn
-}
-
-var _ TLSConn = &tlsConn{}
-
-func (c *tlsConn) Read(p []byte) (n int, err error) {
-	if len(p) == 0 {
-		return
+func (s *Server) checkTLS(conn net.Conn, config *tls.Config, force bool) net.Conn {
+	var bs [1]byte
+	if n, err := conn.Read(bs[:]); err != nil || n == 0 {
+		log.Error("fail to read the first byte from the conneciton",
+			"remoteaddr", conn.RemoteAddr().String(), "err", err)
+		conn.Close()
+		return nil
 	}
 
-	c.ensureTLSConn()
-	if c.err != nil {
-		err, c.err = c.err, nil
-		return
+	conn = &peekedConn{Conn: conn, Peeked: int16(bs[0])}
+
+	// Detect whether the connection is based on TLS. If true, use tls.Server
+	// to wrap the original connection.
+	//
+	// No valid TLS record has a type of 0x80, however SSLv2 handshakes
+	// start with a uint16 length where the MSB is set and the first record
+	// is always < 256 bytes long. Therefore typ == 0x80 strongly suggests
+	// an SSLv2 client.
+	const recordTypeSSLv2 = 0x80
+	const recordTypeHandshake = 0x16
+	if bs[0] == recordTypeHandshake || bs[0] == recordTypeSSLv2 { // For TLS
+		conn = tls.Server(conn, config)
+	} else if force {
+		log.Error("not support the not-TLS conneciton",
+			"remoteaddr", conn.RemoteAddr().String())
+		conn.Close()
+		return nil
 	}
 
-	n, err = c.Conn.Read(p)
-	return
+	return conn
 }
-
-func (c *tlsConn) TLSConn() (conn *tls.Conn) {
-	c.ensureTLSConn()
-	if c.istls {
-		conn, _ = c.Conn.(*tls.Conn)
-	}
-	return
-}
-
-func (c *tlsConn) ensureTLSConn() {
-	// For first read, We will detect whether the connection is based on TLS.
-	if c.first {
-		c.first = false
-
-		var bs [1]byte
-		if _, c.err = c.Conn.Read(bs[:]); c.err != nil {
-			log.Error("fail to read the first byte from the conneciton",
-				"remoteaddr", c.RemoteAddr().String(), "err", c.err)
-			c.Close()
-			return
-		}
-
-		c.Conn = &peekedConn{Conn: c.Conn, Peeked: int16(bs[0])}
-
-		// Detect whether the connection is based on TLS. If true, use tls.Server
-		// to wrap the original connection.
-		//
-		// No valid TLS record has a type of 0x80, however SSLv2 handshakes
-		// start with a uint16 length where the MSB is set and the first record
-		// is always < 256 bytes long. Therefore typ == 0x80 strongly suggests
-		// an SSLv2 client.
-		const recordTypeSSLv2 = 0x80
-		const recordTypeHandshake = 0x16
-		if bs[0] == recordTypeHandshake || bs[0] == recordTypeSSLv2 { // For TLS
-			c.Conn = tls.Server(c.Conn, c.config)
-			c.istls = true
-		} else if c.force {
-			log.Error("not support the not-TLS conneciton",
-				"remoteaddr", c.RemoteAddr().String())
-
-			c.err = errNotSupportNotTLS
-			c.Close()
-			return
-		}
-	}
-}
-
-var errNotSupportNotTLS = errors.New("not support the not-TLS connection")
 
 type peekedConn struct {
 	Peeked int16
@@ -192,18 +153,18 @@ type peekedConn struct {
 }
 
 func (c *peekedConn) Read(p []byte) (n int, err error) {
-	if c.Peeked > -1 {
-		p[0] = byte(c.Peeked)
-		c.Peeked = -1
-		if len(p) == 1 {
-			return 1, nil
-		}
-
-		p = p[1:]
-		n = 1
+	if c.Peeked == -1 {
+		return c.Conn.Read(p)
 	}
 
-	m, err := c.Conn.Read(p)
-	n += m
+	p[0], c.Peeked = byte(c.Peeked), -1
+	if len(p) == 1 {
+		return 1, nil
+	}
+
+	p = p[1:]
+	n, err = c.Conn.Read(p)
+	n++
+
 	return
 }

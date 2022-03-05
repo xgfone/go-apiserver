@@ -42,11 +42,16 @@ func TestServer(t *testing.T) {
 				time.Sleep(interval)
 			}
 		}
-		rw.WriteHeader(200)
+		if r.TLS == nil {
+			rw.WriteHeader(201)
+		} else {
+			rw.WriteHeader(202)
+		}
 	})
 
 	handler := NewHTTPServerHandler(ln.Addr(), httpHandler)
-	server := NewServer(ln, handler, cert.TLSConfig)
+	server := NewServer(ln, handler)
+	server.SetTLSConfig(cert.TLSConfig, false)
 
 	go server.Start()
 	go handler.Start()
@@ -61,24 +66,15 @@ func TestServer(t *testing.T) {
 	go func() {
 		// request the block http to test the graceful shutdown.
 		url := "http://127.0.0.1:8301/?sleep=" + waitDuration.String()
-		testHTTPReq(t, client, url)
+		testHTTPReq(t, client, url, 201)
 	}()
 
 	// Test HTTPS: first time
-	resp, err := client.Get("https://127.0.0.1:8301")
-	if resp != nil {
-		resp.Body.Close()
-		if resp.StatusCode != 200 {
-			t.Errorf("unexpected the status code '%d'", resp.StatusCode)
-		}
-	}
-	if err != nil {
-		t.Error(err)
-	}
+	testHTTPReq(t, client, "https://127.0.0.1:8301", 202)
 
 	// Test HTTPS for two times
-	testHTTPReq(t, client, "https://127.0.0.1:8301")
-	testHTTPReq(t, client, "https://127.0.0.1:8301")
+	testHTTPReq(t, client, "https://127.0.0.1:8301", 202)
+	testHTTPReq(t, client, "https://127.0.0.1:8301", 202)
 
 	start := time.Now()
 	server.Stop()
@@ -87,12 +83,12 @@ func TestServer(t *testing.T) {
 	}
 }
 
-func testHTTPReq(t *testing.T, client *http.Client, url string) {
+func testHTTPReq(t *testing.T, client *http.Client, url string, code int) {
 	resp, err := client.Get(url)
 	if resp != nil {
 		resp.Body.Close()
-		if resp.StatusCode != 200 {
-			t.Errorf("unexpected the status code '%d'", resp.StatusCode)
+		if resp.StatusCode != code {
+			t.Errorf("expected statuscode %d, but got %d", code, resp.StatusCode)
 		}
 	}
 	if err != nil {

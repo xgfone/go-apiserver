@@ -136,11 +136,6 @@ func (l *ForwardConnListener) Close() (err error) {
 func (l *ForwardConnListener) Accept() (conn net.Conn, err error) {
 	select {
 	case conn = <-l.connch:
-		if tlsConn, ok := conn.(TLSConn); ok {
-			if tlsconn := tlsConn.TLSConn(); tlsconn != nil {
-				conn = tlsconn
-			}
-		}
 	case err = <-l.errch:
 	}
 	return
