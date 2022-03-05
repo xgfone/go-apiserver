@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"net"
 	"net/url"
 	"strings"
@@ -69,7 +70,10 @@ func NewCertificate(ca, key, cert []byte) (c Certificate, err error) {
 	var capool *x509.CertPool
 	if len(ca) != 0 {
 		capool = x509.NewCertPool()
-		capool.AppendCertsFromPEM(ca)
+		if !capool.AppendCertsFromPEM(ca) {
+			err = errors.New("invalid CA PEM certificate")
+			return
+		}
 	}
 
 	tlsCert, err := tls.X509KeyPair(cert, key)
@@ -151,7 +155,7 @@ func (c Certificate) MatchIP(ip string) bool {
 
 // MatchHost checks whether there is one of the DNSName SANs to match the host.
 //
-// Notice: It only supports the full domain host or the wild
+// Notice: It only supports the full or wild domain host.
 func (c Certificate) MatchHost(host string) (ok bool) {
 	for _, dnsname := range c.DNSNames {
 		if strings.HasPrefix(dnsname, "*.") {

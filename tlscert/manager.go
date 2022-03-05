@@ -17,9 +17,16 @@ package tlscert
 import (
 	"crypto/tls"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
+
+// CertPrefixFilter returns a certificate filter to only allow the certificate
+// whose name has the given prefix to be added or deleted.
+func CertPrefixFilter(prefix string) func(string) bool {
+	return func(s string) bool { return strings.HasPrefix(s, prefix) }
+}
 
 var _ CertUpdater = &CertManager{}
 
@@ -36,6 +43,7 @@ type CertManager struct {
 	name    string
 	lock    sync.RWMutex
 	certs   map[string]Certificate
+	filter  func(string) bool
 	updater CertUpdater
 
 	tlsCerts  atomic.Value
@@ -73,6 +81,16 @@ func (m *CertManager) OnChanged(updater CertUpdater) {
 	m.lock.Unlock()
 }
 
+// SetFilter sets the certificate filter to only add or delete the certificate
+// that the filter returns true.
+//
+// If filter is nil, which is the default, it is equal to return true.
+func (m *CertManager) SetFilter(filter func(name string) bool) {
+	m.lock.Lock()
+	m.filter = filter
+	m.lock.Unlock()
+}
+
 // GetCertificates returns all the certificates.
 func (m *CertManager) GetCertificates() map[string]Certificate {
 	m.lock.RLock()
@@ -104,9 +122,11 @@ func (m *CertManager) AddCertificate(name string, cert Certificate) {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	m.certs[name] = cert
-	m.updateCertificates()
-	m.updater.AddCertificate(name, cert)
+	if m.filter == nil || m.filter(name) {
+		m.certs[name] = cert
+		m.updateCertificates()
+		m.updater.AddCertificate(name, cert)
+	}
 	return
 }
 
@@ -115,10 +135,12 @@ func (m *CertManager) AddCertificate(name string, cert Certificate) {
 func (m *CertManager) DelCertificate(name string) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	if _, ok := m.certs[name]; ok {
-		delete(m.certs, name)
-		m.updateCertificates()
-		m.updater.DelCertificate(name)
+	if m.filter == nil || m.filter(name) {
+		if _, ok := m.certs[name]; ok {
+			delete(m.certs, name)
+			m.updateCertificates()
+			m.updater.DelCertificate(name)
+		}
 	}
 }
 
@@ -156,7 +178,7 @@ func (m *CertManager) GetConfigForClient(chi *tls.ClientHelloInfo) (config *tls.
 	return
 }
 
-// SetTLSConfig resets the TLS config template.
+// SetTLSConfig resets the TLS config template, which is thread-safe.
 func (m *CertManager) SetTLSConfig(config *tls.Config) {
 	if config == nil {
 		panic("TLS config is nil")

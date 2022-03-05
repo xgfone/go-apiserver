@@ -15,28 +15,23 @@
 package tlscert
 
 import (
-	"crypto/tls"
 	"fmt"
 	"strings"
 	"sync"
-	"sync/atomic"
 )
 
 var _ CertUpdater = &CertManagerGroup{}
 
-// CertManagerGroup is used to manage a group of the certificate manager.
+// CertManagerGroup is used to manage a group of the certificate managers.
 // which implements the interface CertUpdater.
 type CertManagerGroup struct {
-	conf atomic.Value
 	lock sync.RWMutex
 	cms  map[string]*CertManager
 }
 
 // NewCertManagerGroup returns a new certificate manager group.
 func NewCertManagerGroup() *CertManagerGroup {
-	cm := &CertManagerGroup{cms: make(map[string]*CertManager, 4)}
-	cm.SetTLSConfig(&tls.Config{})
-	return cm
+	return &CertManagerGroup{cms: make(map[string]*CertManager, 4)}
 }
 
 // AddCertManager adds the certificate manager.
@@ -46,7 +41,6 @@ func (g *CertManagerGroup) AddCertManager(cm *CertManager) (err error) {
 	if _, ok := g.cms[name]; ok {
 		err = fmt.Errorf("the cert manager named '%s' has existed", name)
 	} else {
-		cm.SetTLSConfig(g.TLSConfig())
 		g.cms[name] = cm
 	}
 	g.lock.Unlock()
@@ -84,14 +78,20 @@ func (g *CertManagerGroup) GetCertManagers() []*CertManager {
 	return cms
 }
 
-// AddGroupCertificate adds the named certificate into the group certificate manager.
-func (g *CertManagerGroup) AddGroupCertificate(group, name string, cert Certificate) {
+// AddGroupCertificate adds the named certificate into the certificate manager.
+//
+// Notice: A certificate manager is a group, so group is the name of the manager,
+// and name is the name of the certificate.
+func (g *CertManagerGroup) AddGroupCertificate(group, name string, cert Certificate) (err error) {
 	if cm := g.GetCertManager(group); cm != nil {
 		cm.AddCertificate(name, cert)
+	} else {
+		err = fmt.Errorf("no the certificate manager named '%s'", group)
 	}
+	return
 }
 
-// DelGroupCertificate deletes the named certificate from the group certificate manager.
+// DelGroupCertificate deletes the named certificate from the certificate manager.
 func (g *CertManagerGroup) DelGroupCertificate(group, name string) {
 	if cm := g.GetCertManager(group); cm != nil {
 		cm.DelCertificate(name)
@@ -146,22 +146,4 @@ func (g *CertManagerGroup) DelCertificate(name string) {
 	for _, cm := range g.cms {
 		cm.DelCertificate(name)
 	}
-}
-
-// SetTLSConfig resets the TLS config template of all the certificate managers.
-func (g *CertManagerGroup) SetTLSConfig(config *tls.Config) {
-	config = config.Clone()
-
-	g.lock.RLock()
-	defer g.lock.RUnlock()
-
-	g.conf.Store(config)
-	for _, cm := range g.cms {
-		cm.SetTLSConfig(config)
-	}
-}
-
-// TLSConfig returns the TLS config template.
-func (g *CertManagerGroup) TLSConfig() *tls.Config {
-	return g.conf.Load().(*tls.Config)
 }

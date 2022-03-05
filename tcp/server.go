@@ -45,7 +45,7 @@ func NewServer(ln net.Listener, handler Handler) *Server {
 	return &Server{Listener: ln, Handler: handler}
 }
 
-// SetTLSConfig sets the TLS configuration.
+// SetTLSConfig sets the TLS configuration, which is thread-safe.
 //
 // If tlsConfig is set and forceTLS is true, the client must use TLS.
 // If tlsConfig is set and forceTLS is false, the client maybe use TLS or not-TLS.
@@ -54,7 +54,7 @@ func (s *Server) SetTLSConfig(tlsConfig *tls.Config, forceTLS bool) {
 	s.tlsconf.Store(tlsOption{TLSConfig: tlsConfig, ForceTLS: forceTLS})
 }
 
-// GetTLSConfig returns the TLS configuration.
+// GetTLSConfig returns the TLS configuration, which is thread-safe.
 func (s *Server) GetTLSConfig() (tlsConfig *tls.Config, forceTLS bool) {
 	opt := s.tlsconf.Load().(tlsOption)
 	return opt.TLSConfig, opt.ForceTLS
