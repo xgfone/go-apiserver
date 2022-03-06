@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/handler"
+	"github.com/xgfone/go-apiserver/internal/atomic"
 	"github.com/xgfone/go-apiserver/log"
 )
 
@@ -28,8 +29,7 @@ var _ Handler = &HTTPServerHandler{}
 
 // HTTPServerHandler is a handler to handle the http request.
 type HTTPServerHandler struct {
-	http.Server
-
+	server   atomic.Value // http.Server
 	handler  handler.SwitchHandler
 	listener *ForwardConnListener
 }
@@ -44,11 +44,11 @@ func NewHTTPServerHandler(localAddr net.Addr, handler http.Handler) *HTTPServerH
 	}
 
 	prefix := fmt.Sprintf("HTTPServer(%s): ", localAddr.String())
+	logger := log.StdLogger(prefix, log.LvlError)
 
 	h := new(HTTPServerHandler)
 	h.handler.Set(handler)
-	h.Server.Handler = h
-	h.Server.ErrorLog = log.StdLogger(prefix, log.LvlError)
+	h.server.Store(&http.Server{Handler: h, ErrorLog: logger})
 	h.listener = NewForwardConnListener(localAddr, &ForwardConnListenerConfig{
 		OnShutdown: h.onShutdown,
 	})
@@ -56,7 +56,20 @@ func NewHTTPServerHandler(localAddr net.Addr, handler http.Handler) *HTTPServerH
 	return h
 }
 
-func (h *HTTPServerHandler) onShutdown(c context.Context) { h.Server.Shutdown(c) }
+// GetHTTPServer returns the inner http server.
+func (h *HTTPServerHandler) getHTTPServer() *http.Server {
+	return h.server.Load().(*http.Server)
+}
+
+func (h *HTTPServerHandler) onShutdown(c context.Context) {
+	h.getHTTPServer().Shutdown(c)
+}
+
+// ObserveConnState sets the callback function to observe the state of the http
+// connection.
+func (h *HTTPServerHandler) ObserveConnState(f func(net.Conn, http.ConnState)) {
+	h.getHTTPServer().ConnState = f
+}
 
 // ServeHTTP implements the interface http.Handler to be used as a http.Handler.
 func (h *HTTPServerHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
@@ -72,7 +85,7 @@ func (h *HTTPServerHandler) Swap(new http.Handler) (old http.Handler) {
 }
 
 // Start starts the inner HTTP server.
-func (h *HTTPServerHandler) Start() { h.Server.Serve(h.listener) }
+func (h *HTTPServerHandler) Start() { h.getHTTPServer().Serve(h.listener) }
 
 // OnConnection implements the interface Handler, which will forward the call
 // to the inner handler.
