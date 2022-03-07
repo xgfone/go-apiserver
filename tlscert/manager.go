@@ -37,7 +37,7 @@ type tlsCertsWrapper struct{ Certs []Certificate }
 type CertManager struct {
 	// CertMatchHost is used to check whether the certificate matches the host.
 	//
-	// Default: cert.MatchHost(host) || cert.MatchIP(host)
+	// Default: cert.X509Cert.VerifyHostname(host) == nil
 	CertMatchHost func(cert Certificate, host string) bool
 
 	name    string
@@ -61,7 +61,7 @@ func NewCertManager(name string) *CertManager {
 }
 
 func (m *CertManager) certMatchHost(cert Certificate, host string) bool {
-	return cert.MatchHost(host) || cert.MatchIP(host)
+	return cert.X509Cert.VerifyHostname(host) == nil
 }
 
 // Name returns the name of the manager.
@@ -170,8 +170,7 @@ func (m *CertManager) FindCertificate(host string) (cert Certificate, ok bool) {
 func (m *CertManager) GetConfigForClient(chi *tls.ClientHelloInfo) (config *tls.Config, err error) {
 	if cert, ok := m.FindCertificate(chi.ServerName); ok {
 		config = m.TLSConfig().Clone()
-		config.GetConfigForClient = nil
-		cert.UpdateTLSConfig(config)
+		err = cert.UpdateCertificates(config)
 	} else {
 		err = fmt.Errorf("no certificate for the server name '%s'", chi.ServerName)
 	}
@@ -185,7 +184,9 @@ func (m *CertManager) SetTLSConfig(config *tls.Config) {
 	}
 
 	config = config.Clone()
-	config.GetConfigForClient = m.GetConfigForClient
+	if config.GetConfigForClient == nil {
+		config.GetConfigForClient = m.GetConfigForClient
+	}
 	m.tlsConfig.Store(config)
 }
 

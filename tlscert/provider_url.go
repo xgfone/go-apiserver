@@ -26,9 +26,8 @@ import (
 )
 
 type urlCert struct {
-	CA   string `json:"ca"`
-	Key  string `json:"key"`
-	Cert string `json:"cert"`
+	KeyPEM  string `json:"keyPEM"`
+	CertPEM string `json:"certPEM"`
 }
 
 type urlCertInfo struct {
@@ -43,12 +42,11 @@ type urlCertInfo struct {
 //
 // Notice: it only uses http.Get to access the url, and gets the certificate
 // information from the response body, which is a JSON data with the three keys,
-// "ca", "key" and "cert", the values of which is the PEM string, for example,
+// "keyPEM" and "certPEM", the values of which is the PEM string, for example,
 //
 //     {
-//         "ca": "-----BEGIN CERTIFICATE-----......-----END CERTIFICATE-----",
-//         "key": "-----BEGIN RSA PRIVATE KEY-----......-----END RSA PRIVATE KEY-----",
-//         "cert": "-----BEGIN CERTIFICATE-----......-----END CERTIFICATE-----"
+//         "keyPEM": "-----BEGIN RSA PRIVATE KEY-----......-----END RSA PRIVATE KEY-----",
+//         "certPEM": "-----BEGIN CERTIFICATE-----......-----END CERTIFICATE-----"
 //     }
 //
 type URLProvider struct {
@@ -196,11 +194,11 @@ func (p *URLProvider) checkAndUpdate(info *urlCertInfo, updater CertUpdater) {
 		return
 	}
 
-	if r.CA == info.Cert.CA && r.Key == info.Cert.Key && r.Cert == info.Cert.Cert {
+	if r.KeyPEM == info.Cert.KeyPEM && r.CertPEM == info.Cert.CertPEM {
 		return // No Change
 	}
 
-	cert, err := NewCertificate([]byte(r.CA), []byte(r.Key), []byte(r.Cert))
+	cert, err := NewCertificate([]byte(r.CertPEM), []byte(r.KeyPEM))
 	if err != nil {
 		log.Error("fail to create certificate",
 			"name", info.Name, "url", info.URL, "err", err)

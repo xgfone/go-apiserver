@@ -25,13 +25,11 @@ import (
 
 func TestProviderManager(t *testing.T) {
 	const (
-		cafile   = "provider_cafile.pem"
 		keyfile  = "provider_keyfile.pem"
 		certfile = "provider_certfile.pem"
 	)
 
-	defer func() { os.Remove(cafile); os.Remove(keyfile); os.Remove(certfile) }()
-	createFile(t, cafile, test.Ca)
+	defer func() { os.Remove(keyfile); os.Remove(certfile) }()
 	createFile(t, keyfile, test.Key)
 	createFile(t, certfile, test.Cert)
 
@@ -45,12 +43,12 @@ func TestProviderManager(t *testing.T) {
 	pm.Start(context.Background())
 	pm.AddProvider(fileProvider2)
 
-	err := fileProvider1.AddCertFile("cert1", cafile, keyfile, certfile)
+	err := fileProvider1.AddCertFile("cert1", keyfile, certfile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = fileProvider2.AddCertFile("cert2", cafile, keyfile, certfile)
+	err = fileProvider2.AddCertFile("cert2", keyfile, certfile)
 	if err != nil {
 		t.Fatal(err)
 	}

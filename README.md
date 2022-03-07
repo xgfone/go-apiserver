@@ -166,7 +166,6 @@ import (
 
 var (
 	addr     = flag.String("addr", "127.0.0.1:80", "The address to listen to.")
-	caFile   = flag.String("cafile", "", "The CA file.")
 	keyFile  = flag.String("keyfile", "", "The Key file.")
 	certFile = flag.String("certfile", "", "The Certificate file.")
 	forceTLS = flag.Bool("forcetls", false, "If true, use TLS forcibly when setting the certificate")
@@ -182,11 +181,8 @@ func main() {
 
 	// New an entrypoint based on HTTP.
 	ep := entrypoint.NewEntryPoint("entrypoint_name", *addr, router)
-	if err := ep.Init(); err != nil {
-		fmt.Println(err)
-		return
-	}
 
+	// Initialize the certificate.
 	if *keyFile != "" && *certFile != "" {
 		// Use the certificate manager to manage all the certificates.
 		certManager := tlscert.NewCertManager("tlsgroup")
@@ -194,7 +190,7 @@ func main() {
 		// Use the file provider to monitor the change of the certificate files.
 		// When the certificate files have changed, it will be reloaded.
 		tlsFileProvider := tlscert.NewFileProvider("tlsfiles", time.Second*10)
-		tlsFileProvider.AddCertFile("tlsfile", *caFile, *keyFile, *certFile)
+		tlsFileProvider.AddCertFile("tlsfile", *keyFile, *certFile)
 
 		// Use the provider manager to manage all the certificate providers.
 		tlsProviderManager := tlscert.NewProviderManager(certManager)
@@ -204,6 +200,12 @@ func main() {
 		// Set the TLS configuration of the entrypoint.
 		ep.TLSConfig = certManager.TLSConfig()
 		ep.ForceTLS = *forceTLS
+	}
+
+	// Initialize the entrypoint.
+	if err := ep.Init(); err != nil {
+		fmt.Println(err)
+		return
 	}
 
 	// Start the HTTP server.

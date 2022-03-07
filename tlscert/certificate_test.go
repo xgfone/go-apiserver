@@ -21,32 +21,60 @@ import (
 	"github.com/xgfone/go-apiserver/internal/test"
 )
 
-func TestCertificate(t *testing.T) {
-	cert, err := NewCertificate([]byte(test.Ca), []byte(test.Key), []byte(test.Cert))
+func testCACertificate(t *testing.T, certPEM, keyPEM string) {
+	cert, err := NewCertificate([]byte(certPEM), []byte(keyPEM))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if cert.StartTime.IsZero() || cert.EndTime.IsZero() {
+	if !cert.X509Cert.IsCA {
+		t.Error("the certificate is not a CA")
+	}
+
+	if cn := cert.X509Cert.Subject.CommonName; cn != "test-ca" {
+		t.Errorf("expect CN '%s', but got '%s'", "test-ca", cn)
+	}
+
+	if cert.X509Cert.NotBefore.IsZero() || cert.X509Cert.NotAfter.IsZero() {
+		t.Error("no start or end time of the certificate")
+	}
+}
+
+func TestCACertificate(t *testing.T) {
+	testCACertificate(t, test.Ca, "")
+	testCACertificate(t, test.Ca, test.CaKey)
+}
+
+func TestCertificate(t *testing.T) {
+	cert, err := NewCertificate([]byte(test.Cert), []byte(test.Key))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cert.X509Cert.IsCA {
+		t.Error("the certificate is a CA")
+	}
+
+	if cert.X509Cert.NotBefore.IsZero() || cert.X509Cert.NotAfter.IsZero() {
 		t.Error("no start or end time of the certificate")
 	}
 
-	if len(cert.DNSNames) != len(test.CertDNSNames) {
+	if len(cert.X509Cert.DNSNames) != len(test.CertDNSNames) {
 		t.Errorf("expect '%d' DNS names, but got '%d': %v",
-			len(test.CertDNSNames), len(cert.DNSNames), cert.DNSNames)
+			len(test.CertDNSNames), len(cert.X509Cert.DNSNames), cert.X509Cert.DNSNames)
 	} else {
-		for _, dnsname := range cert.DNSNames {
+		for _, dnsname := range cert.X509Cert.DNSNames {
 			if !inStrings(test.CertDNSNames, dnsname) {
 				t.Errorf("unexpected dns name '%s'", dnsname)
 			}
 		}
 	}
 
-	if len(cert.IPAddresses) != len(test.CertIPAddresses) {
+	if len(cert.X509Cert.IPAddresses) != len(test.CertIPAddresses) {
 		t.Errorf("expect '%d' IPs, but got '%d': %v",
-			len(test.CertIPAddresses), len(cert.IPAddresses), cert.IPAddresses)
+			len(test.CertIPAddresses), len(cert.X509Cert.IPAddresses), cert.X509Cert.IPAddresses)
 	} else {
-		for _, ip := range cert.IPAddresses {
+		for _, ip := range cert.X509Cert.IPAddresses {
 			if !inIPs(test.CertIPAddresses, ip) {
 				t.Errorf("unexpected dns name '%s'", ip.String())
 			}

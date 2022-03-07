@@ -15,6 +15,7 @@
 package tcp
 
 import (
+	"crypto/tls"
 	"net/http"
 	"testing"
 	"time"
@@ -24,10 +25,24 @@ import (
 )
 
 func TestServer(t *testing.T) {
-	cert, err := tlscert.NewCertificate([]byte(test.Ca), []byte(test.Key), []byte(test.Cert))
+	caCert, err := tlscert.NewCACertificate([]byte(test.Ca))
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	cert, err := tlscert.NewCertificate([]byte(test.Cert), []byte(test.Key))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	serverTLSConfig := new(tls.Config)
+	cert.UpdateCertificates(serverTLSConfig)
+	// caCert.UpdateClientCAs(serverTLSConfig)
+	// serverTLSConfig.ClientAuth = tls.RequireAndVerifyClientCert
+
+	clientTLSConfig := new(tls.Config)
+	cert.UpdateCertificates(clientTLSConfig)
+	caCert.UpdateRootCAs(clientTLSConfig)
 
 	ln, err := Listen("127.0.0.1:8301")
 	if err != nil {
@@ -51,13 +66,13 @@ func TestServer(t *testing.T) {
 
 	handler := NewHTTPServerHandler(ln.Addr(), httpHandler)
 	server := NewServer(ln, handler)
-	server.SetTLSConfig(cert.TLSConfig, false)
+	server.SetTLSConfig(serverTLSConfig, false)
 
 	go server.Start()
 	go handler.Start()
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = cert.TLSConfig
+	transport.TLSClientConfig = clientTLSConfig
 	transport.ForceAttemptHTTP2 = false
 	client := &http.Client{Transport: transport}
 	waitDuration := time.Second

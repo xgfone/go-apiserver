@@ -26,19 +26,17 @@ import (
 
 func TestFileProvider(t *testing.T) {
 	const (
-		cafile   = "cafile.pem"
 		keyfile  = "keyfile.pem"
 		certfile = "certfile.pem"
 	)
 
-	defer func() { os.Remove(cafile); os.Remove(keyfile); os.Remove(certfile) }()
-	createFile(t, cafile, test.Ca)
+	defer func() { os.Remove(keyfile); os.Remove(certfile) }()
 	createFile(t, keyfile, test.Key)
 	createFile(t, certfile, test.Cert)
 
 	certmanager := NewCertManager("")
 	fileProvider := NewFileProvider("file", time.Millisecond*100)
-	err := fileProvider.AddCertFile("test", cafile, keyfile, certfile)
+	err := fileProvider.AddCertFile("test", keyfile, certfile)
 	if err != nil {
 		t.Fatal(err)
 	}

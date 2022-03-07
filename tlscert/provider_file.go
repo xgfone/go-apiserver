@@ -38,7 +38,6 @@ type fileCertInfo struct {
 	Name string
 	Last time.Time
 
-	CA   fileInfo
 	Key  fileInfo
 	Cert fileInfo
 }
@@ -91,18 +90,18 @@ func (p *FileProvider) GetCertNames() []string {
 // GetCertFile returns the certificate file by the name.
 //
 // If the name does not exist, return ("", "", "", false).
-func (p *FileProvider) GetCertFile(name string) (ca, key, cert string, ok bool) {
+func (p *FileProvider) GetCertFile(name string) (key, cert string, ok bool) {
 	p.lock.RLock()
 	info, ok := p.certs[name]
 	if ok {
-		ca, key, cert = info.CA.File, info.Key.File, info.Cert.File
+		key, cert = info.Key.File, info.Cert.File
 	}
 	p.lock.RUnlock()
 	return
 }
 
 // AddCertFile adds the files associated with the certificate.
-func (p *FileProvider) AddCertFile(name, caFile, keyFile, certFile string) error {
+func (p *FileProvider) AddCertFile(name, keyFile, certFile string) error {
 	if name == "" {
 		return fmt.Errorf("the file certificate name is empty")
 	} else if keyFile == "" {
@@ -119,7 +118,6 @@ func (p *FileProvider) AddCertFile(name, caFile, keyFile, certFile string) error
 
 	p.certs[name] = &fileCertInfo{
 		Name: name,
-		CA:   fileInfo{File: caFile, logk: "cafile", logv: caFile},
 		Key:  fileInfo{File: keyFile, logk: "keyfile", logv: keyFile},
 		Cert: fileInfo{File: certFile, logk: "certfile", logv: certFile},
 	}
@@ -190,21 +188,13 @@ func (p *FileProvider) checkAndUpdate(info *fileCertInfo, updater CertUpdater) {
 		minTime = info.Key.Last
 	}
 
-	if info.CA.File != "" {
-		info.CA = readCertificateFile(info.CA)
-		if minTime.After(info.CA.Last) {
-			minTime = info.CA.Last
-		}
-	}
-
 	if !minTime.After(info.Last) { // No Change
 		return
 	}
 
-	cert, err := NewCertificate(info.CA.Data, info.Key.Data, info.Cert.Data)
+	cert, err := NewCertificate(info.Cert.Data, info.Key.Data)
 	if err != nil {
 		log.Error("fail to create certificate",
-			info.CA.logk, info.CA.logv,
 			info.Key.logk, info.Key.logv,
 			info.Cert.logk, info.Cert.logv,
 			"err", err)

@@ -18,96 +18,84 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
-	"net"
-	"net/url"
-	"strings"
 	"time"
 )
 
 // Certificate represents the information of a certificate.
 type Certificate struct {
 	// The original PEM data of the certificate.
-	CA, Key, Cert []byte
+	KeyPEM, CertPEM []byte
 
-	// The start and end time of the validity of the certificate.
-	//
-	// Notice: They are pared from the Cert PEM.
-	StartTime, EndTime time.Time
-
-	// The SAN information signed by the certificate.
-	//
-	// Notice: They are pared from the Cert PEM.
-	DNSNames       []string
-	EmailAddresses []string
-	IPAddresses    []net.IP
-	URIs           []*url.URL
-
-	// The certificate information.
-	CN      string
-	IsCA    bool
-	Version int
-
-	// The parsed TLS certificate and Root CA.
-	RootCAs *x509.CertPool
-	TLSCert tls.Certificate
-
-	// TLSConfig is the TLS config, which is generated with RootCAs and TLSCert.
-	TLSConfig *tls.Config
-
-	// It is a cache of the certificate list to avoid the memory allocation.
-	tlsCerts []tls.Certificate
+	// The parsed TLS certificate.
+	X509Cert *x509.Certificate
+	TLSCert  tls.Certificate
 }
 
-// NewCertificate returns the a new Certificate.
-//
-// Notice: Both key and cert are the PEM block.
-func NewCertificate(ca, key, cert []byte) (c Certificate, err error) {
-	ca = bytes.TrimSpace(ca)
-	key = bytes.TrimSpace(key)
-	cert = bytes.TrimSpace(cert)
+// NewCACertificate only parses the CA certificate, which is equal to
+//   NewCertificate(caPEM, nil)
+func NewCACertificate(caPEM []byte) (c Certificate, err error) {
+	return NewCertificate(caPEM, nil)
+}
 
-	var capool *x509.CertPool
-	if len(ca) != 0 {
-		capool = x509.NewCertPool()
-		if !capool.AppendCertsFromPEM(ca) {
-			err = errors.New("invalid CA PEM certificate")
+// NewCertificate parses the given PEM certificate and returns a new Certificate.
+//
+// Notice: keyPEM may be empty, which will only parse the certificate PEM block.
+func NewCertificate(certPEM, keyPEM []byte) (c Certificate, err error) {
+	c.CertPEM = bytes.TrimSpace(certPEM)
+	if len(keyPEM) > 0 {
+		c.KeyPEM = bytes.TrimSpace(keyPEM)
+	}
+
+	if len(c.KeyPEM) == 0 {
+		var skippedBlockTypes []string
+
+		certPEMBlock := c.CertPEM
+		for {
+			var certDERBlock *pem.Block
+			certDERBlock, certPEMBlock = pem.Decode(certPEMBlock)
+			if certDERBlock == nil {
+				break
+			}
+
+			if certDERBlock.Type == "CERTIFICATE" {
+				c.TLSCert.Certificate = append(c.TLSCert.Certificate, certDERBlock.Bytes)
+			} else {
+				skippedBlockTypes = append(skippedBlockTypes, certDERBlock.Type)
+			}
+		}
+
+		if len(c.TLSCert.Certificate) == 0 {
+			err = errors.New(`tls: failed to find "CERTIFICATE" PEM block in certificate pem`)
 			return
 		}
-	}
 
-	tlsCert, err := tls.X509KeyPair(cert, key)
-	if err != nil {
-		return
-	}
-
-	if tlsCert.Leaf == nil {
-		tlsCert.Leaf, err = x509.ParseCertificate(tlsCert.Certificate[0])
+		c.TLSCert.Leaf, err = x509.ParseCertificate(c.TLSCert.Certificate[0])
 		if err != nil {
 			return
 		}
+
+	} else {
+		c.TLSCert, err = tls.X509KeyPair(c.CertPEM, c.KeyPEM)
+		if err != nil {
+			return c, err
+		}
+
+		if c.TLSCert.Leaf == nil {
+			c.TLSCert.Leaf, err = x509.ParseCertificate(c.TLSCert.Certificate[0])
+			if err != nil {
+				return
+			}
+		}
 	}
 
-	c.CN = tlsCert.Leaf.Subject.CommonName
-	c.IsCA = tlsCert.Leaf.IsCA
-	c.Version = tlsCert.Leaf.Version
-
-	c.URIs = tlsCert.Leaf.URIs
-	c.DNSNames = tlsCert.Leaf.DNSNames
-	c.IPAddresses = tlsCert.Leaf.IPAddresses
-	c.EmailAddresses = tlsCert.Leaf.EmailAddresses
-
-	c.StartTime = tlsCert.Leaf.NotBefore.UTC()
-	c.EndTime = tlsCert.Leaf.NotAfter.UTC()
-	c.TLSCert = tlsCert
-	c.RootCAs = capool
-
-	c.tlsCerts = []tls.Certificate{tlsCert}
-	c.TLSConfig = &tls.Config{RootCAs: capool, Certificates: c.tlsCerts}
-	c.CA, c.Key, c.Cert = ca, key, cert
-
+	c.X509Cert = c.TLSCert.Leaf
 	return
 }
+
+// IsCA is a simplified function to report whether the certificate is a CA.
+func (c Certificate) IsCA() bool { return c.X509Cert.IsCA }
 
 // IsExpired reports whether the certificate is expired.
 //
@@ -116,57 +104,53 @@ func (c Certificate) IsExpired(now time.Time) bool {
 	if now.IsZero() {
 		now = time.Now().UTC()
 	}
-	return now.After(c.EndTime) || c.StartTime.After(now)
+	return now.After(c.X509Cert.NotAfter) || c.X509Cert.NotBefore.After(now)
 }
 
 // HasChanged reports whether the certificate has changed.
-func (c Certificate) HasChanged(ca, key, cert []byte) bool {
-	return !bytes.Equal(c.Cert, cert) || !bytes.Equal(c.Key, key) || !bytes.Equal(c.CA, ca)
+func (c Certificate) HasChanged(key, cert []byte) bool {
+	return !bytes.Equal(c.CertPEM, cert) || !bytes.Equal(c.KeyPEM, key)
 }
 
 // IsEqual reports whether the current certificate is equal to other.
 func (c Certificate) IsEqual(other Certificate) bool {
-	return !c.HasChanged(other.CA, other.Key, other.Cert)
+	return !c.HasChanged(other.KeyPEM, other.CertPEM)
 }
 
-// UpdateTLSConfig fills the TLS certificate into the TLS config.
-func (c Certificate) UpdateTLSConfig(config *tls.Config) {
-	config.Certificates = c.tlsCerts
-	if c.RootCAs != nil {
-		config.RootCAs = c.RootCAs
+// UpdateCertificates fills the TLS certificate of the TLS config.
+func (c Certificate) UpdateCertificates(config *tls.Config) (err error) {
+	if c.X509Cert.IsCA {
+		err = errors.New("the certificate is a CA certificate")
+	} else {
+		config.Certificates = append(config.Certificates, c.TLSCert)
 	}
+	return
 }
 
-// MatchIP checks whether there is one of the IP SANs to match the ip.
-func (c Certificate) MatchIP(ip string) bool {
-	netip := net.ParseIP(ip)
-	if netip == nil {
-		return false
-	}
-
-	for _, ipaddr := range c.IPAddresses {
-		if ipaddr.Equal(netip) {
-			return true
+// UpdateRootCAs fills the root CAs of the TLS config, which is used
+// by the client to verify a server certificate.
+func (c Certificate) UpdateRootCAs(config *tls.Config) (err error) {
+	if c.X509Cert.IsCA {
+		if config.RootCAs == nil {
+			config.RootCAs = x509.NewCertPool()
+			config.RootCAs.AppendCertsFromPEM(c.CertPEM)
 		}
+	} else {
+		err = errors.New("the certificate is not a CA certificate")
 	}
-
-	return false
+	return
 }
 
-// MatchHost checks whether there is one of the DNSName SANs to match the host.
-//
-// Notice: It only supports the full or wild domain host.
-func (c Certificate) MatchHost(host string) (ok bool) {
-	for _, dnsname := range c.DNSNames {
-		if strings.HasPrefix(dnsname, "*.") {
-			ok = strings.HasSuffix(host, dnsname[1:])
-		} else {
-			ok = dnsname == host
+// UpdateClientCAs fills the client CAs of the TLS config, which is used
+// by the server to verify a client certificate by the policy in ClientAuth.
+func (c Certificate) UpdateClientCAs(config *tls.Config) (err error) {
+	if c.X509Cert.IsCA {
+		if config.ClientCAs == nil {
+			config.ClientCAs = x509.NewCertPool()
+			config.ClientCAs.AppendCertsFromPEM(c.CertPEM)
 		}
-
-		if ok {
-			break
-		}
+	} else {
+		err = errors.New("the certificate is not a CA certificate")
 	}
 	return
 }

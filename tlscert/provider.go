@@ -40,7 +40,7 @@ func LogCertUpdater(u CertUpdater) CertUpdater { return logCertUpdater{u} }
 type logCertUpdater struct{ updater CertUpdater }
 
 func (u logCertUpdater) AddCertificate(name string, cert Certificate) {
-	log.Info("add the certificate", "name", name, "dnsnames", cert.DNSNames)
+	log.Info("add the certificate", "name", name)
 	if u.updater != nil {
 		u.updater.AddCertificate(name, cert)
 	}

@@ -30,9 +30,8 @@ func TestURLProvider(t *testing.T) {
 		Handler: http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			rw.WriteHeader(200)
 			json.NewEncoder(rw).Encode(urlCert{
-				CA:   test.Ca,
-				Key:  test.Key,
-				Cert: test.Cert,
+				KeyPEM:  test.Key,
+				CertPEM: test.Cert,
 			})
 		}),
 	}
