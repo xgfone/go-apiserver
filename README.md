@@ -154,6 +154,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"time"
@@ -181,31 +182,26 @@ func main() {
 
 	// New an entrypoint based on HTTP.
 	ep := entrypoint.NewEntryPoint("entrypoint_name", *addr, router)
+	if err := ep.Init(); err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	// Initialize the certificate.
 	if *keyFile != "" && *certFile != "" {
-		// Use the certificate manager to manage all the certificates.
-		certManager := tlscert.NewCertManager("tlsgroup")
-
 		// Use the file provider to monitor the change of the certificate files.
 		// When the certificate files have changed, it will be reloaded.
 		tlsFileProvider := tlscert.NewFileProvider("tlsfiles", time.Second*10)
 		tlsFileProvider.AddCertFile("tlsfile", *keyFile, *certFile)
 
-		// Use the provider manager to manage all the certificate providers.
-		tlsProviderManager := tlscert.NewProviderManager(certManager)
+		// Use the provider manager to manage all the certificate providers,
+		// and update the certificate into the entrypoint when it has changed.
+		tlsProviderManager := tlscert.NewProviderManager(ep)
 		tlsProviderManager.AddProvider(tlsFileProvider)
 		tlsProviderManager.Start(context.Background())
 
-		// Set the TLS configuration of the entrypoint.
-		ep.TLSConfig = certManager.TLSConfig()
-		ep.ForceTLS = *forceTLS
-	}
-
-	// Initialize the entrypoint.
-	if err := ep.Init(); err != nil {
-		fmt.Println(err)
-		return
+		// Update the TLS configuration of the entrypoint.
+		ep.SetTLSConfig(new(tls.Config), *forceTLS)
 	}
 
 	// Start the HTTP server.
@@ -218,29 +214,29 @@ func main() {
 	// Open another terminal and run the http client:
 	// $ curl http://localhost:80
 	// OK
-	// $ curl https://localhost:80 --cacert ca.pem --key key.pem --cert cert.pem
+	// $ curl https://localhost:80 --cacert ca.pem
 	// curl: (35) error:1408F10B:SSL routines:ssl3_get_record:wrong version number
 	//
 	//
 	// TEST 2:
 	// Open a terminal and run the program:
-	// $ go run main.go -cafile ca.pem -keyfile key.pem -certfile cert.pem
+	// $ go run main.go -keyfile key.pem -certfile cert.pem
 	//
 	// Open another terminal and run the http client:
 	// $ curl http://localhost:80
 	// OK
-	// $ curl https://localhost:80 --cacert ca.pem --key key.pem --cert cert.pem
+	// $ curl https://localhost:80 --cacert ca.pem
 	// OK
 	//
 	//
 	// TEST 3:
 	// Open a terminal and run the program:
-	// $ go run main.go -cafile ca.pem -keyfile key.pem -certfile cert.pem --forcetls
+	// $ go run main.go -keyfile key.pem -certfile cert.pem --forcetls
 	//
 	// Open another terminal and run the http client:
 	// $ curl http://localhost:80
 	// curl: (56) Recv failure: Connection was reset
-	// $ curl https://localhost:80 --cacert ca.pem --key key.pem --cert cert.pem
+	// $ curl https://localhost:80 --cacert ca.pem
 	// OK
 }
 ```
