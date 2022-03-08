@@ -16,27 +16,27 @@ package tlscert
 
 import "context"
 
-// DefaultCertManagerGroup is the default certificate manager group.
-var DefaultCertManagerGroup = NewCertManagerGroup()
+// DefaultCertUpdaterManager is the default certificate updater manager.
+var DefaultCertUpdaterManager = NewCertUpdaterManager()
 
-// AddCertManager is equal to DefaultCertManagerGroup.AddCertManager(cm).
-func AddCertManager(cm *CertManager) error {
-	return DefaultCertManagerGroup.AddCertManager(cm)
+// AddCertUpdater is equal to DefaultCertUpdaterManager.AddCertUpdater(name, updater).
+func AddCertUpdater(name string, updater CertUpdater) error {
+	return DefaultCertUpdaterManager.AddCertUpdater(name, updater)
 }
 
-// DelCertManager is equal to DefaultCertManagerGroup.DelCertManager(name).
-func DelCertManager(name string) {
-	DefaultCertManagerGroup.DelCertManager(name)
+// DelCertUpdater is equal to DefaultCertUpdaterManager.DelCertUpdater(name).
+func DelCertUpdater(name string) {
+	DefaultCertUpdaterManager.DelCertUpdater(name)
 }
 
-// GetCertManager is equal to DefaultCertManagerGroup.GetCertManager(name).
-func GetCertManager(name string) *CertManager {
-	return DefaultCertManagerGroup.GetCertManager(name)
+// GetCertUpdater is equal to DefaultCertUpdaterManager.GetCertUpdater(name).
+func GetCertUpdater(name string) CertUpdater {
+	return DefaultCertUpdaterManager.GetCertUpdater(name)
 }
 
-// GetCertManagers is equal to DefaultCertManagerGroup.GetCertManagers().
-func GetCertManagers() []*CertManager {
-	return DefaultCertManagerGroup.GetCertManagers()
+// GetCertUpdaters is equal to DefaultCertUpdaterManager.GetCertManagers().
+func GetCertUpdaters() map[string]CertUpdater {
+	return DefaultCertUpdaterManager.GetCertUpdaters()
 }
 
 /// ----------------------------------------------------------------------- ///

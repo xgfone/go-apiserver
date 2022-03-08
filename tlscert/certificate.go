@@ -30,7 +30,7 @@ type Certificate struct {
 
 	// The parsed TLS certificate.
 	X509Cert *x509.Certificate
-	TLSCert  tls.Certificate
+	TLSCert  *tls.Certificate
 }
 
 // NewCACertificate only parses the CA certificate, which is equal to
@@ -51,6 +51,7 @@ func NewCertificate(certPEM, keyPEM []byte) (c Certificate, err error) {
 	if len(c.KeyPEM) == 0 {
 		var skippedBlockTypes []string
 
+		c.TLSCert = new(tls.Certificate)
 		certPEMBlock := c.CertPEM
 		for {
 			var certDERBlock *pem.Block
@@ -77,11 +78,13 @@ func NewCertificate(certPEM, keyPEM []byte) (c Certificate, err error) {
 		}
 
 	} else {
-		c.TLSCert, err = tls.X509KeyPair(c.CertPEM, c.KeyPEM)
+		var tlsCert tls.Certificate
+		tlsCert, err = tls.X509KeyPair(c.CertPEM, c.KeyPEM)
 		if err != nil {
 			return c, err
 		}
 
+		c.TLSCert = &tlsCert
 		if c.TLSCert.Leaf == nil {
 			c.TLSCert.Leaf, err = x509.ParseCertificate(c.TLSCert.Certificate[0])
 			if err != nil {
@@ -107,14 +110,9 @@ func (c Certificate) IsExpired(now time.Time) bool {
 	return now.After(c.X509Cert.NotAfter) || c.X509Cert.NotBefore.After(now)
 }
 
-// HasChanged reports whether the certificate has changed.
-func (c Certificate) HasChanged(key, cert []byte) bool {
-	return !bytes.Equal(c.CertPEM, cert) || !bytes.Equal(c.KeyPEM, key)
-}
-
-// IsEqual reports whether the current certificate is equal to other.
-func (c Certificate) IsEqual(other Certificate) bool {
-	return !c.HasChanged(other.KeyPEM, other.CertPEM)
+// IsEqual reports whether the current certificate is equal to o.
+func (c Certificate) IsEqual(o Certificate) bool {
+	return bytes.Equal(c.CertPEM, o.CertPEM) && bytes.Equal(c.KeyPEM, o.KeyPEM)
 }
 
 // UpdateCertificates fills the TLS certificate of the TLS config.
@@ -122,7 +120,7 @@ func (c Certificate) UpdateCertificates(config *tls.Config) (err error) {
 	if c.X509Cert.IsCA {
 		err = errors.New("the certificate is a CA certificate")
 	} else {
-		config.Certificates = append(config.Certificates, c.TLSCert)
+		config.Certificates = append(config.Certificates, *c.TLSCert)
 	}
 	return
 }

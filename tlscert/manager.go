@@ -22,9 +22,15 @@ import (
 	"sync/atomic"
 )
 
-// CertPrefixFilter returns a certificate filter to only allow the certificate
-// whose name has the given prefix to be added or deleted.
-func CertPrefixFilter(prefix string) func(string) bool {
+// CertFilter is used to filter the certificate by the name,
+// which is added or deleted only when the filter returns true.
+type CertFilter func(name string) (ok bool)
+
+func defaultCertFilter(name string) bool { return true }
+
+// CertPrefixFilter returns a certificate filter that only allows
+// the certificates whose name has the given prefix.
+func CertPrefixFilter(prefix string) CertFilter {
 	return func(s string) bool { return strings.HasPrefix(s, prefix) }
 }
 
@@ -35,33 +41,22 @@ type tlsCertsWrapper struct{ Certs []Certificate }
 // CertManager is used to manage a set of the certificates,
 // which implements the interface CertUpdater.
 type CertManager struct {
-	// CertMatchHost is used to check whether the certificate matches the host.
-	//
-	// Default: cert.X509Cert.VerifyHostname(host) == nil
-	CertMatchHost func(cert Certificate, host string) bool
-
 	name    string
 	lock    sync.RWMutex
 	certs   map[string]Certificate
-	filter  func(string) bool
+	filter  CertFilter
 	updater CertUpdater
 
-	tlsCerts  atomic.Value
-	tlsConfig atomic.Value
+	tlsCerts atomic.Value
 }
 
 // NewCertManager returns a new central certificate manager.
 func NewCertManager(name string) *CertManager {
 	cm := &CertManager{name: name, certs: make(map[string]Certificate, 8)}
 	cm.tlsCerts.Store(tlsCertsWrapper{})
-	cm.CertMatchHost = cm.certMatchHost
-	cm.SetTLSConfig(&tls.Config{})
+	cm.SetCertFilter(nil)
 	cm.OnChanged(nil)
 	return cm
-}
-
-func (m *CertManager) certMatchHost(cert Certificate, host string) bool {
-	return cert.X509Cert.VerifyHostname(host) == nil
 }
 
 // Name returns the name of the manager.
@@ -81,13 +76,17 @@ func (m *CertManager) OnChanged(updater CertUpdater) {
 	m.lock.Unlock()
 }
 
-// SetFilter sets the certificate filter to only add or delete the certificate
-// that the filter returns true.
+// SetCertFilter sets the certificate filter to filter the added or deleted
+// certificates.
 //
-// If filter is nil, which is the default, it is equal to return true.
-func (m *CertManager) SetFilter(filter func(name string) bool) {
+// If filter is nil, it uses the default, which is equal to return the original name.
+func (m *CertManager) SetCertFilter(filter CertFilter) {
 	m.lock.Lock()
-	m.filter = filter
+	if filter == nil {
+		m.filter = defaultCertFilter
+	} else {
+		m.filter = filter
+	}
 	m.lock.Unlock()
 }
 
@@ -122,7 +121,11 @@ func (m *CertManager) AddCertificate(name string, cert Certificate) {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	if m.filter == nil || m.filter(name) {
+	if m.filter(name) {
+		if old, ok := m.certs[name]; ok && old.IsEqual(cert) {
+			return
+		}
+
 		m.certs[name] = cert
 		m.updateCertificates()
 		m.updater.AddCertificate(name, cert)
@@ -135,7 +138,7 @@ func (m *CertManager) AddCertificate(name string, cert Certificate) {
 func (m *CertManager) DelCertificate(name string) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	if m.filter == nil || m.filter(name) {
+	if m.filter(name) {
 		if _, ok := m.certs[name]; ok {
 			delete(m.certs, name)
 			m.updateCertificates()
@@ -152,45 +155,22 @@ func (m *CertManager) updateCertificates() {
 	m.tlsCerts.Store(tlsCertsWrapper{certs})
 }
 
-// FindCertificate traverses all the certificates and finds the certificate
-// whose SANs matches the host name that may be an ip if the certificate
-// supports it.
-func (m *CertManager) FindCertificate(host string) (cert Certificate, ok bool) {
+// FindCertificate traverses all the certificates and finds the matched certificate.
+func (m *CertManager) FindCertificate(chi *tls.ClientHelloInfo) (cert Certificate, ok bool) {
 	certs := m.tlsCerts.Load().(tlsCertsWrapper).Certs
-	for _, cert := range certs {
-		if m.CertMatchHost(cert, host) {
-			return cert, true
+	for i, _len := 0, len(certs); i < _len; i++ {
+		if err := chi.SupportsCertificate(certs[i].TLSCert); err == nil {
+			return certs[i], true
 		}
 	}
 	return
 }
 
-// GetConfigForClient is used as tls.Config.GetConfigForClient to look up
-// the TLS config by SNI.
-func (m *CertManager) GetConfigForClient(chi *tls.ClientHelloInfo) (config *tls.Config, err error) {
-	if cert, ok := m.FindCertificate(chi.ServerName); ok {
-		config = m.TLSConfig().Clone()
-		err = cert.UpdateCertificates(config)
-	} else {
-		err = fmt.Errorf("no certificate for the server name '%s'", chi.ServerName)
+// GetTLSCertificate finds the matched TLS certificate, which is used as
+// tls.Config.GetCertificate.
+func (m *CertManager) GetTLSCertificate(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	if cert, ok := m.FindCertificate(chi); ok {
+		return cert.TLSCert, nil
 	}
-	return
-}
-
-// SetTLSConfig resets the TLS config template, which is thread-safe.
-func (m *CertManager) SetTLSConfig(config *tls.Config) {
-	if config == nil {
-		panic("TLS config is nil")
-	}
-
-	config = config.Clone()
-	if config.GetConfigForClient == nil {
-		config.GetConfigForClient = m.GetConfigForClient
-	}
-	m.tlsConfig.Store(config)
-}
-
-// TLSConfig returns the TLS config, which looks up the certificate by SNI.
-func (m *CertManager) TLSConfig() *tls.Config {
-	return m.tlsConfig.Load().(*tls.Config)
+	return nil, fmt.Errorf("tls: no proper certificate is configured for '%s'", chi.ServerName)
 }

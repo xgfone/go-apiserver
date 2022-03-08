@@ -24,10 +24,19 @@ import (
 
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/tcp"
+	"github.com/xgfone/go-apiserver/tlscert"
 )
+
+// TLSConfig is used to configure the TLS config.
+type TLSConfig interface {
+	SetTLSConfig(tlsConfig *tls.Config, forceTLS bool)
+}
 
 // Server represents an entrypoint server.
 type Server interface {
+	TLSConfig
+
+	Name() string
 	Protocal() string
 	OnShutdown(...func())
 	Shutdown(context.Context)
@@ -52,10 +61,6 @@ type EntryPoint struct {
 	// For the http entrypoint, it may be nil or the type of http.Handler.
 	// If nil, it is router.NewRouter(ruler.NewRouteManager()) by default.
 	Handler interface{}
-
-	// TLSConfig is used to configure the TLS.
-	TLSConfig *tls.Config
-	ForceTLS  bool
 
 	Server
 }
@@ -94,8 +99,7 @@ func (ep *EntryPoint) Init() (err error) {
 			panic(fmt.Errorf("unknown http handler type '%T'", ep.Handler))
 		}
 
-		httpServer := NewHTTPServer(ln, httpHandler)
-		httpServer.SetTLSConfig(ep.TLSConfig, ep.ForceTLS)
+		httpServer := NewHTTPServer(ep.Name, ln, httpHandler)
 		ep.Server = httpServer
 
 	case "tcp":
@@ -113,8 +117,7 @@ func (ep *EntryPoint) Init() (err error) {
 			panic(fmt.Errorf("unknown http handler type '%T'", ep.Handler))
 		}
 
-		tcpServer := NewTCPServer(ln, tcpHandler)
-		tcpServer.SetTLSConfig(ep.TLSConfig, ep.ForceTLS)
+		tcpServer := NewTCPServer(ep.Name, ln, tcpHandler)
 		ep.Server = tcpServer
 
 	// case "udp":
@@ -131,12 +134,26 @@ func (ep *EntryPoint) Stop() { ep.Shutdown(context.Background()) }
 // Start starts the entrypoint.
 func (ep *EntryPoint) Start() {
 	log.Info(fmt.Sprintf("start the %s server", ep.Protocal()),
-		"enabletls", ep.TLSConfig != nil, "forcetls", ep.ForceTLS,
-		"name", ep.Name, "listenaddr", ep.Addr)
+		"name", ep.Server.Name(), "listenaddr", ep.Addr)
 
 	ep.Server.Start()
 
 	log.Info(fmt.Sprintf("stop the %s server", ep.Protocal()),
-		"enabletls", ep.TLSConfig != nil, "forcetls", ep.ForceTLS,
-		"name", ep.Name, "listenaddr", ep.Addr)
+		"name", ep.Server.Name(), "listenaddr", ep.Addr)
+}
+
+// AddCertificate implements the interface tlscert.CertUpdater
+// to add the certificate with the name into the server if it supports TLS.
+func (ep *EntryPoint) AddCertificate(name string, cert tlscert.Certificate) {
+	if updater, ok := ep.Server.(tlscert.CertUpdater); ok {
+		updater.AddCertificate(name, cert)
+	}
+}
+
+// DelCertificate implements the interface tlscert.CertUpdater
+// to delete the certificate by the name from the server if it supports TLS.
+func (ep *EntryPoint) DelCertificate(name string) {
+	if updater, ok := ep.Server.(tlscert.CertUpdater); ok {
+		updater.DelCertificate(name)
+	}
 }

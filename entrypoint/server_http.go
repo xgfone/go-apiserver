@@ -33,14 +33,14 @@ type HTTPServer struct {
 }
 
 // NewHTTPServer returns a new HTTP entrypoint Server.
-func NewHTTPServer(ln net.Listener, handler http.Handler) (server HTTPServer) {
+func NewHTTPServer(serverName string, ln net.Listener, handler http.Handler) (server HTTPServer) {
 	if handler == nil {
 		handler = router.NewRouter(ruler.NewRouteManager())
 	}
 
 	server.HTTPHandler = handler
 	server.HTTPServer = tcp.NewHTTPServerHandler(ln.Addr(), handler)
-	server.TCPServer = NewTCPServer(ln, server.HTTPServer)
+	server.TCPServer = NewTCPServer(serverName, ln, server.HTTPServer)
 	return
 }
 

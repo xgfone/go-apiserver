@@ -16,6 +16,7 @@ package tlscert
 
 import (
 	"context"
+	"crypto/tls"
 	"os"
 	"testing"
 	"time"
@@ -96,10 +97,15 @@ func TestProviderManager(t *testing.T) {
 		t.Errorf("too many certificates: %d", len(certs))
 	}
 
-	if _, ok := certmanager.FindCertificate("127.0.0.1"); !ok {
+	chi := &tls.ClientHelloInfo{SupportedVersions: []uint16{tls.VersionTLS13}}
+
+	chi.ServerName = "127.0.0.1"
+	if _, ok := certmanager.FindCertificate(chi); !ok {
 		t.Errorf("not found the certificate for %s", "127.0.0.1")
 	}
-	if _, ok := certmanager.FindCertificate("localhost"); !ok {
+
+	chi.ServerName = "localhost"
+	if _, ok := certmanager.FindCertificate(chi); !ok {
 		t.Errorf("not found the certificate for %s", "localhost")
 	}
 

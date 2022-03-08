@@ -42,7 +42,9 @@ type Server struct {
 
 // NewServer returns a new Server.
 func NewServer(ln net.Listener, handler Handler) *Server {
-	return &Server{Listener: ln, Handler: handler}
+	server := &Server{Listener: ln, Handler: handler}
+	server.SetTLSConfig(nil, false)
+	return server
 }
 
 // SetTLSConfig sets the TLS configuration, which is thread-safe.

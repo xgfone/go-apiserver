@@ -41,8 +41,8 @@ func TestServer(t *testing.T) {
 	// serverTLSConfig.ClientAuth = tls.RequireAndVerifyClientCert
 
 	clientTLSConfig := new(tls.Config)
-	cert.UpdateCertificates(clientTLSConfig)
 	caCert.UpdateRootCAs(clientTLSConfig)
+	// cert.UpdateCertificates(clientTLSConfig)
 
 	ln, err := Listen("127.0.0.1:8301")
 	if err != nil {
