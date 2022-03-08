@@ -50,7 +50,7 @@ func TestLoadBalancer(t *testing.T) {
 	time.Sleep(time.Millisecond * 100)
 
 	server1, err := upstream.NewServer(upstream.ServerConfig{
-		URL:          upstream.URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8101},
+		URL:          upstream.URL{Hostname: "www.example.com", IP: "127.0.0.1", Port: 8101},
 		StaticWeight: 1,
 	})
 	if err != nil {
@@ -58,7 +58,7 @@ func TestLoadBalancer(t *testing.T) {
 	}
 
 	server2, err := upstream.NewServer(upstream.ServerConfig{
-		URL:          upstream.URL{Domain: "www.example.com", IP: "127.0.0.1", Port: 8102},
+		URL:          upstream.URL{Hostname: "www.example.com", IP: "127.0.0.1", Port: 8102},
 		StaticWeight: 2,
 	})
 	if err != nil {

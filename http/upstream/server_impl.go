@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/xgfone/go-apiserver/nets"
 )
@@ -54,8 +55,8 @@ type ServerConfig struct {
 
 // NewServer returns a new server supporting the weight.
 func NewServer(conf ServerConfig) (WeightedServer, error) {
-	if conf.Domain == "" && conf.IP == "" {
-		return nil, fmt.Errorf("missing the domain or ip")
+	if conf.Hostname == "" && conf.IP == "" {
+		return nil, fmt.Errorf("missing the hostname or ip")
 	}
 	if conf.Scheme == "" {
 		conf.Scheme = "http"
@@ -72,13 +73,13 @@ func NewServer(conf ServerConfig) (WeightedServer, error) {
 		if conf.IP != "" {
 			addr = net.JoinHostPort(conf.IP, fmt.Sprint(conf.Port))
 		} else {
-			addr = net.JoinHostPort(conf.Domain, fmt.Sprint(conf.Port))
+			addr = net.JoinHostPort(conf.Hostname, fmt.Sprint(conf.Port))
 		}
 	} else {
 		if conf.IP != "" {
 			addr = conf.IP
 		} else {
-			addr = conf.Domain
+			addr = conf.Hostname
 		}
 	}
 
@@ -159,8 +160,13 @@ func (s *httpServer) HandleHTTP(w http.ResponseWriter, r *http.Request) (err err
 		r.Method = s.conf.Method
 	}
 
-	if s.conf.Domain != "" {
-		r.Host = s.conf.Domain // Override the header "Host"
+	if s.conf.Hostname != "" {
+		// Override the header "Host"
+		if s.conf.Port > 0 {
+			r.Host = net.JoinHostPort(s.conf.Hostname, strconv.FormatInt(int64(s.conf.Port), 10))
+		} else {
+			r.Host = s.conf.Hostname
+		}
 	}
 
 	if s.conf.Path != "" {
@@ -229,8 +235,8 @@ func (s *httpServer) Check(ctx context.Context, health URL) (err error) {
 		health.Scheme = s.conf.Scheme
 	}
 
-	if health.Domain == "" {
-		health.Domain = s.conf.Domain
+	if health.Hostname == "" {
+		health.Hostname = s.conf.Hostname
 	}
 
 	health.IP = s.conf.IP

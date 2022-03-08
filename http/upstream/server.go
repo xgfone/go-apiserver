@@ -34,14 +34,14 @@ var ErrNoAvailableServers = errors.New("no available servers")
 
 // URL is the metadata information of the http endpoint.
 type URL struct {
-	Method  string            `json:"method" yaml:"method"` // Such as "GET"
-	Scheme  string            `json:"scheme" yaml:"scheme"` // Such as "http" or "https"
-	Domain  string            `json:"domain" yaml:"domain"` // Such as "www.example.com"
-	IP      string            `json:"ip" yaml:"ip"`         // Such as "1.2.3.4"
-	Port    uint16            `json:"port" yaml:"port"`     // Such as 80 or 443
-	Path    string            `json:"path" yaml:"path"`     // Such as "/"
-	Queries map[string]string `json:"queries" yaml:"queries"`
-	Headers map[string]string `json:"headers" yaml:"headers"`
+	Method   string            `json:"method" yaml:"method"`     // Such as "GET"
+	Scheme   string            `json:"scheme" yaml:"scheme"`     // Such as "http" or "https"
+	Hostname string            `json:"hostname" yaml:"hostname"` // Such as "www.example.com"
+	IP       string            `json:"ip" yaml:"ip"`             // Such as "1.2.3.4"
+	Port     uint16            `json:"port" yaml:"port"`         // Such as 80 or 443
+	Path     string            `json:"path" yaml:"path"`         // Such as "/"
+	Queries  map[string]string `json:"queries" yaml:"queries"`
+	Headers  map[string]string `json:"headers" yaml:"headers"`
 }
 
 // ID returns the unique identity, for example,
@@ -51,15 +51,15 @@ type URL struct {
 //
 func (u URL) ID() string {
 	var host string
-	if u.Domain == "" {
+	if u.Hostname == "" {
 		if u.IP != "" {
 			host = u.IP
 		}
 	} else {
 		if u.IP == "" {
-			host = u.Domain
+			host = u.Hostname
 		} else {
-			host = strings.Join([]string{u.Domain, u.IP}, "+")
+			host = strings.Join([]string{u.Hostname, u.IP}, "+")
 		}
 	}
 
@@ -81,7 +81,7 @@ func (u URL) IsZero() bool {
 		len(u.Path) == 0 &&
 		len(u.Method) == 0 &&
 		len(u.Scheme) == 0 &&
-		len(u.Domain) == 0 &&
+		len(u.Hostname) == 0 &&
 		len(u.Queries) == 0 &&
 		len(u.Headers) == 0
 }
@@ -99,11 +99,11 @@ func (u URL) URL() url.URL {
 		} else {
 			_url.Host = net.JoinHostPort(u.IP, fmt.Sprint(u.Port))
 		}
-	} else if u.Domain != "" {
+	} else if u.Hostname != "" {
 		if u.Port == 0 {
-			_url.Host = u.Domain
+			_url.Host = u.Hostname
 		} else {
-			_url.Host = net.JoinHostPort(u.Domain, fmt.Sprint(u.Port))
+			_url.Host = net.JoinHostPort(u.Hostname, fmt.Sprint(u.Port))
 		}
 	} else {
 		panic(fmt.Errorf("no url host: %+v", u))
