@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tlscert
+package provider
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/log"
+	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
 
 type urlCert struct {
@@ -143,7 +144,7 @@ func (p *URLProvider) DelCertURL(name string) {
 func (p *URLProvider) Name() string { return p.name }
 
 // OnChanged implements the interface Provider.
-func (p *URLProvider) OnChanged(ctx context.Context, updater CertUpdater) {
+func (p *URLProvider) OnChanged(ctx context.Context, updater tlscert.Updater) {
 	ticker := time.NewTicker(p.interval)
 	defer ticker.Stop()
 
@@ -167,7 +168,7 @@ func (p *URLProvider) OnChanged(ctx context.Context, updater CertUpdater) {
 	}
 }
 
-func (p *URLProvider) update(updater CertUpdater) {
+func (p *URLProvider) update(updater tlscert.Updater) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -176,7 +177,7 @@ func (p *URLProvider) update(updater CertUpdater) {
 	}
 }
 
-func (p *URLProvider) checkAndUpdate(info *urlCertInfo, updater CertUpdater) {
+func (p *URLProvider) checkAndUpdate(info *urlCertInfo, updater tlscert.Updater) {
 	resp, err := http.Get(info.URL)
 	if resp != nil {
 		defer resp.Body.Close()
@@ -198,7 +199,7 @@ func (p *URLProvider) checkAndUpdate(info *urlCertInfo, updater CertUpdater) {
 		return // No Change
 	}
 
-	cert, err := NewCertificate([]byte(r.CertPEM), []byte(r.KeyPEM))
+	cert, err := tlscert.NewCertificate([]byte(r.CertPEM), []byte(r.KeyPEM))
 	if err != nil {
 		log.Error("fail to create certificate",
 			"name", info.Name, "url", info.URL, "err", err)

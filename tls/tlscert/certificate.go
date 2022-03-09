@@ -1,4 +1,4 @@
-// Copyright 2021~2022 xgfone
+// Copyright 2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package tlscert provides some TLS certificate management functions.
 package tlscert
 
 import (
@@ -113,6 +114,16 @@ func (c Certificate) IsExpired(now time.Time) bool {
 // IsEqual reports whether the current certificate is equal to o.
 func (c Certificate) IsEqual(o Certificate) bool {
 	return bytes.Equal(c.CertPEM, o.CertPEM) && bytes.Equal(c.KeyPEM, o.KeyPEM)
+}
+
+// IsSupported checks whether the certificate is supported by the client.
+func (c Certificate) IsSupported(chi *tls.ClientHelloInfo) error {
+	return chi.SupportsCertificate(c.TLSCert)
+}
+
+// VerifyHostname verifies whether the hostname is valid for the certificate.
+func (c Certificate) VerifyHostname(hostname string) error {
+	return c.X509Cert.VerifyHostname(hostname)
 }
 
 // UpdateCertificates fills the TLS certificate of the TLS config.

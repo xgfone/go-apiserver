@@ -20,21 +20,20 @@ import (
 
 	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/tcp"
-	"github.com/xgfone/go-apiserver/tlscert"
+	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
 
 var _ Server = TCPServer{}
 
 // TCPServer represents a tcp entrypoint server.
 type TCPServer struct {
-	ServerName  string
 	Middlewares *middleware.Manager
-	*tlscert.CertManager
+	CertManager *tlscert.Manager
 	*tcp.Server
 }
 
 // NewTCPServer returns a new TCP entrypoint Server.
-func NewTCPServer(serverName string, ln net.Listener, handler tcp.Handler) (server TCPServer) {
+func NewTCPServer(ln net.Listener, handler tcp.Handler) (server TCPServer) {
 	if ln == nil {
 		panic("the tcp listener is nil")
 	}
@@ -42,23 +41,38 @@ func NewTCPServer(serverName string, ln net.Listener, handler tcp.Handler) (serv
 		panic("the tcp handler is nil")
 	}
 
-	server.ServerName = serverName
-	server.CertManager = tlscert.NewCertManager(serverName)
+	server.CertManager = tlscert.NewManager()
 	server.Middlewares = middleware.NewManager(handler)
 	server.Server = tcp.NewServer(ln, server.Middlewares)
+	server.SetTLSForce(true)
 	return
 }
-
-// Name returns the name of the tcp server.
-func (s TCPServer) Name() string { return s.ServerName }
 
 // Protocal returns the protocal of the http server, which is a fixed "tcp".
 func (s TCPServer) Protocal() string { return "tcp" }
 
 // SetTLSConfig sets the tls configuration, which is thread-safe.
-func (s TCPServer) SetTLSConfig(tlsConfig *tls.Config, forceTLS bool) {
+func (s TCPServer) SetTLSConfig(tlsConfig *tls.Config) {
 	if tlsConfig.GetCertificate == nil && len(tlsConfig.Certificates) == 0 {
 		tlsConfig.GetCertificate = s.CertManager.GetTLSCertificate
 	}
+
+	_, forceTLS := s.Server.GetTLSConfig()
 	s.Server.SetTLSConfig(tlsConfig, forceTLS)
+}
+
+// SetTLSForce sets whether or not to force the client to use TLS.
+func (s TCPServer) SetTLSForce(forceTLS bool) {
+	config, _ := s.Server.GetTLSConfig()
+	s.Server.SetTLSConfig(config, forceTLS)
+}
+
+// AddCertificate implements the interface tlscert.CertUpdater.
+func (s TCPServer) AddCertificate(name string, certificate tlscert.Certificate) {
+	s.CertManager.AddCertificate(name, certificate)
+}
+
+// DelCertificate implements the interface tlscert.CertUpdater.
+func (s TCPServer) DelCertificate(name string) {
+	s.CertManager.DelCertificate(name)
 }

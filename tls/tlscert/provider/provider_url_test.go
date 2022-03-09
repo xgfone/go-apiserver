@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tlscert
+package provider
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/internal/test"
+	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
 
 func TestURLProvider(t *testing.T) {
@@ -39,7 +40,7 @@ func TestURLProvider(t *testing.T) {
 	defer httpserver.Shutdown(context.Background())
 	time.Sleep(time.Millisecond * 50)
 
-	certmanager := NewCertManager("")
+	certmanager := tlscert.NewManager()
 	urlProvider := NewURLProvider("url", time.Millisecond*100)
 	err := urlProvider.AddCertURL("test", "http://127.0.0.1:8888")
 	if err != nil {

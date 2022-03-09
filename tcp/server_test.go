@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/internal/test"
-	"github.com/xgfone/go-apiserver/tlscert"
+	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
 
 func TestServer(t *testing.T) {

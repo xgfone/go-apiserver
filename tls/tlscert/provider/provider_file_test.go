@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tlscert
+package provider
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/internal/test"
+	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
 
 func TestFileProvider(t *testing.T) {
@@ -34,7 +35,7 @@ func TestFileProvider(t *testing.T) {
 	createFile(t, keyfile, test.Key)
 	createFile(t, certfile, test.Cert)
 
-	certmanager := NewCertManager("")
+	certmanager := tlscert.NewManager()
 	fileProvider := NewFileProvider("file", time.Millisecond*100)
 	err := fileProvider.AddCertFile("test", keyfile, certfile)
 	if err != nil {

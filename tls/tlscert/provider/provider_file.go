@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tlscert
+package provider
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/log"
+	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
 
 type fileInfo struct {
@@ -146,7 +147,7 @@ func (p *FileProvider) DelCertFile(name string) {
 func (p *FileProvider) Name() string { return p.name }
 
 // OnChanged implements the interface Provider.
-func (p *FileProvider) OnChanged(ctx context.Context, updater CertUpdater) {
+func (p *FileProvider) OnChanged(ctx context.Context, updater tlscert.Updater) {
 	ticker := time.NewTicker(p.interval)
 	defer ticker.Stop()
 
@@ -170,7 +171,7 @@ func (p *FileProvider) OnChanged(ctx context.Context, updater CertUpdater) {
 	}
 }
 
-func (p *FileProvider) update(updater CertUpdater) {
+func (p *FileProvider) update(updater tlscert.Updater) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -179,7 +180,7 @@ func (p *FileProvider) update(updater CertUpdater) {
 	}
 }
 
-func (p *FileProvider) checkAndUpdate(info *fileCertInfo, updater CertUpdater) {
+func (p *FileProvider) checkAndUpdate(info *fileCertInfo, updater tlscert.Updater) {
 	info.Cert = readCertificateFile(info.Cert)
 	minTime := info.Cert.Last
 
@@ -192,7 +193,7 @@ func (p *FileProvider) checkAndUpdate(info *fileCertInfo, updater CertUpdater) {
 		return
 	}
 
-	cert, err := NewCertificate(info.Cert.Data, info.Key.Data)
+	cert, err := tlscert.NewCertificate(info.Cert.Data, info.Key.Data)
 	if err != nil {
 		log.Error("fail to create certificate",
 			info.Key.logk, info.Key.logv,
