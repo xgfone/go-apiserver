@@ -123,7 +123,7 @@ func (m *Manager) updateCertificates() {
 func (m *Manager) FindCertificate(chi *tls.ClientHelloInfo) (cert Certificate, ok bool) {
 	certs := m.certs.Load().(certsWrapper).Certs
 	for i, _len := 0, len(certs); i < _len; i++ {
-		if err := chi.SupportsCertificate(certs[i].TLSCert); err == nil {
+		if err := VerifyCertificate(certs[i].TLSCert, chi); err == nil {
 			return certs[i], true
 		}
 	}

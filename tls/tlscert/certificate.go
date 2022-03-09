@@ -24,6 +24,19 @@ import (
 	"time"
 )
 
+func init() {
+	VerifyCertificate = func(cert *tls.Certificate, chi *tls.ClientHelloInfo) error {
+		return cert.Leaf.VerifyHostname(chi.ServerName)
+	}
+}
+
+// VerifyCertificate is used to verify whether the certificte is supported
+// by the client.
+//
+//   For Go1.14+, it is equal to chi.SupportsCertificate(cert).
+//   For Go1.13, it is equal to cert.Leaf.VerifyHostname(chi.ServerName).
+var VerifyCertificate func(cert *tls.Certificate, chi *tls.ClientHelloInfo) error
+
 // Certificate represents the information of a certificate.
 type Certificate struct {
 	// The original PEM data of the certificate.
@@ -118,7 +131,7 @@ func (c Certificate) IsEqual(o Certificate) bool {
 
 // IsSupported checks whether the certificate is supported by the client.
 func (c Certificate) IsSupported(chi *tls.ClientHelloInfo) error {
-	return chi.SupportsCertificate(c.TLSCert)
+	return VerifyCertificate(c.TLSCert, chi)
 }
 
 // VerifyHostname verifies whether the hostname is valid for the certificate.
