@@ -162,7 +162,7 @@ import (
 	"github.com/xgfone/go-apiserver/entrypoint"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
-	"github.com/xgfone/go-apiserver/tlscert"
+	"github.com/xgfone/go-apiserver/tls/tlscert/provider"
 )
 
 var (
@@ -191,17 +191,18 @@ func main() {
 	if *keyFile != "" && *certFile != "" {
 		// Use the file provider to monitor the change of the certificate files.
 		// When the certificate files have changed, it will be reloaded.
-		tlsFileProvider := tlscert.NewFileProvider("tlsfiles", time.Second*10)
+		tlsFileProvider := provider.NewFileProvider("tlsfiles", time.Second*10)
 		tlsFileProvider.AddCertFile("tlsfile", *keyFile, *certFile)
 
 		// Use the provider manager to manage all the certificate providers,
 		// and update the certificate into the entrypoint when it has changed.
-		tlsProviderManager := tlscert.NewProviderManager(ep)
+		tlsProviderManager := provider.NewManager(ep)
 		tlsProviderManager.AddProvider(tlsFileProvider)
 		tlsProviderManager.Start(context.Background())
 
 		// Update the TLS configuration of the entrypoint.
-		ep.SetTLSConfig(new(tls.Config), *forceTLS)
+		ep.SetTLSConfig(new(tls.Config))
+		ep.SetTLSForce(*forceTLS)
 	}
 
 	// Start the HTTP server.
