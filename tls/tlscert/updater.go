@@ -16,6 +16,7 @@ package tlscert
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/xgfone/go-apiserver/log"
 )
@@ -73,6 +74,60 @@ func (u prefixUpdater) AddCertificate(name string, cert Certificate) {
 
 func (u prefixUpdater) DelCertificate(name string) {
 	if strings.HasPrefix(name, u.prefix) {
+		u.updater.DelCertificate(name)
+	}
+}
+
+// NameFilterUpdater is a certificate updater proxy to add or delete the certificates
+// that have the specific name.
+type NameFilterUpdater struct {
+	updater Updater
+	names   sync.Map
+}
+
+// NewNameFilterUpdater returns a new NameFilterUpdater with the wrapped updater.
+func NewNameFilterUpdater(updater Updater, names ...string) *NameFilterUpdater {
+	u := &NameFilterUpdater{updater: updater}
+	u.AddNames(names...)
+	return u
+}
+
+// Names returns the name list of the supported certificates.
+func (u *NameFilterUpdater) Names() []string {
+	names := make([]string, 0, 4)
+	u.names.Range(func(key, _ interface{}) bool {
+		names = append(names, key.(string))
+		return true
+	})
+	return names
+}
+
+// AddNames adds the names of the supported certificates.
+func (u *NameFilterUpdater) AddNames(names ...string) {
+	for i, _len := 0, len(names); i < _len; i++ {
+		u.names.LoadOrStore(names[i], struct{}{})
+	}
+}
+
+// DelNames adds the names of the no longer supported certificates.
+func (u *NameFilterUpdater) DelNames(names ...string) {
+	for i, _len := 0, len(names); i < _len; i++ {
+		u.names.Delete(names[i])
+	}
+}
+
+// AddCertificate implements the interface Updater, which only adds
+// the certificates that have the specific name.
+func (u *NameFilterUpdater) AddCertificate(name string, cert Certificate) {
+	if _, ok := u.names.Load(name); ok {
+		u.updater.AddCertificate(name, cert)
+	}
+}
+
+// DelCertificate implements the interface Updater, which only deletes
+// the certificates that have the specific name.
+func (u *NameFilterUpdater) DelCertificate(name string) {
+	if _, ok := u.names.Load(name); ok {
 		u.updater.DelCertificate(name)
 	}
 }
