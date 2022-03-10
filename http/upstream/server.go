@@ -17,6 +17,8 @@ package upstream
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -34,14 +36,14 @@ var ErrNoAvailableServers = errors.New("no available servers")
 
 // URL is the metadata information of the http endpoint.
 type URL struct {
-	Method   string            `json:"method" yaml:"method"`     // Such as "GET"
-	Scheme   string            `json:"scheme" yaml:"scheme"`     // Such as "http" or "https"
-	Hostname string            `json:"hostname" yaml:"hostname"` // Such as "www.example.com"
-	IP       string            `json:"ip" yaml:"ip"`             // Such as "1.2.3.4"
-	Port     uint16            `json:"port" yaml:"port"`         // Such as 80 or 443
-	Path     string            `json:"path" yaml:"path"`         // Such as "/"
-	Queries  map[string]string `json:"queries" yaml:"queries"`
-	Headers  map[string]string `json:"headers" yaml:"headers"`
+	Method   string            `json:"method,omitempty" yaml:"method,omitempty"`     // Such as "GET"
+	Scheme   string            `json:"scheme,omitempty" yaml:"scheme,omitempty"`     // Such as "http" or "https"
+	Hostname string            `json:"hostname,omitempty" yaml:"hostname,omitempty"` // Such as "www.example.com"
+	IP       string            `json:"ip,omitempty" yaml:"ip,omitempty"`             // Such as "1.2.3.4"
+	Port     uint16            `json:"port,omitempty" yaml:"port,omitempty"`         // Such as 80 or 443
+	Path     string            `json:"path,omitempty" yaml:"path,omitempty"`         // Such as "/"
+	Queries  map[string]string `json:"queries,omitempty" yaml:"queries,omitempty"`
+	Headers  map[string]string `json:"headers,omitempty" yaml:"headers,omitempty"`
 }
 
 // ID returns the unique identity, for example,
@@ -67,7 +69,9 @@ func (u URL) ID() string {
 		host = net.JoinHostPort(host, fmt.Sprint(u.Port))
 	}
 
-	_url := url.URL{Scheme: u.Scheme, Host: host, Path: u.Path}
+	data, _ := json.Marshal(u)
+	fragment := fmt.Sprintf("md5=%x", md5.Sum(data))
+	_url := url.URL{Scheme: u.Scheme, Host: host, Path: u.Path, Fragment: fragment}
 	return _url.String()
 }
 

@@ -33,10 +33,7 @@ type ServerConfig struct {
 
 	// Optional
 	//
-	// Default: one of
-	//   - Metadata.IP + Metadata.Port
-	//   - Metadata.Domain + Metadata.Port
-	//
+	// Default: URL.ID()
 	ID string
 
 	// Handle the request or response.
@@ -83,8 +80,13 @@ func NewServer(conf ServerConfig) (WeightedServer, error) {
 		}
 	}
 
+	id := conf.ID
+	if id == "" {
+		id = conf.URL.ID()
+	}
+
 	s := &httpServer{
-		id:             addr,
+		id:             id,
 		addr:           addr,
 		conf:           conf,
 		getWeight:      conf.DynamicWeight,
