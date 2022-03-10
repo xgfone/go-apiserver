@@ -54,8 +54,8 @@ func NewBuilderManager() *BuilderManager {
 	return &BuilderManager{builders: make(map[string]Builder, 8)}
 }
 
-// AddBuilder adds the middleware builder.
-func (m *BuilderManager) AddBuilder(b Builder) (err error) {
+// RegisterBuilder adds the middleware builder.
+func (m *BuilderManager) RegisterBuilder(b Builder) (err error) {
 	typ := b.Type()
 	m.lock.Lock()
 	if _, ok := m.builders[typ]; ok {
@@ -67,10 +67,10 @@ func (m *BuilderManager) AddBuilder(b Builder) (err error) {
 	return
 }
 
-// DelBuilder removes and returns the middleware builder by the type.
+// UnregisterBuilder removes and returns the middleware builder by the type.
 //
 // If the middleware builder does not exist, do nothing and return nil.
-func (m *BuilderManager) DelBuilder(typ string) Builder {
+func (m *BuilderManager) UnregisterBuilder(typ string) Builder {
 	m.lock.Lock()
 	builder, ok := m.builders[typ]
 	if ok {
