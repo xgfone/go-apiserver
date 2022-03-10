@@ -20,6 +20,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/matcher"
 	"github.com/xgfone/go-apiserver/http/reqresp"
+	"github.com/xgfone/go-apiserver/middleware"
 )
 
 // Name returns a route builder with the name, which is equal to
@@ -67,6 +68,7 @@ func (m *RouteManager) HostRegexp(regexpHost string) RouteBuilder {
 // RouteBuilder is used to build the route.
 type RouteBuilder struct {
 	manager  *RouteManager
+	mdws     middleware.Middlewares
 	name     string
 	matcher  matcher.Matcher
 	matchers matcher.Matchers
@@ -233,6 +235,12 @@ func (b RouteBuilder) HostRegexp(regexpHost string) RouteBuilder {
 	return b
 }
 
+// Use appends the http handler middlewares that act on the latter handler.
+func (b RouteBuilder) Use(middlewares ...middleware.Middleware) RouteBuilder {
+	b.mdws = b.mdws.Clone(middlewares...)
+	return b
+}
+
 // ContextHandler is the same HandlerFunc, but wraps the request and response
 // into Context.
 func (b RouteBuilder) ContextHandler(h func(*reqresp.Context)) error {
@@ -301,6 +309,7 @@ func (b RouteBuilder) addRoute(handler http.Handler) (err error) {
 		name = b.matcher.String()
 	}
 
+	handler = b.mdws.Handler(handler).(http.Handler)
 	route := NewRoute(name, b.priority, b.matcher, handler)
 	return b.manager.AddRoute(route)
 }
