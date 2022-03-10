@@ -241,3 +241,148 @@ func main() {
 	// OK
 }
 ```
+
+### Mini API Gateway
+```go
+package main
+
+import (
+	"flag"
+
+	"github.com/xgfone/go-apiserver/entrypoint"
+	"github.com/xgfone/go-apiserver/http/middlewares"
+	"github.com/xgfone/go-apiserver/http/reqresp"
+	"github.com/xgfone/go-apiserver/http/router"
+	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
+	"github.com/xgfone/go-apiserver/http/upstream"
+	"github.com/xgfone/go-apiserver/http/upstream/balancer"
+	"github.com/xgfone/go-apiserver/http/upstream/loadbalancer"
+	"github.com/xgfone/go-apiserver/log"
+)
+
+var (
+	listenAddr = flag.String("listen-addr", ":80", "The address that api gateway listens on.")
+	manageCIDR = flag.String("manage-cidr", "127.0.0.0/8", "The CIDR of the management network.")
+)
+
+func main() {
+	flag.Parse()
+
+	routeManager := ruler.NewRouteManager()
+	initAdminManageAPI(routeManager)
+
+	router := router.NewRouter(routeManager)
+	router.Middlewares.Use(middlewares.DefaultMiddlewares...)
+
+	ep := entrypoint.NewEntryPoint("api-gateway", *listenAddr, router)
+	if err := ep.Init(); err != nil {
+		log.Error("fail to initialize the api-gateway entrypoint", "addr", *listenAddr)
+		return
+	}
+
+	ep.Start()
+}
+
+func initAdminManageAPI(router *ruler.RouteManager) {
+	router.
+		Path("/admin/route").
+		Method("POST").
+		ClientIP(*manageCIDR). // Only allow the specific clients to add the route.
+		ContextHandler(func(ctx *reqresp.Context) {
+			var req struct {
+				Rule     string `json:"rule"`
+				Upstream struct {
+					ForwardPolicy string       `json:"forwardPolicy"`
+					ForwardURL    upstream.URL `json:"forwardUrl"`
+
+					Servers []struct {
+						IP     string `json:"ip"`
+						Port   uint16 `json:"port"`
+						Weight int    `json:"weight"`
+					} `json:"servers" yaml:"servers"`
+				} `json:"upstream"`
+			}
+
+			if err := ctx.BindBody(&req); err != nil {
+				ctx.Text(400, "invalid request route paramenter: %s", err.Error())
+				return
+			}
+
+			if req.Rule == "" {
+				ctx.Text(400, "the route rule is empty")
+				return
+			}
+			if req.Upstream.ForwardPolicy == "" {
+				req.Upstream.ForwardPolicy = "weight_random"
+			}
+
+			// Build the upstream servers.
+			servers := make(upstream.Servers, len(req.Upstream.Servers))
+			for i, server := range req.Upstream.Servers {
+				config := upstream.ServerConfig{URL: req.Upstream.ForwardURL}
+				config.StaticWeight = server.Weight
+				config.Port = server.Port
+				config.IP = server.IP
+
+				wserver, err := upstream.NewServer(config)
+				if err != nil {
+					ctx.Text(400, "fail to build the upstream server: %s", err.Error())
+					return
+				}
+
+				servers[i] = wserver
+			}
+
+			// Build the loadbalancer forwarder.
+			balancer, _ := balancer.Build(req.Upstream.ForwardPolicy, nil)
+			lb := loadbalancer.NewLoadBalancer(req.Rule, balancer)
+			lb.UpsertServers(servers...)
+
+			// Build the route and forward the request to loadbalancer.
+			err := router.Rule(req.Rule).HandlerFunc(lb.ServeHTTP)
+			if err != nil {
+				ctx.Text(400, "invalid route rule '%s': %s", req.Rule, err.Error())
+			}
+		})
+}
+```
+
+```shell
+# Run the mini API-Gateway on the host 192.168.1.10
+$ nohup go run main.go &
+
+# Add the route
+$ curl -XPOST http://127.0.0.1/admin/route -H 'Content-Type: application/json' -d '
+{
+    "rule": "Method(`GET`) && Path(`/path`)",
+    "upstream": {
+        "forwardPolicy": "weight_round_robin",
+        "forwardUrl" : {"path": "/backend/path"},
+        "servers": [
+            {"ip": "192.168.1.11", "port": 80, "weight": 1}, // 33.3% requests
+            {"ip": "192.168.1.12", "port": 80, "weight": 2}  // 66.7% requests
+        ]
+    }
+}'
+
+# Access the backend servers by the mini API-Gateway:
+# 1/3 requests -> 192.168.1.11
+# 2/3 requests -> 192.168.1.12
+$ curl http://192.168.1.10/path
+192.168.1.11/backend/path
+
+$ curl http://192.168.1.10/path
+192.168.1.12/backend/path
+
+$ curl http://192.168.1.10/path
+192.168.1.12/backend/path
+
+$ curl http://192.168.1.10/path
+192.168.1.11/backend/path
+
+$ curl http://192.168.1.10/path
+192.168.1.12/backend/path
+
+$ curl http://192.168.1.10/path
+192.168.1.12/backend/path
+```
