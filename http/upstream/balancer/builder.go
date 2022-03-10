@@ -30,6 +30,15 @@ func registerBuiltinBuidler(t string, f func() Balancer) {
 // RegisterBuidler registers the given balancer builder.
 //
 // If the balancer builder typed "typ" has existed, override it to the new.
+//
+// For the builtin builders as following, they ignore the config parameter
+// and never return an error.
+//   - random
+//   - weight_random
+//   - round_robin
+//   - weight_round_robin
+//   - source_ip_hash
+//   - least_conn
 func RegisterBuidler(typ string, builder Builder) { builders[typ] = builder }
 
 // GetBuilder returns the registered balancer builder by the type.
@@ -42,7 +51,7 @@ func Build(typ string, config interface{}) (balancer Balancer, err error) {
 	if builder := GetBuilder(typ); builder != nil {
 		balancer, err = builder(config)
 	} else {
-		err = fmt.Errorf("no the builder typed '%s'", typ)
+		err = fmt.Errorf("no the balancer builder typed '%s'", typ)
 	}
 	return
 }

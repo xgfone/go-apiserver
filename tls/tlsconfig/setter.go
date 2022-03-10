@@ -23,7 +23,7 @@ type Setter interface {
 
 // SetterUpdater is a tls.Config updater to set tls.Config when it has changed.
 type SetterUpdater struct {
-	// TLSConfigName is used to filter the specific tls.Config if not empty.
+	// TLSConfigName is used to filter the specific named tls.Config if not empty.
 	TLSConfigName string
 
 	// TLSConfigSetter is used to set and update the tls config to the new.
