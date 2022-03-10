@@ -17,6 +17,7 @@ package healthcheck
 import (
 	"context"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -36,13 +37,21 @@ func (s testServer) Check(context.Context, upstream.URL) error {
 	return nil
 }
 
-type testUpdater struct{ servers map[string]bool }
+type testUpdater struct{ servers sync.Map }
 
-func newUpdater() testUpdater { return testUpdater{make(map[string]bool)} }
+func newUpdater() *testUpdater { return &testUpdater{} }
 
-func (u testUpdater) UpsertServer(s upstream.Server)               { u.servers[s.ID()] = false }
-func (u testUpdater) RemoveServer(serverID string)                 { delete(u.servers, serverID) }
-func (u testUpdater) SetServerOnline(serverID string, online bool) { u.servers[serverID] = true }
+func (u *testUpdater) UpsertServer(s upstream.Server)         { u.servers.Store(s.ID(), false) }
+func (u *testUpdater) RemoveServer(id string)                 { u.servers.Delete(id) }
+func (u *testUpdater) SetServerOnline(id string, online bool) { u.servers.Store(id, online) }
+func (u *testUpdater) Servers() map[string]bool {
+	servers := make(map[string]bool)
+	u.servers.Range(func(key, value interface{}) bool {
+		servers[key.(string)] = value.(bool)
+		return true
+	})
+	return servers
+}
 
 func TestHealthCheck(t *testing.T) {
 	updater1 := newUpdater()
@@ -65,8 +74,8 @@ func TestHealthCheck(t *testing.T) {
 	}
 
 	checkServers(t, "hc", servers)
-	checkServers(t, "updater1", updater1.servers)
-	checkServers(t, "updater2", updater2.servers)
+	checkServers(t, "updater1", updater1.Servers())
+	checkServers(t, "updater2", updater2.Servers())
 }
 
 func checkServers(t *testing.T, prefix string, servers map[string]bool) {
