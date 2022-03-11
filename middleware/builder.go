@@ -48,13 +48,13 @@ func UnregisterBuilder(typ string) { delete(builders, typ) }
 // If the middleware builder does not exist, return nil.
 func GetBuilder(typ string) Builder { return builders[typ] }
 
-// GetBuilders returns all the middleware builders.
-func GetBuilders() map[string]Builder {
-	bs := make(map[string]Builder, len(builders))
-	for typ, builder := range builders {
-		bs[typ] = builder
+// GetBuilderTypes returns the types of all the middleware builders.
+func GetBuilderTypes() (types []string) {
+	types = make([]string, 0, len(builders))
+	for _type := range builders {
+		types = append(types, _type)
 	}
-	return bs
+	return
 }
 
 // Build uses the builder typed typ to build a middleware named name
