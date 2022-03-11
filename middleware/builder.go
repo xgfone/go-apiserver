@@ -16,64 +16,51 @@ package middleware
 
 import (
 	"fmt"
-	"sync"
 )
+
+var builders map[string]Builder
 
 // Builder is used to build a new middleware with the middleware config.
 type Builder func(name string, config map[string]interface{}) (Middleware, error)
 
-// BuilderManager is used to manage the middleware builder.
-type BuilderManager struct{ builders sync.Map }
-
-// NewBuilderManager returns a new middleware builder manager.
-func NewBuilderManager() *BuilderManager { return &BuilderManager{} }
-
 // RegisterBuilder registers a new middleware builder typed typ.
-func (m *BuilderManager) RegisterBuilder(typ string, builder Builder) (err error) {
+func RegisterBuilder(typ string, builder Builder) (err error) {
 	if typ == "" {
 		panic("the middleware builder type is emtpy")
 	} else if builder == nil {
 		panic("the middleware builder is nil")
 	}
 
-	if _, loaded := m.builders.LoadOrStore(typ, builder); loaded {
+	if _, ok := builders[typ]; ok {
 		err = fmt.Errorf("the middleware builder typed '%s' has existed", typ)
+	} else {
+		builders[typ] = builder
 	}
+
 	return
 }
 
 // UnregisterBuilder unregisters the middleware builder by the type.
-func (m *BuilderManager) UnregisterBuilder(typ string) {
-	if typ == "" {
-		panic("the middleware builder type is emtpy")
-	}
-	m.builders.Delete(typ)
-}
+func UnregisterBuilder(typ string) { delete(builders, typ) }
 
 // GetBuilder returns the middleware builder by the type.
 //
 // If the middleware builder does not exist, return nil.
-func (m *BuilderManager) GetBuilder(typ string) Builder {
-	if value, ok := m.builders.Load(typ); ok {
-		return value.(Builder)
-	}
-	return nil
-}
+func GetBuilder(typ string) Builder { return builders[typ] }
 
 // GetBuilders returns all the middleware builders.
-func (m *BuilderManager) GetBuilders() map[string]Builder {
-	builders := make(map[string]Builder, 32)
-	m.builders.Range(func(key, value interface{}) bool {
-		builders[key.(string)] = value.(Builder)
-		return true
-	})
-	return builders
+func GetBuilders() map[string]Builder {
+	bs := make(map[string]Builder, len(builders))
+	for typ, builder := range builders {
+		bs[typ] = builder
+	}
+	return bs
 }
 
 // Build uses the builder typed typ to build a middleware named name
 // with the config.
-func (m *BuilderManager) Build(typ, name string, config map[string]interface{}) (Middleware, error) {
-	if builder := m.GetBuilder(typ); builder != nil {
+func Build(typ, name string, config map[string]interface{}) (Middleware, error) {
+	if builder := GetBuilder(typ); builder != nil {
 		return builder(name, config)
 	}
 	return nil, fmt.Errorf("no the middleware builder typed '%s'", typ)
