@@ -19,85 +19,54 @@ import (
 	"sync"
 )
 
-// BuilderFunc is a function to build the common middleware.
-type BuilderFunc func(name string, config map[string]interface{}) (Middleware, error)
-
 // Builder is used to build a new middleware with the middleware config.
-type Builder interface {
-	Build(name string, config map[string]interface{}) (Middleware, error)
-	Type() string
-}
-
-type builder struct {
-	new BuilderFunc
-	typ string
-}
-
-func (b builder) Type() string { return b.typ }
-func (b builder) Build(n string, c map[string]interface{}) (Middleware, error) {
-	return b.new(n, c)
-}
-
-// NewBuilder returns a new common middleware builder.
-func NewBuilder(typ string, build BuilderFunc) Builder {
-	return builder{typ: typ, new: build}
-}
+type Builder func(name string, config map[string]interface{}) (Middleware, error)
 
 // BuilderManager is used to manage the middleware builder.
-type BuilderManager struct {
-	builders map[string]Builder
-	lock     sync.RWMutex
-}
+type BuilderManager struct{ builders sync.Map }
 
 // NewBuilderManager returns a new middleware builder manager.
-func NewBuilderManager() *BuilderManager {
-	return &BuilderManager{builders: make(map[string]Builder, 8)}
-}
+func NewBuilderManager() *BuilderManager { return &BuilderManager{} }
 
-// RegisterBuilder adds the middleware builder.
-func (m *BuilderManager) RegisterBuilder(b Builder) (err error) {
-	typ := b.Type()
-	m.lock.Lock()
-	if _, ok := m.builders[typ]; ok {
-		err = fmt.Errorf("the middleware builder typed '%s' has existed", typ)
-	} else {
-		m.builders[typ] = b
+// RegisterBuilder registers a new middleware builder typed typ.
+func (m *BuilderManager) RegisterBuilder(typ string, builder Builder) (err error) {
+	if typ == "" {
+		panic("the middleware builder type is emtpy")
+	} else if builder == nil {
+		panic("the middleware builder is nil")
 	}
-	m.lock.Unlock()
+
+	if _, loaded := m.builders.LoadOrStore(typ, builder); loaded {
+		err = fmt.Errorf("the middleware builder typed '%s' has existed", typ)
+	}
 	return
 }
 
-// UnregisterBuilder removes and returns the middleware builder by the type.
-//
-// If the middleware builder does not exist, do nothing and return nil.
-func (m *BuilderManager) UnregisterBuilder(typ string) Builder {
-	m.lock.Lock()
-	builder, ok := m.builders[typ]
-	if ok {
-		delete(m.builders, typ)
+// UnregisterBuilder unregisters the middleware builder by the type.
+func (m *BuilderManager) UnregisterBuilder(typ string) {
+	if typ == "" {
+		panic("the middleware builder type is emtpy")
 	}
-	m.lock.Unlock()
-	return builder
+	m.builders.Delete(typ)
 }
 
 // GetBuilder returns the middleware builder by the type.
 //
 // If the middleware builder does not exist, return nil.
 func (m *BuilderManager) GetBuilder(typ string) Builder {
-	m.lock.RLock()
-	builder := m.builders[typ]
-	m.lock.RUnlock()
-	return builder
+	if value, ok := m.builders.Load(typ); ok {
+		return value.(Builder)
+	}
+	return nil
 }
 
 // GetBuilders returns all the middleware builders.
-func (m *BuilderManager) GetBuilders() []Builder {
-	m.lock.RLock()
-	builders := make([]Builder, 0, len(m.builders))
-	for _, builder := range m.builders {
-		builders = append(builders, builder)
-	}
-	m.lock.RUnlock()
+func (m *BuilderManager) GetBuilders() map[string]Builder {
+	builders := make(map[string]Builder, 32)
+	m.builders.Range(func(key, value interface{}) bool {
+		builders[key.(string)] = value.(Builder)
+		return true
+	})
 	return builders
 }
 
@@ -105,7 +74,7 @@ func (m *BuilderManager) GetBuilders() []Builder {
 // with the config.
 func (m *BuilderManager) Build(typ, name string, config map[string]interface{}) (Middleware, error) {
 	if builder := m.GetBuilder(typ); builder != nil {
-		return builder.Build(name, config)
+		return builder(name, config)
 	}
 	return nil, fmt.Errorf("no the middleware builder typed '%s'", typ)
 }

@@ -22,22 +22,22 @@ func Build(typ, name string, conf map[string]interface{}) (Middleware, error) {
 	return DefaultBuilderManager.Build(typ, name, conf)
 }
 
-// RegisterBuilder is equal to DefaultBuilderManager.RegisterBuilder(b).
-func RegisterBuilder(b Builder) (err error) {
-	return DefaultBuilderManager.RegisterBuilder(b)
+// RegisterBuilder is equal to DefaultBuilderManager.RegisterBuilder(typ, builder).
+func RegisterBuilder(typ string, builder Builder) (err error) {
+	return DefaultBuilderManager.RegisterBuilder(typ, builder)
 }
 
-// UnregisterBuilder is equal to DefaultBuilderManager.UnregisterBuilder(name).
-func UnregisterBuilder(name string) Builder {
-	return DefaultBuilderManager.UnregisterBuilder(name)
+// UnregisterBuilder is equal to DefaultBuilderManager.UnregisterBuilder(typ).
+func UnregisterBuilder(typ string) {
+	DefaultBuilderManager.UnregisterBuilder(typ)
 }
 
-// GetBuilder is equal to DefaultBuilderManager.GetBuilder(name).
-func GetBuilder(name string) Builder {
-	return DefaultBuilderManager.GetBuilder(name)
+// GetBuilder is equal to DefaultBuilderManager.GetBuilder(typ).
+func GetBuilder(typ string) Builder {
+	return DefaultBuilderManager.GetBuilder(typ)
 }
 
 // GetBuilders is equal to DefaultBuilderManager.GetBuilders().
-func GetBuilders() []Builder {
+func GetBuilders() map[string]Builder {
 	return DefaultBuilderManager.GetBuilders()
 }
