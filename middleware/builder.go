@@ -18,7 +18,7 @@ import (
 	"fmt"
 )
 
-var builders map[string]Builder
+var builders = make(map[string]Builder, 16)
 
 // Builder is used to build a new middleware with the middleware config.
 type Builder func(name string, config map[string]interface{}) (Middleware, error)
