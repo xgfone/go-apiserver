@@ -36,7 +36,7 @@ type TLSConfig interface {
 // Server represents an entrypoint server.
 type Server interface {
 	TLSConfig
-	Protocal() string
+	Protocol() string
 	OnShutdown(...func())
 	Shutdown(context.Context)
 	Start()
@@ -113,7 +113,7 @@ func (ep *EntryPoint) Init() (err error) {
 		case tcp.Handler:
 			tcpHandler = handler
 		default:
-			panic(fmt.Errorf("unknown http handler type '%T'", ep.Handler))
+			panic(fmt.Errorf("unknown tcp handler type '%T'", ep.Handler))
 		}
 
 		tcpServer := NewTCPServer(ln, tcpHandler)
@@ -132,12 +132,12 @@ func (ep *EntryPoint) Stop() { ep.Shutdown(context.Background()) }
 
 // Start starts the entrypoint.
 func (ep *EntryPoint) Start() {
-	log.Info(fmt.Sprintf("start the %s server", ep.Protocal()),
+	log.Info(fmt.Sprintf("start the %s server", ep.Protocol()),
 		"name", ep.Name, "listenaddr", ep.Addr)
 
 	ep.Server.Start()
 
-	log.Info(fmt.Sprintf("stop the %s server", ep.Protocal()),
+	log.Info(fmt.Sprintf("stop the %s server", ep.Protocol()),
 		"name", ep.Name, "listenaddr", ep.Addr)
 }
 

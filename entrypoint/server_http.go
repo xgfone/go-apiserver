@@ -44,8 +44,8 @@ func NewHTTPServer(ln net.Listener, handler http.Handler) (server HTTPServer) {
 	return
 }
 
-// Protocal returns the protocal of the http server, which is a fixed "http".
-func (s HTTPServer) Protocal() string { return "http" }
+// Protocol returns the protocol of the http server, which is a fixed "http".
+func (s HTTPServer) Protocol() string { return "http" }
 
 // Start starts and runs the http server until it is closed.
 func (s HTTPServer) Start() {
