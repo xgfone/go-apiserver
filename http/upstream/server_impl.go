@@ -85,9 +85,15 @@ func NewServer(conf ServerConfig) (WeightedServer, error) {
 		id = conf.URL.ID()
 	}
 
+	host := conf.Hostname
+	if host != "" && conf.Port > 0 {
+		host = net.JoinHostPort(conf.Hostname, strconv.FormatInt(int64(conf.Port), 10))
+	}
+
 	s := &httpServer{
 		id:             id,
 		addr:           addr,
+		host:           host,
 		conf:           conf,
 		getWeight:      conf.DynamicWeight,
 		handleRequest:  conf.HandleRequest,
@@ -129,6 +135,7 @@ var _ WeightedServer = &httpServer{}
 type httpServer struct {
 	id       string
 	addr     string
+	host     string
 	conf     ServerConfig
 	headers  http.Header
 	queries  url.Values
@@ -162,13 +169,9 @@ func (s *httpServer) HandleHTTP(w http.ResponseWriter, r *http.Request) (err err
 		r.Method = s.conf.Method
 	}
 
-	if s.conf.Hostname != "" {
+	if s.host != "" {
 		// Override the header "Host"
-		if s.conf.Port > 0 {
-			r.Host = net.JoinHostPort(s.conf.Hostname, strconv.FormatInt(int64(s.conf.Port), 10))
-		} else {
-			r.Host = s.conf.Hostname
-		}
+		r.Host = s.host
 	}
 
 	if s.conf.Path != "" {
