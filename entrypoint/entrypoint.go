@@ -42,27 +42,21 @@ type EntryPoint struct {
 	Server
 }
 
-// NewEntryPoint returns a new entrypoint.
-func NewEntryPoint(name, addr string, handler interface{}) *EntryPoint {
-	return &EntryPoint{Name: name, Addr: addr, Handler: handler}
-}
-
-// Init initializes the entrypoint server, which extracts the protocol
-// from the address and builds the server by the protocol server builder.
-func (ep *EntryPoint) Init() (err error) {
-	if ep.Server != nil {
-		return
-	}
-
-	addr := ep.Addr
+// NewEntryPoint news an entrypoint, which extracts the protocol from addr
+// and builds the server by the protocol server builder.
+func NewEntryPoint(name, addr string, handler interface{}) (*EntryPoint, error) {
 	protocol := "http"
 	if index := strings.Index(addr, "://"); index > -1 {
 		protocol = addr[:index]
 		addr = addr[index+3:]
 	}
 
-	ep.Server, err = BuildServer(protocol, addr, ep.Handler)
-	return
+	server, err := BuildServer(protocol, addr, handler)
+	if err != nil {
+		return nil, err
+	}
+
+	return &EntryPoint{Name: name, Addr: addr, Handler: handler, Server: server}, nil
 }
 
 // Stop is equal to ep.Shutdown(context.Background()).
