@@ -42,8 +42,8 @@ func httpHandler(route string) http.HandlerFunc {
 
 // StartHTTPServer is a simple convenient function to start a http server.
 func StartHTTPServer(addr string, handler http.Handler) (err error) {
-	ep := entrypoint.NewEntryPoint("test", addr, handler)
-	if err = ep.Init(); err == nil {
+	ep, err := entrypoint.NewEntryPoint("test", addr, handler)
+	if err == nil {
 		ep.Start()
 	}
 	return
@@ -187,8 +187,8 @@ func main() {
 	router.Path("/").ContextHandler(func(c *reqresp.Context) { c.Text(200, "OK") })
 
 	// New an entrypoint based on HTTP.
-	ep := entrypoint.NewEntryPoint("entrypoint_name", *addr, router)
-	if err := ep.Init(); err != nil {
+	ep, err := entrypoint.NewEntryPoint("entrypoint_name", *addr, router)
+	if err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -280,8 +280,8 @@ func main() {
 	router := router.NewRouter(routeManager)
 	router.Middlewares.Use(middlewares.DefaultMiddlewares...)
 
-	ep := entrypoint.NewEntryPoint("api-gateway", *listenAddr, router)
-	if err := ep.Init(); err != nil {
+	ep, err := entrypoint.NewEntryPoint("api-gateway", *listenAddr, router)
+	if err != nil {
 		log.Error("fail to initialize the api-gateway entrypoint", "addr", *listenAddr)
 		return
 	}
