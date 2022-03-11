@@ -36,6 +36,8 @@ type TCPServer struct {
 func NewTCPServer(ln net.Listener, handler tcp.Handler) (server TCPServer) {
 	if ln == nil {
 		panic("the tcp listener is nil")
+	} else if handler == nil {
+		panic("the tcp handler is nil")
 	}
 
 	server.CertManager = tlscert.NewManager()

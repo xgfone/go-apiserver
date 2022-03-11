@@ -15,6 +15,7 @@
 package entrypoint
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 
@@ -22,6 +23,26 @@ import (
 	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
 	"github.com/xgfone/go-apiserver/tcp"
 )
+
+func init() {
+	RegisterServerBuilder("http", func(addr string, h interface{}) (Server, error) {
+		ln, err := tcp.Listen(addr)
+		if err != nil {
+			return nil, err
+		}
+
+		var httpHandler http.Handler
+		switch handler := h.(type) {
+		case nil:
+		case http.Handler:
+			httpHandler = handler
+		default:
+			panic(fmt.Errorf("unknown http handler type '%T'", h))
+		}
+
+		return NewHTTPServer(ln, httpHandler), nil
+	})
+}
 
 var _ Server = HTTPServer{}
 

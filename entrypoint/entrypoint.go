@@ -17,30 +17,12 @@ package entrypoint
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/xgfone/go-apiserver/log"
-	"github.com/xgfone/go-apiserver/tcp"
 	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
-
-// TLSConfig is used to configure the TLS config.
-type TLSConfig interface {
-	SetTLSConfig(*tls.Config)
-	SetTLSForce(forceTLS bool)
-}
-
-// Server represents an entrypoint server.
-type Server interface {
-	TLSConfig
-	Protocol() string
-	OnShutdown(...func())
-	Shutdown(context.Context)
-	Start()
-}
 
 // EntryPoint represents an entrypoint of the services.
 type EntryPoint struct {
@@ -55,10 +37,6 @@ type EntryPoint struct {
 	Addr string
 
 	// Handler is the handler of the entrypoint server.
-	//
-	// For the tcp entrypoint, it must be the type of tcp.Handler.
-	// For the http entrypoint, it may be nil or the type of http.Handler.
-	// If nil, it is router.NewRouter(ruler.NewRouteManager()) by default.
 	Handler interface{}
 
 	Server
@@ -69,61 +47,21 @@ func NewEntryPoint(name, addr string, handler interface{}) *EntryPoint {
 	return &EntryPoint{Name: name, Addr: addr, Handler: handler}
 }
 
-// Init initializes the entrypoint server.
+// Init initializes the entrypoint server, which extracts the protocol
+// from the address and builds the server by the protocol server builder.
 func (ep *EntryPoint) Init() (err error) {
 	if ep.Server != nil {
 		return
 	}
 
 	addr := ep.Addr
-	var protocol string
+	protocol := "http"
 	if index := strings.Index(addr, "://"); index > -1 {
 		protocol = addr[:index]
 		addr = addr[index+3:]
 	}
 
-	switch protocol {
-	case "", "http":
-		ln, err := tcp.Listen(addr)
-		if err != nil {
-			return err
-		}
-
-		var httpHandler http.Handler
-		switch handler := ep.Handler.(type) {
-		case nil:
-		case http.Handler:
-			httpHandler = handler
-		default:
-			panic(fmt.Errorf("unknown http handler type '%T'", ep.Handler))
-		}
-
-		httpServer := NewHTTPServer(ln, httpHandler)
-		ep.Server = httpServer
-
-	case "tcp":
-		ln, err := tcp.Listen(addr)
-		if err != nil {
-			return err
-		}
-
-		var tcpHandler tcp.Handler
-		switch handler := ep.Handler.(type) {
-		case nil:
-		case tcp.Handler:
-			tcpHandler = handler
-		default:
-			panic(fmt.Errorf("unknown tcp handler type '%T'", ep.Handler))
-		}
-
-		tcpServer := NewTCPServer(ln, tcpHandler)
-		ep.Server = tcpServer
-
-	// case "udp":
-	default:
-		return fmt.Errorf("unknown entrypoint protocol '%s'", protocol)
-	}
-
+	ep.Server, err = BuildServer(protocol, addr, ep.Handler)
 	return
 }
 
