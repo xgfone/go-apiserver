@@ -54,6 +54,8 @@ func NewClientConfig(tlsConfig *tls.Config, certNames ...string) *Config {
 	c.certManager.AddUpdater("clientconfig", clientUpdater{c})
 	c.certFilter = tlscert.NewNameFilterUpdater(c.certManager, certNames...)
 	c.updateTLSConfig = updateClientConfig
+	c.SetTLSConfig(tlsConfig)
+	c.SetConfigName("")
 	return c
 }
 
@@ -104,7 +106,9 @@ func (c *Config) GetTLSConfig() *tls.Config {
 // SetTLSConfig implements the interface tlsconfig.Setter to update tls.Config.
 func (c *Config) SetTLSConfig(tlsConfig *tls.Config) {
 	c.updateTLSConfig(c, tlsConfig)
-	c.callback(c.GetTLSConfig())
+	if c.callback != nil {
+		c.callback(c.GetTLSConfig())
+	}
 }
 
 // AddTLSConfig implements the interface tlsconfig.Updater to update tls.Config
