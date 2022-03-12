@@ -32,7 +32,7 @@ var (
 )
 
 // DefaultLogger is the default logger implementation.
-var DefaultLogger Logger = NewLogger(os.Stderr, "", log.LstdFlags)
+var DefaultLogger Logger = NewLogger(os.Stderr, "", log.LstdFlags, LvlTrace)
 
 // Logger represents a logging implementation.
 type Logger interface {

@@ -16,12 +16,14 @@ package loadbalancer
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/xgfone/go-apiserver/http/upstream"
 	"github.com/xgfone/go-apiserver/http/upstream/balancer"
+	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/nets"
 )
 
@@ -36,6 +38,7 @@ func (s testServer) HandleHTTP(http.ResponseWriter, *http.Request) error { retur
 func newTestServer(ip string) testServer { return testServer{url: upstream.URL{IP: ip}} }
 
 func BenchmarkLoadBalancer(b *testing.B) {
+	log.DefaultLogger = log.NewLogger(io.Discard, "", 0, log.LvlAlert)
 	lb := NewLoadBalancer("test", balancer.Random())
 	lb.ResetServers(newTestServer("127.0.0.1"), newTestServer("127.0.0.2"))
 

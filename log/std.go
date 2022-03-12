@@ -22,25 +22,50 @@ import (
 )
 
 // NewLogger returns a new Logger with the default implementation.
-func NewLogger(out io.Writer, prefix string, flag int) Logger {
-	return stdLogger{flag: flag, logger: log.New(out, prefix, flag)}
+func NewLogger(out io.Writer, prefix string, flag, levelThreshold int) Logger {
+	return stdLogger{
+		flag:   flag,
+		level:  levelThreshold,
+		logger: log.New(out, prefix, flag),
+	}
 }
 
 type stdLogger struct {
 	flag   int
+	level  int
 	logger *log.Logger
 }
 
-func (l stdLogger) Enabled(level int) bool { return true }
+func (l stdLogger) Enabled(level int) bool { return level >= l.level }
 
 func (l stdLogger) StdLogger(prefix string, level int) *log.Logger {
 	return log.New(l.logger.Writer(), prefix, l.flag)
 }
 
 func (l stdLogger) Log(level, depth int, msg string, kvs ...interface{}) {
+	if level < l.level {
+		return
+	}
+
 	var builder strings.Builder
 	builder.Grow(128)
 	builder.WriteString(msg)
+
+	switch level {
+	case LvlTrace:
+		builder.WriteString("; level=trace")
+	case LvlDebug:
+		builder.WriteString("; level=debug")
+	case LvlInfo:
+		builder.WriteString("; level=info")
+	case LvlWarn:
+		builder.WriteString("; level=warn")
+	case LvlError:
+		builder.WriteString("; level=error")
+	case LvlAlert:
+		builder.WriteString("; level=alert")
+	}
+
 	for i, _len := 0, len(kvs); i < _len; i += 2 {
 		fmt.Fprintf(&builder, "; %s=%v", kvs[i], kvs[i+1])
 	}

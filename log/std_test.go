@@ -23,7 +23,7 @@ import (
 
 func TestStdLogger(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	DefaultLogger = NewLogger(buf, "prefix: ", log.Lshortfile)
+	DefaultLogger = NewLogger(buf, "prefix: ", log.Lshortfile, LvlTrace)
 
 	Info("msg1", "k1", "v1")
 	Log(LvlInfo, 0, "msg2", "k2", "v2")
@@ -31,10 +31,10 @@ func TestStdLogger(t *testing.T) {
 	Infof("msg4: %s=%s", "k3", "v3")
 
 	expects := []string{
-		`prefix: std_test.go:28: msg1; k1=v1`,
-		`prefix: std_test.go:29: msg2; k2=v2`,
+		`prefix: std_test.go:28: msg1; level=info; k1=v1`,
+		`prefix: std_test.go:29: msg2; level=info; k2=v2`,
 		`stdlog: std_test.go:30: msg3`,
-		`prefix: std_test.go:31: msg4: k3=v3`,
+		`prefix: std_test.go:31: msg4: k3=v3; level=info`,
 		``,
 	}
 	results := strings.Split(buf.String(), "\n")
