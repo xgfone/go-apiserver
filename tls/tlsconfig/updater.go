@@ -16,6 +16,11 @@ package tlsconfig
 
 import "crypto/tls"
 
+// Getter is used to get the tls config.
+type Getter interface {
+	GetTLSConfig() *tls.Config
+}
+
 // Setter is used to set the tls config.
 type Setter interface {
 	SetTLSConfig(*tls.Config)

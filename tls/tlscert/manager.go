@@ -139,6 +139,16 @@ func (m *Manager) GetTLSCertificate(chi *tls.ClientHelloInfo) (*tls.Certificate,
 	return nil, fmt.Errorf("tls: no proper certificate is configured for '%s'", chi.ServerName)
 }
 
+// GetTLSCertificates returns all the certificates as []tls.Certificate.
+func (m *Manager) GetTLSCertificates() (certificates []tls.Certificate) {
+	certs := m.certs.Load().(certsWrapper).Certs
+	certificates = make([]tls.Certificate, len(certs))
+	for i, _len := 0, len(certs); i < _len; i++ {
+		certificates[i] = *certs[i].TLSCert
+	}
+	return
+}
+
 // AddUpdater adds the certificate updater with the name.
 //
 // The updater will be called when to add or delete the certificate.
