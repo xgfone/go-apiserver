@@ -15,6 +15,7 @@
 package client
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/internal/atomic"
@@ -54,4 +55,19 @@ func (c *Client) SwapHTTPClient(new *http.Client) (old *http.Client) {
 		panic("the http client is nil")
 	}
 	return c.httpClient.Swap(new).(*http.Client)
+}
+
+// Do is a convenient function to send the http request.
+func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	return c.GetHTTPClient().Do(req)
+}
+
+// Get is a convenient function to send the http GET request.
+func (c *Client) Get(url string) (*http.Response, error) {
+	return c.GetHTTPClient().Get(url)
+}
+
+// Post is a convenient function to send the http POST request.
+func (c *Client) Post(url, contentType string, body io.Reader) (*http.Response, error) {
+	return c.GetHTTPClient().Post(url, contentType, body)
 }
