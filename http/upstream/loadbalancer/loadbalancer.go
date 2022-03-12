@@ -36,7 +36,6 @@ type ResultHandler func(*LoadBalancer, http.ResponseWriter, *http.Request, error
 // ServerDiscovery is used to discover the servers.
 type ServerDiscovery interface {
 	Servers() upstream.Servers
-	ID() string
 }
 
 type (
