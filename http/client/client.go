@@ -31,9 +31,20 @@ type Setter interface {
 	SetHTTPClient(*http.Client)
 }
 
-// Client is used to maintain the http.Client.
+// Client is used to maintain the http.Client thread-safely.
 type Client struct {
 	httpClient atomic.Value
+}
+
+// NewClient returns a new thread-safe http client.
+func NewClient(client *http.Client) *Client {
+	if client == nil {
+		panic("the http client is nil")
+	}
+
+	c := new(Client)
+	c.SetHTTPClient(client)
+	return c
 }
 
 // GetHTTPClient implements the interface Getter to get the http.Client.
