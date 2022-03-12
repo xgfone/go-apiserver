@@ -21,34 +21,6 @@ import (
 	"github.com/xgfone/go-apiserver/middleware"
 )
 
-/*
-// Manager is used to manage a set of routes.
-type Manager interface {
-	// MatchRoute uses the registered routes to match the http request,
-	// and returns the matched route.
-	MatchRoute(orig *http.Request) (newreq *http.Request, route Route, ok bool)
-
-	// GetRoute returns the route by the given name.
-	GetRoute(name string) (route Route, ok bool)
-
-	// GetRoutes returns all the registered routes.
-	GetRoutes() (routes Routes)
-
-	// AddRoute is used to add the given route.
-	AddRoute(route Route) error
-
-	// DelRoute deletes and returns the route by the given name.
-	DelRoute(name string) (route Route, ok bool)
-
-	// UpdateRoutes updates the given routes, which will add the route
-	// if it does not exist, or update it to the new.
-	UpdateRoutes(routes ...Route) error
-
-	// ResetRoutes discards all the original routes and resets them to routes.
-	ResetRoutes(routes ...Route) error
-}
-*/
-
 // Routes is a group of Routes.
 type Routes []Route
 
