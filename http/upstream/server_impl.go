@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"strconv"
 
+	httpclient "github.com/xgfone/go-apiserver/http/client"
 	"github.com/xgfone/go-apiserver/nets"
 )
 
@@ -39,7 +40,7 @@ type ServerConfig struct {
 	// Handle the request or response.
 	//
 	// Optional
-	HTTPClient     *http.Client // Default: http.DefaultClient
+	HTTPClient     httpclient.Getter // Default: use http.DefaultClient
 	HandleRequest  func(*http.Client, *http.Request) (*http.Response, error)
 	HandleResponse func(http.ResponseWriter, *http.Response) error
 
@@ -57,9 +58,6 @@ func NewServer(conf ServerConfig) (WeightedServer, error) {
 	}
 	if conf.Scheme == "" {
 		conf.Scheme = "http"
-	}
-	if conf.HTTPClient == nil {
-		conf.HTTPClient = http.DefaultClient
 	}
 	if conf.StaticWeight <= 0 {
 		conf.StaticWeight = 1
@@ -201,16 +199,20 @@ func (s *httpServer) HandleHTTP(w http.ResponseWriter, r *http.Request) (err err
 		}
 	}
 
-	resp, err := s.handleRequest(s.conf.HTTPClient, r)
+	var resp *http.Response
+	if s.conf.HTTPClient == nil {
+		resp, err = s.handleRequest(http.DefaultClient, r)
+	} else {
+		resp, err = s.handleRequest(s.conf.HTTPClient.GetHTTPClient(), r)
+	}
+
 	if resp != nil {
 		defer resp.Body.Close()
 	}
 
-	if err != nil {
-		return err
+	if err == nil {
+		err = s.handleResponse(w, resp)
 	}
-
-	err = s.handleResponse(w, resp)
 	return err
 }
 
@@ -254,7 +256,13 @@ func (s *httpServer) Check(ctx context.Context, health URL) (err error) {
 		return err
 	}
 
-	resp, err := s.conf.HTTPClient.Do(req)
+	var resp *http.Response
+	if s.conf.HTTPClient == nil {
+		resp, err = http.DefaultClient.Do(req)
+	} else {
+		resp, err = s.conf.HTTPClient.GetHTTPClient().Do(req)
+	}
+
 	if resp != nil {
 		resp.Body.Close()
 	}
