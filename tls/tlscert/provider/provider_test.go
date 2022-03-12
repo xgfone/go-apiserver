@@ -35,15 +35,15 @@ func TestProviderManager(t *testing.T) {
 	createFile(t, keyfile, test.Key)
 	createFile(t, certfile, test.Cert)
 
-	fileProvider1 := NewFileProvider("file1", time.Millisecond*100)
-	fileProvider2 := NewFileProvider("file2", time.Millisecond*100)
+	fileProvider1 := NewFileProvider(time.Millisecond * 100)
+	fileProvider2 := NewFileProvider(time.Millisecond * 100)
 
 	certmanager := tlscert.NewManager()
 	pm := NewManager(certmanager)
-	pm.AddProvider(fileProvider1)
+	pm.AddProvider("file1", fileProvider1)
 	pm.Start(context.Background())
 	pm.Start(context.Background())
-	pm.AddProvider(fileProvider2)
+	pm.AddProvider("file2", fileProvider2)
 
 	err := fileProvider1.AddCertFile("cert1", keyfile, certfile)
 	if err != nil {

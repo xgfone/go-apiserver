@@ -26,6 +26,8 @@ import (
 	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
 
+var _ Provider = &URLProvider{}
+
 type urlCert struct {
 	KeyPEM  string `json:"keyPEM"`
 	CertPEM string `json:"certPEM"`
@@ -51,7 +53,6 @@ type urlCertInfo struct {
 //     }
 //
 type URLProvider struct {
-	name     string
 	interval time.Duration
 
 	lock  sync.RWMutex
@@ -59,20 +60,16 @@ type URLProvider struct {
 	delch chan string
 }
 
-// NewURLProvider returns a new url certificate provider with the name
+// NewURLProvider returns a new url certificate provider
 // and the interval duration to check the certificate files.
 //
 // If interval is ZERO, it is time.Minute by default.
-func NewURLProvider(name string, interval time.Duration) *URLProvider {
-	if name == "" {
-		panic("the file provider name must not be empty")
-	}
+func NewURLProvider(interval time.Duration) *URLProvider {
 	if interval <= 0 {
 		interval = time.Minute
 	}
 
 	return &URLProvider{
-		name:     name,
 		interval: interval,
 		delch:    make(chan string, 8),
 		certs:    make(map[string]*urlCertInfo, 4),
@@ -140,11 +137,8 @@ func (p *URLProvider) DelCertURL(name string) {
 	}
 }
 
-// Name implements the interface Provider.
-func (p *URLProvider) Name() string { return p.name }
-
-// OnChanged implements the interface Provider.
-func (p *URLProvider) OnChanged(ctx context.Context, updater tlscert.Updater) {
+// OnChangedCertificate implements the interface Provider.
+func (p *URLProvider) OnChangedCertificate(ctx context.Context, updater tlscert.Updater) {
 	ticker := time.NewTicker(p.interval)
 	defer ticker.Stop()
 

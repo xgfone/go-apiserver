@@ -47,7 +47,6 @@ type fileCertInfo struct {
 // which will watch the change of the certificate files and update
 // the certificate to the new one.
 type FileProvider struct {
-	name     string
 	interval time.Duration
 
 	lock  sync.RWMutex
@@ -57,20 +56,16 @@ type FileProvider struct {
 
 var _ Provider = &FileProvider{}
 
-// NewFileProvider returns a new file certificate provider with the name
+// NewFileProvider returns a new file certificate provider
 // and the interval duration to check the certificate files.
 //
 // If interval is ZERO, it is time.Minute by default.
-func NewFileProvider(name string, interval time.Duration) *FileProvider {
-	if name == "" {
-		panic("the file provider name must not be empty")
-	}
+func NewFileProvider(interval time.Duration) *FileProvider {
 	if interval <= 0 {
 		interval = time.Minute
 	}
 
 	return &FileProvider{
-		name:     name,
 		interval: interval,
 		delch:    make(chan string, 8),
 		certs:    make(map[string]*fileCertInfo, 4),
@@ -143,11 +138,8 @@ func (p *FileProvider) DelCertFile(name string) {
 	}
 }
 
-// Name implements the interface Provider.
-func (p *FileProvider) Name() string { return p.name }
-
-// OnChanged implements the interface Provider.
-func (p *FileProvider) OnChanged(ctx context.Context, updater tlscert.Updater) {
+// OnChangedCertificate implements the interface Provider.
+func (p *FileProvider) OnChangedCertificate(ctx context.Context, updater tlscert.Updater) {
 	ticker := time.NewTicker(p.interval)
 	defer ticker.Stop()
 

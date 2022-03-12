@@ -41,14 +41,14 @@ func TestURLProvider(t *testing.T) {
 	time.Sleep(time.Millisecond * 50)
 
 	certmanager := tlscert.NewManager()
-	urlProvider := NewURLProvider("url", time.Millisecond*100)
+	urlProvider := NewURLProvider(time.Millisecond * 100)
 	err := urlProvider.AddCertURL("test", "http://127.0.0.1:8888")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	go urlProvider.OnChanged(ctx, certmanager)
+	go urlProvider.OnChangedCertificate(ctx, certmanager)
 
 	time.Sleep(time.Millisecond * 500)
 	switch certs := certmanager.GetCertificates(); len(certs) {

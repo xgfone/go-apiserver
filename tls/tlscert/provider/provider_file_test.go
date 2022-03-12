@@ -36,14 +36,14 @@ func TestFileProvider(t *testing.T) {
 	createFile(t, certfile, test.Cert)
 
 	certmanager := tlscert.NewManager()
-	fileProvider := NewFileProvider("file", time.Millisecond*100)
+	fileProvider := NewFileProvider(time.Millisecond * 100)
 	err := fileProvider.AddCertFile("test", keyfile, certfile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	go fileProvider.OnChanged(ctx, certmanager)
+	go fileProvider.OnChangedCertificate(ctx, certmanager)
 
 	time.Sleep(time.Millisecond * 500)
 	switch certs := certmanager.GetCertificates(); len(certs) {

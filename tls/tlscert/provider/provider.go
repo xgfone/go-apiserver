@@ -28,14 +28,11 @@ var DefaultManager *Manager
 
 // Provider is used to provide the certificates.
 type Provider interface {
-	// Name is the name of the provider, which indicates uniquely the provider.
-	Name() string
-
-	// OnChanged is used to update the certificate when the certificate
-	// has changed.
+	// OnChangedCertificate is used to update the certificate
+	// when the certificate has changed.
 	//
 	// If context is done, the provider should clean the resources and stop.
-	OnChanged(context.Context, tlscert.Updater)
+	OnChangedCertificate(context.Context, tlscert.Updater)
 }
 
 type providerWrapper struct {
@@ -62,11 +59,11 @@ func NewManager(updater tlscert.Updater) *Manager {
 }
 
 // GetProviders returns all the certificate providers.
-func (m *Manager) GetProviders() []Provider {
+func (m *Manager) GetProviders() map[string]Provider {
 	m.lock.RLock()
-	providers := make([]Provider, 0, len(m.providers))
-	for _, provider := range m.providers {
-		providers = append(providers, provider)
+	providers := make(map[string]Provider, len(m.providers))
+	for name, provider := range m.providers {
+		providers[name] = provider
 	}
 	m.lock.RUnlock()
 	return providers
@@ -82,28 +79,26 @@ func (m *Manager) GetProvider(name string) Provider {
 	return provider
 }
 
-// AddProvider adds the provider into the manager.
-func (m *Manager) AddProvider(provider Provider) (err error) {
-	var pw *providerWrapper
-	name := provider.Name()
-
-	m.lock.Lock()
-	if m.providers == nil {
-		m.providers = make(map[string]*providerWrapper)
+// AddProvider adds the provider named name into the manager.
+func (m *Manager) AddProvider(name string, provider Provider) (err error) {
+	if name == "" {
+		panic("the certificate provider name is empty")
+	} else if provider == nil {
+		panic("the certificate provider is nil")
 	}
 
+	m.lock.Lock()
 	if _, ok := m.providers[name]; ok {
 		err = fmt.Errorf("the certificate provider named '%s' has existed", name)
 	} else {
-		pw = &providerWrapper{Provider: provider}
+		pw := &providerWrapper{Provider: provider}
 		m.providers[name] = pw
-	}
 
-	// The provider manager has been started.
-	if m.context != nil {
-		m.startProvider(pw)
+		// The provider manager has been started.
+		if m.context != nil {
+			m.startProvider(pw)
+		}
 	}
-
 	m.lock.Unlock()
 	return
 }
@@ -123,7 +118,7 @@ func (m *Manager) DelProvider(name string) {
 func (m *Manager) startProvider(pw *providerWrapper) {
 	var ctx context.Context
 	ctx, pw.CancelFunc = context.WithCancel(m.context)
-	go pw.OnChanged(ctx, m.updater)
+	go pw.OnChangedCertificate(ctx, m.updater)
 }
 
 // Start starts all the providers.
