@@ -155,8 +155,8 @@ func (c Certificate) UpdateRootCAs(config *tls.Config) (err error) {
 	if c.X509Cert.IsCA {
 		if config.RootCAs == nil {
 			config.RootCAs = x509.NewCertPool()
-			config.RootCAs.AppendCertsFromPEM(c.CertPEM)
 		}
+		config.RootCAs.AppendCertsFromPEM(c.CertPEM)
 	} else {
 		err = errors.New("the certificate is not a CA certificate")
 	}
@@ -169,8 +169,8 @@ func (c Certificate) UpdateClientCAs(config *tls.Config) (err error) {
 	if c.X509Cert.IsCA {
 		if config.ClientCAs == nil {
 			config.ClientCAs = x509.NewCertPool()
-			config.ClientCAs.AppendCertsFromPEM(c.CertPEM)
 		}
+		config.ClientCAs.AppendCertsFromPEM(c.CertPEM)
 	} else {
 		err = errors.New("the certificate is not a CA certificate")
 	}

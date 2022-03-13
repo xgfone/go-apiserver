@@ -42,6 +42,7 @@ func (ln keepAliveListener) Accept() (net.Conn, error) {
 	}
 
 	if err := tc.SetKeepAlive(true); err != nil {
+		tc.Close()
 		return nil, err
 	}
 
@@ -49,6 +50,7 @@ func (ln keepAliveListener) Accept() (net.Conn, error) {
 		// Some systems, such as OpenBSD, have no user-settable per-socket TCP
 		// keepalive options.
 		if !errors.Is(err, syscall.ENOPROTOOPT) {
+			tc.Close()
 			return nil, err
 		}
 	}
