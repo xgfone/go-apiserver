@@ -144,5 +144,5 @@ func (c *Config) DelCertNames(names ...string) {
 
 // GetCertNames returns the names of all the supported certificates.
 func (c *Config) GetCertNames() []string {
-	return c.certFilter.Names()
+	return c.certFilter.GetNames()
 }

@@ -92,8 +92,8 @@ func NewNameFilterUpdater(updater Updater, names ...string) *NameFilterUpdater {
 	return u
 }
 
-// Names returns the name list of the supported certificates.
-func (u *NameFilterUpdater) Names() []string {
+// GetNames returns the name list of the supported certificates.
+func (u *NameFilterUpdater) GetNames() []string {
 	names := make([]string, 0, 4)
 	u.names.Range(func(key, _ interface{}) bool {
 		names = append(names, key.(string))
