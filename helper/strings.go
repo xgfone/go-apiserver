@@ -47,7 +47,7 @@ func StringsEqual(ss1, ss2 []string) bool {
 	}
 
 	for i := 0; i < len1; i++ {
-		if !InStrings(ss1[i], ss2) {
+		if !InStrings(ss1[i], ss2) || !InStrings(ss2[i], ss1) {
 			return false
 		}
 	}
