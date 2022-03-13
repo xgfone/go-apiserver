@@ -16,20 +16,27 @@ package balancer
 
 import (
 	"net/http"
+	"time"
 
 	up "github.com/xgfone/go-apiserver/http/upstream"
 )
 
 // Retry returns a new balancer to retry the rest servers when failing to
 // forward the request.
-func Retry(balancer Balancer) Balancer {
+//
+// Notice: It will retry the same upstream server for the sourceip or consistent
+// hash balancer.
+func Retry(balancer Balancer, interval time.Duration) Balancer {
 	if balancer == nil {
 		panic("RetryBalancer: the wrapped balancer is nil")
 	}
-	return retry{Balancer: balancer}
+	return retry{Balancer: balancer, interval: interval}
 }
 
-type retry struct{ Balancer }
+type retry struct {
+	interval time.Duration
+	Balancer
+}
 
 func (f retry) WrappedBalancer() Balancer { return f.Balancer }
 func (f retry) Forward(w http.ResponseWriter, r *http.Request, s up.Servers) (err error) {
@@ -41,6 +48,16 @@ func (f retry) Forward(w http.ResponseWriter, r *http.Request, s up.Servers) (er
 	for ; _len > 0; _len-- {
 		if err = f.Balancer.Forward(w, r, s); err == nil {
 			break
+		}
+
+		if f.interval > 0 {
+			timer := time.NewTimer(f.interval)
+			select {
+			case <-timer.C:
+			case <-r.Context().Done():
+				timer.Stop()
+				return r.Context().Err()
+			}
 		}
 	}
 
