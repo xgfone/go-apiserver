@@ -94,6 +94,12 @@ func ExampleIPChecker() {
 	checkip(cidrv6checker, "2408::215:5dff:fe8c:6de7")
 	checkip(cidrv6checker, "1.2.3.4")
 
+	checkers, _ := NewIPCheckers("10.0.0.0/8", "fe80::/16")
+	checkip(checkers, "10.1.2.3")
+	checkip(checkers, "192.168.1.2")
+	checkip(checkers, "fe80::215:5dff:fe8c:6de7")
+	checkip(checkers, "2408::215:5dff:fe8c:6de7")
+
 	// Output:
 	// '1.2.3.4/32' contains the ip '1.2.3.4'
 	// '1.2.3.4/32' does not contain the ip '5.6.7.8'
@@ -107,4 +113,8 @@ func ExampleIPChecker() {
 	// 'fe80::/16' contains the ip 'fe80::215:5dff:fe8c:6de7'
 	// 'fe80::/16' does not contain the ip '2408::215:5dff:fe8c:6de7'
 	// 'fe80::/16' does not contain the ip '1.2.3.4'
+	// '10.0.0.0/8,fe80::/16' contains the ip '10.1.2.3'
+	// '10.0.0.0/8,fe80::/16' does not contain the ip '192.168.1.2'
+	// '10.0.0.0/8,fe80::/16' contains the ip 'fe80::215:5dff:fe8c:6de7'
+	// '10.0.0.0/8,fe80::/16' does not contain the ip '2408::215:5dff:fe8c:6de7'
 }

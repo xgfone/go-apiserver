@@ -71,6 +71,7 @@ func validOptionalPort(port string) bool {
 // IPChecker is used to check whether the ip is legal or allowed.
 type IPChecker interface {
 	CheckIPString(ip string) (ok bool)
+	CheckIP(ip net.IP) (ok bool)
 	fmt.Stringer
 }
 
@@ -99,20 +100,33 @@ func (cs IPCheckers) String() string {
 	var buf strings.Builder
 	buf.Grow(128)
 	for i := 0; i < _len; i++ {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
 		buf.WriteString(cs[i].String())
 	}
 	return buf.String()
 }
 
-// CheckIPString implements the interface IPChecker, which returns true
+// CheckIP implements the interface IPChecker, which returns true
 // if any ip checker return true.
-func (cs IPCheckers) CheckIPString(ip string) bool {
+func (cs IPCheckers) CheckIP(ip net.IP) bool {
+	if len(ip) == 0 {
+		return false
+	}
+
 	for i, _len := 0, len(cs); i < _len; i++ {
-		if cs[i].CheckIPString(ip) {
+		if cs[i].CheckIP(ip) {
 			return true
 		}
 	}
 	return false
+}
+
+// CheckIPString implements the interface IPChecker, which returns true
+// if any ip checker return true.
+func (cs IPCheckers) CheckIPString(ip string) bool {
+	return cs.CheckIP(net.ParseIP(ip))
 }
 
 // NewIPChecker returns a new IPChecker based on an IP or CIDR.
@@ -143,10 +157,13 @@ type ipChecker struct{ *net.IPNet }
 
 func (c ipChecker) String() string { return c.IPNet.String() }
 
-func (c ipChecker) CheckIPString(ip string) bool {
-	_ip := net.ParseIP(ip)
-	if _ip == nil {
+func (c ipChecker) CheckIP(ip net.IP) bool {
+	if len(ip) == 0 {
 		return false
 	}
-	return c.Contains(_ip)
+	return c.Contains(ip)
+}
+
+func (c ipChecker) CheckIPString(ip string) bool {
+	return c.CheckIP(net.ParseIP(ip))
 }

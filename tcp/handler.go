@@ -112,8 +112,24 @@ func NewIPWhitelistHandler(handler Handler, ipChecker nets.IPChecker) IPWhitelis
 
 // OnConnection overrides the method OnConnection of the interface Handler.
 func (h IPWhitelistHandler) OnConnection(c net.Conn) {
-	ip, _ := nets.SplitHostPort(c.RemoteAddr().String())
-	if h.CheckIPString(ip) {
+	var ip net.IP
+	remoteAddr := c.RemoteAddr()
+	switch addr := remoteAddr.(type) {
+	case *net.IPAddr:
+		ip = addr.IP
+
+	case *net.TCPAddr:
+		ip = addr.IP
+
+	case *net.UDPAddr:
+		ip = addr.IP
+
+	default:
+		host, _ := nets.SplitHostPort(remoteAddr.String())
+		ip = net.ParseIP(host)
+	}
+
+	if h.CheckIP(ip) {
 		h.Handler.OnConnection(c)
 	} else {
 		c.Close()
