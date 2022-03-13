@@ -197,13 +197,13 @@ func main() {
 	if *keyFile != "" && *certFile != "" {
 		// Use the file provider to monitor the change of the certificate files.
 		// When the certificate files have changed, it will be reloaded.
-		tlsFileProvider := provider.NewFileProvider("tlsfiles", time.Second*10)
+		tlsFileProvider := provider.NewFileProvider(time.Second * 10)
 		tlsFileProvider.AddCertFile("tlsfile", *keyFile, *certFile)
 
 		// Use the provider manager to manage all the certificate providers,
 		// and update the certificate into the entrypoint when it has changed.
 		tlsProviderManager := provider.NewManager(ep)
-		tlsProviderManager.AddProvider(tlsFileProvider)
+		tlsProviderManager.AddProvider("tlsFileProvider", tlsFileProvider)
 		tlsProviderManager.Start(context.Background())
 
 		// Update the TLS configuration of the entrypoint.
