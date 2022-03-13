@@ -40,8 +40,10 @@ type actionsWrapper struct{ actions map[string]http.Handler }
 
 // Context is the request context.
 type Context struct {
+	// Notice: It uses Reg3 to store the action context.
 	*reqresp.Context
 
+	// If action is empty, it represents that there is no action in the request.
 	Action  string
 	handler http.Handler
 	respond func(*Context, Response) error

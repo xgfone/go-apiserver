@@ -67,6 +67,9 @@ func (r *Route) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 }
 
 // Use uses the given middlewares to act on the handler.
+//
+// Notice: if using Use to configure the middlewares on the http handler,
+// you should use the method ServeHTTP to handle the http request.
 func (r *Route) Use(mws ...middleware.Middleware) {
 	if r.Handler == nil {
 		panic("the route handler is nil")

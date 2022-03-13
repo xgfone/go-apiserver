@@ -48,8 +48,8 @@ type URL struct {
 
 // ID returns the unique identity, for example,
 //
-//   "http://127.0.0.1/path/to"
-//   "http://www.example.com+127.0.0.1/path/to"
+//   "http://127.0.0.1/path#md5=21aca36be0bd34307f635553a460db41"
+//   "http://www.example.com+127.0.0.1/path#md5=32243ff8dfc9ac922946dcd0a89cc1b9"
 //
 func (u URL) ID() string {
 	var host string
