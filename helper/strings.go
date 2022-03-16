@@ -14,6 +14,21 @@
 
 package helper
 
+import "math/rand"
+
+// DefaultCharset is the default charset to generate the random string.
+var DefaultCharset = "0123456789abcdefghijklmnopqrstuvwxyz"
+
+// RandomString generates a random string with the length from the given charsets.
+func RandomString(n int, charset string) string {
+	nlen := len(charset)
+	buf := make([]byte, n)
+	for i := 0; i < n; i++ {
+		buf[i] = charset[rand.Intn(nlen)]
+	}
+	return string(buf)
+}
+
 // IsInteger reports whether s is the integer or not.
 func IsInteger(s string) bool {
 	if s == "" {

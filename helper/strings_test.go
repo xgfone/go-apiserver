@@ -14,7 +14,31 @@
 
 package helper
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+func BenchmarkRandomString(b *testing.B) {
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			RandomString(8, DefaultCharset)
+		}
+	})
+}
+
+func TestRandomString(t *testing.T) {
+	s := RandomString(8, DefaultCharset)
+	if len(s) != 8 {
+		t.Errorf("expect the string length %d, but got %d", 8, len(s))
+	}
+
+	for _, b := range s {
+		if !strings.ContainsRune(DefaultCharset, b) {
+			t.Errorf("unknown the charset '%s'", string(b))
+		}
+	}
+}
 
 func TestInStrings(t *testing.T) {
 	ss := []string{"a", "b", "c"}
