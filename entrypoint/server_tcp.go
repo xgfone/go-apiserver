@@ -51,13 +51,13 @@ func NewTCPServer(ln net.Listener, handler tcp.Handler) (server TCPServer) {
 func (s TCPServer) Protocol() string { return "tcp" }
 
 // SetTLSConfig sets the tls configuration, which is thread-safe.
-func (s TCPServer) SetTLSConfig(tlsConfig *tls.Config) {
-	if tlsConfig.GetCertificate == nil && len(tlsConfig.Certificates) == 0 {
-		tlsConfig.GetCertificate = s.CertManager.GetTLSCertificate
+func (s TCPServer) SetTLSConfig(c *tls.Config) {
+	if c != nil && c.GetCertificate == nil && len(c.Certificates) == 0 {
+		c.GetCertificate = s.CertManager.GetTLSCertificate
 	}
 
 	_, forceTLS := s.Server.GetTLSConfig()
-	s.Server.SetTLSConfig(tlsConfig, forceTLS)
+	s.Server.SetTLSConfig(c, forceTLS)
 }
 
 // SetTLSForce sets whether or not to force the client to use TLS.
