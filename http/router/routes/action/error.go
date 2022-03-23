@@ -43,7 +43,9 @@ var (
 	ErrInstanceInUse        = NewError("InstanceInUse", "instance is in use")
 	ErrInstanceNotFound     = NewError("InstanceNotFound", "instance is not found")
 	ErrInstanceUnavailable  = NewError("InstanceUnavailable", "instance is unavailable")
+	ErrInstanceInconsistent = NewError("InstanceInconsistent", "instance is inconsistent")
 	ErrResourceInsufficient = NewError("ResourceInsufficient", "resource is insufficient")
+	ErrBalanceInsufficient  = NewError("BalanceInsufficient", "balance is insufficient")
 )
 
 // Error represents an error.
