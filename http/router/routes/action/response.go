@@ -53,9 +53,11 @@ func (c *Context) Success(data interface{}) {
 }
 
 // Failure is the same as c.JSON(200, Response{Error: err}).
+//
+// If err is nil, it is equal to c.Success(nil).
 func (c *Context) Failure(err error) {
 	resp := Response{Error: err}
-	if _, ok := err.(Error); !ok {
+	if _, ok := err.(Error); !ok && err == nil {
 		resp.Error = ErrInternalServerError.WithMessage(err.Error())
 	}
 
