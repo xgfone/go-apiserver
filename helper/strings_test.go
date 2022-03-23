@@ -66,3 +66,55 @@ func TestStringsEqual(t *testing.T) {
 		t.Error("expect strings equal, but got not equal")
 	}
 }
+
+func TestTruncateStringByLen(t *testing.T) {
+	if s := TruncateStringByLen("abc", 4); s != "abc" {
+		t.Errorf("expect '%s', but got '%s'", "abc", s)
+	}
+
+	if s := TruncateStringByLen("abc", 3); s != "abc" {
+		t.Errorf("expect '%s', but got '%s'", "abc", s)
+	}
+
+	if s := TruncateStringByLen("abc", 2); s != "ab" {
+		t.Errorf("expect '%s', but got '%s'", "ab", s)
+	}
+}
+
+func TestTruncateStringByRuneNum(t *testing.T) {
+	if s := TruncateStringByRuneNum("abc", 4); s != "abc" {
+		t.Errorf("expect '%s', but got '%s'", "abc", s)
+	}
+
+	if s := TruncateStringByRuneNum("abc", 3); s != "abc" {
+		t.Errorf("expect '%s', but got '%s'", "abc", s)
+	}
+
+	if s := TruncateStringByRuneNum("abc", 2); s != "ab" {
+		t.Errorf("expect '%s', but got '%s'", "ab", s)
+	}
+
+	if s := TruncateStringByRuneNum("a中c", 4); s != "a中c" {
+		t.Errorf("expect '%s', but got '%s'", "a中c", s)
+	}
+
+	if s := TruncateStringByRuneNum("a中c", 3); s != "a中c" {
+		t.Errorf("expect '%s', but got '%s'", "a中c", s)
+	}
+
+	if s := TruncateStringByRuneNum("a中c", 2); s != "a中" {
+		t.Errorf("expect '%s', but got '%s'", "a中", s)
+	}
+
+	if s := TruncateStringByRuneNum("a\xffc", 4); s != "a\xffc" {
+		t.Errorf("expect '%s', but got '%s'", "a\xffc", s)
+	}
+
+	if s := TruncateStringByRuneNum("a\xffc", 3); s != "a\xffc" {
+		t.Errorf("expect '%s', but got '%s'", "a\xffc", s)
+	}
+
+	if s := TruncateStringByRuneNum("a\xffc", 2); s != "a\xff" {
+		t.Errorf("expect '%s', but got '%s'", "a\xff", s)
+	}
+}
