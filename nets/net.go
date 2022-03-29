@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -31,6 +32,59 @@ type timeoutError interface {
 func IsTimeout(err error) bool {
 	var timeoutErr timeoutError
 	return errors.As(err, &timeoutErr) && timeoutErr.Timeout()
+}
+
+// NormalizeMac normalizes the mac.
+//
+// Return "" if the mac is an invalid mac.
+func NormalizeMac(mac string) string {
+	macs := strings.Split(mac, ":")
+	if len(macs) != 6 {
+		return ""
+	}
+
+	for i, m := range macs {
+		v, err := strconv.ParseUint(m, 16, 8)
+		if err != nil {
+			return ""
+		}
+		macs[i] = fmt.Sprintf("%02x", v)
+	}
+
+	return strings.Join(macs, ":")
+}
+
+// IPIsOnInterface reports whether the ip is on the given network interface
+// named ifaceName.
+//
+// If ip is empty or invalid, return false.
+// If ifaceName is empty, it checks all the network interfaces.
+func IPIsOnInterface(ip, ifaceName string) (on bool, err error) {
+	netip := net.ParseIP(strings.TrimSpace(ip))
+	if netip == nil {
+		return false, nil
+	}
+
+	var addrs []net.Addr
+	var iface *net.Interface
+	if ifaceName == "" {
+		addrs, err = net.InterfaceAddrs()
+	} else if iface, err = net.InterfaceByName(ifaceName); err == nil {
+		addrs, err = iface.Addrs()
+	}
+
+	if err != nil {
+		return
+	}
+
+	ip = netip.String()
+	for _, addr := range addrs {
+		if strings.Split(addr.String(), "/")[0] == ip {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // SplitHostPort separates host and port. If the port is not valid, it returns
