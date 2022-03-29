@@ -278,7 +278,14 @@ func (p urlPath) Match(old *http.Request) (new *http.Request, ok bool) {
 		if p.isPrefix {
 			return old, strings.HasPrefix(GetPath(old), p.rawPath)
 		}
-		return old, GetPath(old) == p.rawPath
+
+		path := GetPath(old)
+		if p.rawPath[len(p.rawPath)-1] != '/' {
+			if _len := len(path); _len > 1 && path[_len-1] == '/' {
+				path = path[:_len-1]
+			}
+		}
+		return old, path == p.rawPath
 	}
 
 	args := kvpool.Get().([]kv)
