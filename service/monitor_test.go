@@ -12,24 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package servicemonitor
+package service
 
 import (
 	"context"
-	"sync/atomic"
 	"testing"
 	"time"
 )
 
-type testService struct{ active int32 }
-
-func newTestService() *testService       { return &testService{} }
-func (s *testService) Activate()         { atomic.StoreInt32(&s.active, 1) }
-func (s *testService) Deactivate()       { atomic.StoreInt32(&s.active, 0) }
-func (s *testService) IsActivated() bool { return atomic.LoadInt32(&s.active) == 1 }
-
 func TestMonitorCheckerExist(t *testing.T) {
-	service := newTestService()
+	service := newTestService("test")
 	checker := CheckerFunc(func(context.Context) (bool, error) { return true, nil })
 	monitor := NewMonitor(service, checker, nil)
 
@@ -59,7 +51,7 @@ func TestMonitorCheckerExist(t *testing.T) {
 }
 
 func TestMonitorCheckerNotExist(t *testing.T) {
-	service := newTestService()
+	service := newTestService("test")
 	checker := CheckerFunc(func(context.Context) (bool, error) { return false, nil })
 	monitor := NewMonitor(service, checker, nil)
 

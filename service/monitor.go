@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package servicemonitor
+package service
 
 import (
 	"context"
@@ -21,21 +21,20 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/log"
-	"github.com/xgfone/go-apiserver/service"
 )
 
 // DefaultCheckConfig is the global default check configuration.
 var DefaultCheckConfig = CheckConfig{
-	Tick:    time.Second * 2,
-	Timeout: time.Second,
-	Failure: 1,
+	Interval: time.Second * 2,
+	Timeout:  time.Second,
+	Failure:  1,
 }
 
 // CheckConfig is used to check the state of the checker.
 type CheckConfig struct {
-	Tick    time.Duration
-	Timeout time.Duration
-	Failure int
+	Interval time.Duration
+	Timeout  time.Duration
+	Failure  int
 }
 
 // Checker is used to check whether a condition is ok.
@@ -58,19 +57,19 @@ type Monitor struct {
 	failure int
 	cconfig CheckConfig
 	checker Checker
-	service service.Service
+	service Service
 }
 
 // NewMonitor returns a new service monitor.
 //
 // If cconf is nil, use DefaultCheckConfig instead.
-func NewMonitor(svc service.Service, checker Checker, cconf *CheckConfig) *Monitor {
+func NewMonitor(svc Service, checker Checker, cconf *CheckConfig) *Monitor {
 	config := DefaultCheckConfig
 	if cconf != nil {
 		config = *cconf
 	}
-	if config.Tick < 1 {
-		panic("checker tick must be greater than 0")
+	if config.Interval < 1 {
+		panic("check interval must be greater than 0")
 	}
 
 	if svc == nil {
@@ -83,8 +82,8 @@ func NewMonitor(svc service.Service, checker Checker, cconf *CheckConfig) *Monit
 	return &Monitor{service: svc, checker: checker, cconfig: config}
 }
 
-// IsActive reports whether the monitor is active,
-// that's, the service is activated.
+// IsActive reports whether the monitor is active, that's,
+// the service associated with the monitor is activated.
 func (c *Monitor) IsActive() bool {
 	return atomic.LoadInt32(&c.state) == 1
 }
@@ -124,7 +123,7 @@ func (c *Monitor) Deactivate() {
 func (c *Monitor) run(ctx context.Context) {
 	c.check(ctx)
 
-	ticker := time.NewTicker(c.cconfig.Tick)
+	ticker := time.NewTicker(c.cconfig.Interval)
 	defer ticker.Stop()
 
 	for {

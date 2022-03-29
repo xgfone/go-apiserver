@@ -15,14 +15,20 @@
 package service
 
 import (
+	"sync/atomic"
 	"testing"
 )
 
-type testService struct{ name string }
+type testService struct {
+	name   string
+	active int32
+}
 
-func newTestService(name string) testService { return testService{name} }
-func (s testService) Activate()              {}
-func (s testService) Deactivate()            {}
+func newTestService(name string) *testService { return &testService{name: name} }
+
+func (s *testService) Activate()         { atomic.StoreInt32(&s.active, 1) }
+func (s *testService) Deactivate()       { atomic.StoreInt32(&s.active, 0) }
+func (s *testService) IsActivated() bool { return atomic.LoadInt32(&s.active) == 1 }
 
 func TestServices(t *testing.T) {
 	origs := Services{newTestService("svc1"), newTestService("svc2")}
@@ -31,7 +37,7 @@ func TestServices(t *testing.T) {
 	svcs2 := origs.Clone(newTestService("svc4"))
 
 	for _, svc := range svcs1 {
-		switch name := svc.(testService).name; name {
+		switch name := svc.(*testService).name; name {
 		case "svc1", "svc2", "svc3":
 		default:
 			t.Errorf("unexpected service named '%s'", name)
@@ -39,7 +45,7 @@ func TestServices(t *testing.T) {
 	}
 
 	for _, svc := range svcs2 {
-		switch name := svc.(testService).name; name {
+		switch name := svc.(*testService).name; name {
 		case "svc1", "svc2", "svc4":
 		default:
 			t.Errorf("unexpected service named '%s'", name)

@@ -12,29 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package servicemonitor
-
-import (
-	"context"
-	"testing"
-)
-
-func TestVipCheckerExist(t *testing.T) {
-	checker := NewVipChecker("127.0.0.1", "")
-	ok, err := checker.Check(context.Background())
-	if err != nil {
-		t.Error(err)
-	} else if !ok {
-		t.Error("expect ip '127.0.0.1' exists, but got none")
-	}
-}
-
-func TestVipCheckerNotExist(t *testing.T) {
-	checker := NewVipChecker("1.2.3.4", "")
-	ok, err := checker.Check(context.Background())
-	if err != nil {
-		t.Error(err)
-	} else if ok {
-		t.Error("unexpect ip '127.0.0.1' exists, but got")
-	}
-}
+// Package service provides a common service interface.
+package service
