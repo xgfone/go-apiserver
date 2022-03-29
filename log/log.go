@@ -32,7 +32,7 @@ var (
 )
 
 // DefaultLogger is the default logger implementation.
-var DefaultLogger Logger = NewLogger(os.Stderr, "", log.LstdFlags, LvlTrace)
+var DefaultLogger Logger = NewLogger(os.Stderr, "", log.LstdFlags|log.Lshortfile, LvlTrace)
 
 // Logger represents a logging implementation.
 type Logger interface {
@@ -108,3 +108,34 @@ func Errorf(fmt string, args ...interface{}) { fmtLog(LvlError, fmt, args...) }
 
 // Alertf is used to emit the log based on the string format with the Alert level.
 func Alertf(fmt string, args ...interface{}) { fmtLog(LvlAlert, fmt, args...) }
+
+// Ef is equal to Error(fmt.Sprintf(format, args...), "err", err).
+func Ef(err error, format string, args ...interface{}) {
+	if len(args) > 0 {
+		format = fmt.Sprintf(format, args...)
+	}
+	DefaultLogger.Log(LvlError, 1, format, "err", err)
+}
+
+// IfErr logs the message and key-values with the ERROR level
+// only if err is not equal to nil.
+func IfErr(err error, msg string, kvs ...interface{}) {
+	ifErr(err, 0, msg, kvs...)
+}
+
+// WrapPanic wraps and logs the panic, which should be called directly after defer,
+// For example,
+//   defer WrapPanic()
+//   defer WrapPanic("key1", "value1")
+//   defer WrapPanic("key1", "value1", "key2", "value2")
+//   defer WrapPanic("key1", "value1", "key2", "value2", "key3", "value3")
+func WrapPanic(kvs ...interface{}) {
+	ifErr(recover(), 1, "panic", kvs...)
+}
+
+func ifErr(err interface{}, depth int, msg string, kvs ...interface{}) {
+	if err == nil {
+		return
+	}
+	DefaultLogger.Log(LvlError, 2+depth, msg, append(kvs, "err", err)...)
+}

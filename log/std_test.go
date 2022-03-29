@@ -16,6 +16,7 @@ package log
 
 import (
 	"bytes"
+	"errors"
 	"log"
 	"strings"
 	"testing"
@@ -29,12 +30,14 @@ func TestStdLogger(t *testing.T) {
 	Log(LvlInfo, 0, "msg2", "k2", "v2")
 	StdLogger("stdlog: ", LvlDebug).Print("msg3")
 	Infof("msg4: %s=%s", "k3", "v3")
+	IfErr(errors.New("error"), "msg5")
 
 	expects := []string{
-		`prefix: std_test.go:28: msg1; level=info; k1=v1`,
-		`prefix: std_test.go:29: msg2; level=info; k2=v2`,
-		`stdlog: std_test.go:30: msg3`,
-		`prefix: std_test.go:31: msg4: k3=v3; level=info`,
+		`prefix: std_test.go:29: msg1; level=info; k1=v1`,
+		`prefix: std_test.go:30: msg2; level=info; k2=v2`,
+		`stdlog: std_test.go:31: msg3`,
+		`prefix: std_test.go:32: msg4: k3=v3; level=info`,
+		`prefix: std_test.go:33: msg5; level=error; err=error`,
 		``,
 	}
 	results := strings.Split(buf.String(), "\n")
