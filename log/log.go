@@ -18,8 +18,11 @@ package log
 import (
 	"fmt"
 	"log"
-	"os"
+	"strings"
 )
+
+// DefaultLogger is the default logger implementation.
+var DefaultLogger Logger
 
 // Pre-define some log levels, which may be assigned to the new values.
 var (
@@ -31,8 +34,65 @@ var (
 	LvlAlert = int(100)
 )
 
-// DefaultLogger is the default logger implementation.
-var DefaultLogger Logger = NewLogger(os.Stderr, "", log.LstdFlags|log.Lshortfile, LvlTrace)
+// ParseLevel parses the level string, which supports
+//   trace
+//   debug
+//   info
+//   warn
+//   error
+//   alert
+// And they are case insensitive.
+func ParseLevel(s string) (level int, err error) {
+	switch strings.ToLower(s) {
+	case "trace":
+		level = LvlTrace
+	case "debug":
+		level = LvlDebug
+	case "info":
+		level = LvlInfo
+	case "warn":
+		level = LvlWarn
+	case "error":
+		level = LvlError
+	case "alert":
+		level = LvlAlert
+	default:
+		err = fmt.Errorf("unknown level '%s'", s)
+	}
+	return
+}
+
+// FormatLevel formats the level to string.
+func FormatLevel(level int) string {
+	switch level {
+	case LvlTrace:
+		return "trace"
+	case LvlDebug:
+		return "debug"
+	case LvlInfo:
+		return "info"
+	case LvlWarn:
+		return "warn"
+	case LvlError:
+		return "error"
+	case LvlAlert:
+		return "alert"
+	default:
+		if level < LvlDebug {
+			return fmt.Sprintf("trace%d", level)
+		} else if level < LvlInfo {
+			return fmt.Sprintf("debug%d", level)
+		} else if level < LvlWarn {
+			return fmt.Sprintf("info%d", level)
+		} else if level < LvlError {
+			return fmt.Sprintf("warn%d", level)
+		} else if level < LvlAlert {
+			return fmt.Sprintf("error%d", level)
+		} else {
+			return fmt.Sprintf("alert%d", level)
+		}
+	}
+}
 
 // Logger represents a logging implementation.
 type Logger interface {

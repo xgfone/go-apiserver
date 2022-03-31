@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -28,6 +29,10 @@ func NewLogger(out io.Writer, prefix string, flag, levelThreshold int) Logger {
 		level:  levelThreshold,
 		logger: log.New(out, prefix, flag),
 	}
+}
+
+func init() {
+	DefaultLogger = NewLogger(os.Stderr, "", log.LstdFlags|log.Lshortfile, LvlTrace)
 }
 
 type stdLogger struct {
@@ -51,20 +56,8 @@ func (l stdLogger) Log(level, depth int, msg string, kvs ...interface{}) {
 	builder.Grow(128)
 	builder.WriteString(msg)
 
-	switch level {
-	case LvlTrace:
-		builder.WriteString("; level=trace")
-	case LvlDebug:
-		builder.WriteString("; level=debug")
-	case LvlInfo:
-		builder.WriteString("; level=info")
-	case LvlWarn:
-		builder.WriteString("; level=warn")
-	case LvlError:
-		builder.WriteString("; level=error")
-	case LvlAlert:
-		builder.WriteString("; level=alert")
-	}
+	builder.WriteString("; level=")
+	builder.WriteString(FormatLevel(level))
 
 	for i, _len := 0, len(kvs); i < _len; i += 2 {
 		fmt.Fprintf(&builder, "; %s=%v", kvs[i], kvs[i+1])
