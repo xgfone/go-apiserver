@@ -14,12 +14,14 @@
 
 package service
 
-// Service represents a service interface.
+// Service represents a non-blocking service interface.
 type Service interface {
-	// Activate is used to activate the service to work in the background.
+	// Activate is used to activate the service to work in the background,
+	// which is non-blocking.
 	Activate()
 
-	// Deactivate is used to deactivate the service to stop the work.
+	// Deactivate is used to deactivate the service to stop the work,
+	// which is non-blocking.
 	Deactivate()
 }
 
