@@ -18,6 +18,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/xgfone/go-apiserver/http/herrors"
 	"github.com/xgfone/go-apiserver/http/matcher"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/middleware"
@@ -255,7 +256,18 @@ func (b RouteBuilder) ContextHandler(h func(*reqresp.Context)) error {
 
 			defer reqresp.DefaultContextAllocator.Release(c)
 		}
+
 		h(c)
+		if !c.WroteHeader() {
+			switch e := c.Err.(type) {
+			case nil:
+				c.WriteHeader(200)
+			case herrors.Error:
+				c.BlobText(e.Code, e.CT, c.Err.Error())
+			default:
+				c.Text(500, c.Err.Error())
+			}
+		}
 	})
 }
 
@@ -275,6 +287,16 @@ func (b RouteBuilder) ContextHandlerWithError(h func(*reqresp.Context) error) er
 		}
 
 		c.Err = h(c)
+		if !c.WroteHeader() {
+			switch e := c.Err.(type) {
+			case nil:
+				c.WriteHeader(200)
+			case herrors.Error:
+				c.BlobText(e.Code, e.CT, c.Err.Error())
+			default:
+				c.Text(500, c.Err.Error())
+			}
+		}
 	})
 }
 

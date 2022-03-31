@@ -204,7 +204,7 @@ var (
 	// For the default implementation, it supports the path parameters,
 	// such as "/{param1}/{param2}" or "/prefix/{param1}/path/{param2}/to".
 	// For the path arguments extracted from the request path, they will be
-	// put into the Datas field of reqresp.Context that can be accessed from
+	// put into the Data field of reqresp.Context that can be accessed from
 	// the new request returned by the matcher by using reqresp.GetContext.
 	Path func(path string) (Matcher, error) = pathMatcher
 
@@ -214,7 +214,7 @@ var (
 	// For the default implementation, it supports the path parameters,
 	// such as "/{param1}/{param2}" or "/prefix/{param1}/path/{param2}/to".
 	// For the path arguments extracted from the request path, they will be
-	// put into the Datas field of reqresp.Context that can be accessed from
+	// put into the Data field of reqresp.Context that can be accessed from
 	// the new request returned by the matcher by using reqresp.GetContext.
 	// Furthermore, the prefix path "/prefix" matches the path "/prefix/",
 	// but the prefix path "/prefix/" does not match the path "/prefix".
