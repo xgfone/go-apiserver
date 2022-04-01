@@ -66,7 +66,7 @@ func (c *Context) Failure(err error) {
 }
 
 func notFoundHandler(resp http.ResponseWriter, req *http.Request) {
-	c := GetContext(req)
+	c := GetContext(resp, req)
 	if len(c.Action) == 0 {
 		c.Failure(ErrInvalidAction.WithMessage("missing the action"))
 	} else {

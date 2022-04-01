@@ -32,8 +32,9 @@ var (
 )
 
 // GetContext returns the Context from the http request.
-func GetContext(req *http.Request) *Context {
-	return reqresp.GetContext(req).Reg3.(*Context)
+func GetContext(w http.ResponseWriter, r *http.Request) *Context {
+	c, _ := reqresp.GetContext(w, r).Reg3.(*Context)
+	return c
 }
 
 type actionsWrapper struct{ actions map[string]http.Handler }
@@ -124,17 +125,12 @@ func (m *RouteManager) Route(w http.ResponseWriter, r *http.Request, notFound ht
 
 func (m *RouteManager) respond(action string, handler http.Handler,
 	w http.ResponseWriter, r *http.Request) {
-	ctx, new := reqresp.GetOrNewContext(r)
-	if new {
-		if rw, ok := w.(reqresp.ResponseWriter); ok {
-			ctx.ResponseWriter = rw
-		} else {
-			ctx.ResponseWriter = reqresp.NewResponseWriter(w)
-		}
-
+	ctx := reqresp.GetContext(w, r)
+	if ctx == nil {
+		ctx = reqresp.DefaultContextAllocator.Acquire()
+		ctx.ResponseWriter = reqresp.NewResponseWriter(w)
+		ctx.Request = reqresp.SetContext(r, ctx)
 		defer reqresp.DefaultContextAllocator.Release(ctx)
-		r = reqresp.SetContext(r, ctx)
-		w = ctx.ResponseWriter
 	}
 
 	c, ok := ctx.Reg3.(*Context)
@@ -150,7 +146,7 @@ func (m *RouteManager) respond(action string, handler http.Handler,
 
 	c.handler = handler
 	c.respond = m.HandleResponse
-	m.Middlewares.ServeHTTP(w, r)
+	m.Middlewares.ServeHTTP(ctx, r)
 	if !c.WroteHeader() {
 		if c.Err == nil {
 			c.Success(nil)
@@ -165,8 +161,8 @@ func releaseContext(c *Context) {
 	ctxpool.Put(c)
 }
 
-func (m *RouteManager) serveHTTP(resp http.ResponseWriter, req *http.Request) {
-	GetContext(req).handler.ServeHTTP(resp, req)
+func (m *RouteManager) serveHTTP(w http.ResponseWriter, r *http.Request) {
+	GetContext(w, r).handler.ServeHTTP(w, r)
 }
 
 /* ------------------------------------------------------------------------- */
@@ -209,8 +205,8 @@ func (m *RouteManager) GetActions() (actions []string) {
 
 // RegisterContextFunc is the same as RegisterFunc, but use Context instead.
 func (m *RouteManager) RegisterContextFunc(action string, f func(*Context)) (ok bool) {
-	return m.RegisterFunc(action, func(rw http.ResponseWriter, r *http.Request) {
-		f(GetContext(r))
+	return m.RegisterFunc(action, func(w http.ResponseWriter, r *http.Request) {
+		f(GetContext(w, r))
 	})
 }
 

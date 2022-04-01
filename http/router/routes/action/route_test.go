@@ -26,7 +26,7 @@ import (
 func TestActionRoute(t *testing.T) {
 	router := NewRouteManager()
 	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		reqresp.GetContext(r).WriteHeader(204)
+		reqresp.GetContext(w, r).WriteHeader(204)
 	})
 
 	router.RegisterContextFunc("Test1", func(c *Context) { c.WriteHeader(201) })

@@ -22,6 +22,9 @@ import (
 	"path"
 )
 
+// DefaultRenderer is the default global renderer.
+var DefaultRenderer Renderer = NewMuxRenderer()
+
 // Renderer is the interface to render the response.
 type Renderer interface {
 	Render(w http.ResponseWriter, code int, name string, data interface{}) error

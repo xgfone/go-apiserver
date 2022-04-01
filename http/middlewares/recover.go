@@ -36,7 +36,7 @@ func Recover(priority int) mw.Middleware {
 
 func wrapPanic(w http.ResponseWriter, r *http.Request) {
 	if e := recover(); e != nil {
-		if c := reqresp.GetContext(r); c == nil {
+		if c := reqresp.GetContext(w, r); c == nil {
 			log.Error("wrap a panic", "addr", r.RemoteAddr, "method", r.Method,
 				"uri", r.RequestURI, "panic", e)
 

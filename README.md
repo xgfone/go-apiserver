@@ -34,9 +34,9 @@ import (
 )
 
 func httpHandler(route string) http.HandlerFunc {
-	return func(rw http.ResponseWriter, r *http.Request) {
-		c := reqresp.GetContext(r)
-		fmt.Fprintf(rw, "%s: %s", route, c.Data["id"])
+	return func(w http.ResponseWriter, r *http.Request) {
+		c := reqresp.GetContext(w, r)
+		fmt.Fprintf(w, "%s: %s", route, c.Data["id"])
 	}
 }
 
@@ -67,7 +67,8 @@ func main() {
 		HandlerFunc(httpHandler("route3")) // Set the handler function
 
 	router := router.NewRouter(routeManager)
-	router.Middlewares.Use(middlewares.Logger(0), middlewares.Recover(1))
+	router.Middlewares.Use(middlewares.Context(0)) // Add Context to support path parameters
+	router.Middlewares.Use(middlewares.Logger(1), middlewares.Recover(2))
 
 	// err := http.ListenAndServe("127.0.0.1:80", router)
 	err := StartHTTPServer("127.0.0.1:80", router)
@@ -358,6 +359,7 @@ func initAdminManageAPI(router *ruler.RouteManager) {
 $ nohup go run main.go &
 
 # Add the route
+# Notice: remove the characters from // to the line end.
 $ curl -XPOST http://127.0.0.1/admin/route -H 'Content-Type: application/json' -d '
 {
     "rule": "Method(`GET`) && Path(`/path`)",

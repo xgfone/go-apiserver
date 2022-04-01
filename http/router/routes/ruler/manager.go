@@ -64,8 +64,8 @@ func (m *RouteManager) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 // Route implements the interface router.RouteManager.
 func (m *RouteManager) Route(w http.ResponseWriter, r *http.Request, notFound http.Handler) {
-	if newreq, route, ok := m.MatchRoute(r); ok {
-		route.ServeHTTP(w, newreq)
+	if route, ok := m.MatchRoute(w, r); ok {
+		route.ServeHTTP(w, r)
 	} else if notFound != nil {
 		notFound.ServeHTTP(w, r)
 	} else if m.NotFound != nil {
@@ -79,14 +79,14 @@ func (m *RouteManager) Route(w http.ResponseWriter, r *http.Request, notFound ht
 
 // MatchRoute uses the registered routes to match the http request,
 // and returns the matched route.
-func (m *RouteManager) MatchRoute(r *http.Request) (*http.Request, Route, bool) {
+func (m *RouteManager) MatchRoute(w http.ResponseWriter, r *http.Request) (Route, bool) {
 	routes := m.routes.Load().(routesWrapper).Routes
 	for i, _len := 0, len(routes); i < _len; i++ {
-		if nreq, ok := routes[i].Matcher.Match(r); ok {
-			return nreq, routes[i], true
+		if ok := routes[i].Matcher.Match(w, r); ok {
+			return routes[i], true
 		}
 	}
-	return nil, Route{}, false
+	return Route{}, false
 }
 
 // GetRoute returns the route by the given name.

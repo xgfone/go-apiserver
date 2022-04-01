@@ -24,7 +24,7 @@ import (
 )
 
 func testMatcher(t *testing.T, req *http.Request, matcher Matcher, match bool) {
-	if _, ok := matcher.Match(req); ok != match {
+	if ok := matcher.Match(nil, req); ok != match {
 		t.Errorf("'%s': expect '%v', but got '%v'", matcher.String(), match, ok)
 	}
 }
@@ -126,24 +126,24 @@ func TestPathMatcherParameter(t *testing.T) {
 		{Path: "/prefix/123/to/abc", Args: map[string]string{"id": "123", "name": "abc"}},
 	}
 
+	c := reqresp.NewContext(4)
 	req := &http.Request{URL: &url.URL{}}
 	for i, m := range matchers {
 		for j, p := range paths {
 			if i == j {
 				req.URL.Path = p.Path
-				nreq, ok := m.Match(req)
+				ok := m.Match(c, req)
 
 				if !ok {
 					t.Errorf("%s does not match the path '%s'", m.String(), p.Path)
 					continue
 				}
 
-				if datas := reqresp.GetReqDatas(nreq); len(p.Args) != len(datas) {
-					t.Errorf("expect %d arguments, but got %d: %v", len(p.Args), len(datas), datas)
-					t.Error(reqresp.GetContext(nreq))
+				if len(p.Args) != len(c.Data) {
+					t.Errorf("expect %d arguments, but got %d: %v", len(p.Args), len(c.Data), c.Data)
 				} else {
 					for key, value := range p.Args {
-						if v := datas[key]; v != value {
+						if v := c.Data[key]; v != value {
 							t.Errorf("argument '%s': expect value '%s', but got '%s'", key, value, v)
 						}
 					}
@@ -167,22 +167,22 @@ func TestPathPrefixMatcherParameter(t *testing.T) {
 		{Match: false, Path: "/notmatch/123"},
 	}
 
+	c := reqresp.NewContext(4)
 	req := &http.Request{URL: &url.URL{}}
 	for _, p := range paths {
 		req.URL.Path = p.Path
-		nreq, ok := matcher.Match(req)
+		ok := matcher.Match(c, req)
 		if p.Match {
 			if !ok {
 				t.Errorf("%s does not match the path '%s'", matcher.String(), p.Path)
 				continue
 			}
 
-			if datas := reqresp.GetReqDatas(nreq); len(p.Args) != len(datas) {
-				t.Errorf("expect %d arguments, but got %d: %v", len(p.Args), len(datas), datas)
-				t.Error(reqresp.GetContext(nreq))
+			if len(p.Args) != len(c.Data) {
+				t.Errorf("expect %d arguments, but got %d: %v", len(p.Args), len(c.Data), c.Data)
 			} else {
 				for key, value := range p.Args {
-					if v := datas[key]; v != value {
+					if v := c.Data[key]; v != value {
 						t.Errorf("argument '%s': expect value '%s', but got '%s'", key, value, v)
 					}
 				}
@@ -196,7 +196,7 @@ func TestPathPrefixMatcherParameter(t *testing.T) {
 
 	matcher = Must(PathPrefix("/prefix/{id}/"))
 	req.URL.Path = "/prefix/123"
-	_, ok := matcher.Match(req)
+	ok := matcher.Match(c, req)
 	if ok {
 		t.Errorf("unexpect the matcher '%s' to match the path '%s'", matcher.String(), req.URL.Path)
 	}

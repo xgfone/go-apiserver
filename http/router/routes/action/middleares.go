@@ -23,20 +23,20 @@ import (
 	mw "github.com/xgfone/go-apiserver/middleware"
 )
 
-func wrapPanic(r *http.Request) {
+func wrapPanic(w http.ResponseWriter, r *http.Request) {
 	switch e := recover().(type) {
 	case nil:
 	case Error:
-		GetContext(r).Err = e
+		GetContext(w, r).Err = e
 
 	case string:
-		GetContext(r).Err = ErrInternalServerError.WithMessage(e)
+		GetContext(w, r).Err = ErrInternalServerError.WithMessage(e)
 
 	case error:
-		GetContext(r).Err = ErrInternalServerError.WithMessage(e.Error())
+		GetContext(w, r).Err = ErrInternalServerError.WithMessage(e.Error())
 
 	default:
-		GetContext(r).Err = ErrInternalServerError.WithMessage(fmt.Sprint(e))
+		GetContext(w, r).Err = ErrInternalServerError.WithMessage(fmt.Sprint(e))
 	}
 }
 
@@ -45,7 +45,7 @@ func wrapPanic(r *http.Request) {
 func Recover(priority int) mw.Middleware {
 	return mw.NewMiddleware("recover", priority, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			defer wrapPanic(r)
+			defer wrapPanic(rw, r)
 			h.(http.Handler).ServeHTTP(rw, r)
 		})
 	})
@@ -59,7 +59,7 @@ func Logger(priority int) mw.Middleware {
 			h.(http.Handler).ServeHTTP(w, r)
 			cost := time.Since(start)
 
-			c := GetContext(r)
+			c := GetContext(w, r)
 			if !c.WroteHeader() {
 				if c.Err == nil {
 					c.Success(nil)

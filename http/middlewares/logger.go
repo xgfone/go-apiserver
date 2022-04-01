@@ -32,7 +32,7 @@ func Logger(priority int) mw.Middleware {
 			cost := time.Since(start)
 
 			var err error
-			if c := reqresp.GetContext(r); c != nil {
+			if c := reqresp.GetContext(w, r); c != nil {
 				err = c.Err
 			}
 

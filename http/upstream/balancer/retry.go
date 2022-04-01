@@ -45,7 +45,14 @@ func (f retry) Forward(w http.ResponseWriter, r *http.Request, s up.Servers) (er
 		return s[0].HandleHTTP(w, r)
 	}
 
+	c := r.Context()
 	for ; _len > 0; _len-- {
+		select {
+		case <-c.Done():
+			return c.Err()
+		default:
+		}
+
 		if err = f.Balancer.Forward(w, r, s); err == nil {
 			break
 		}
@@ -54,9 +61,9 @@ func (f retry) Forward(w http.ResponseWriter, r *http.Request, s up.Servers) (er
 			timer := time.NewTimer(f.interval)
 			select {
 			case <-timer.C:
-			case <-r.Context().Done():
+			case <-c.Done():
 				timer.Stop()
-				return r.Context().Err()
+				return c.Err()
 			}
 		}
 	}

@@ -25,7 +25,7 @@ func testBuilder(t *testing.T, rule, expect string, req *http.Request, result bo
 		t.Error(err)
 	} else if matcher.String() != expect {
 		t.Errorf("expect '%s', but got '%s'", expect, matcher.String())
-	} else if _, ok := matcher.Match(req); ok != result {
+	} else if ok := matcher.Match(nil, req); ok != result {
 		t.Errorf("the rule '%s' does not match the request", rule)
 	}
 }

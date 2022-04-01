@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/textproto"
+	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -31,7 +32,7 @@ import (
 )
 
 // MatchFunc is a function to match the request.
-type MatchFunc func(old *http.Request) (new *http.Request, ok bool)
+type MatchFunc func(http.ResponseWriter, *http.Request) (ok bool)
 
 // Matcher is used to check whether the route rule matches the request.
 type Matcher interface {
@@ -43,7 +44,7 @@ type Matcher interface {
 	Priority() int
 
 	// Match is used to check whether the rule matches the request.
-	Match(old *http.Request) (new *http.Request, ok bool)
+	Match(http.ResponseWriter, *http.Request) (ok bool)
 }
 
 // Matchers is a group of Matchers.
@@ -67,9 +68,9 @@ type matcher struct {
 	match MatchFunc
 }
 
-func (m matcher) String() string                              { return m.desc }
-func (m matcher) Priority() int                               { return m.prio }
-func (m matcher) Match(r *http.Request) (*http.Request, bool) { return m.match(r) }
+func (m matcher) String() string                                    { return m.desc }
+func (m matcher) Priority() int                                     { return m.prio }
+func (m matcher) Match(w http.ResponseWriter, r *http.Request) bool { return m.match(w, r) }
 
 // New returns a new route matcher.
 func New(priority int, description string, match MatchFunc) Matcher {
@@ -79,9 +80,8 @@ func New(priority int, description string, match MatchFunc) Matcher {
 type notMatcher struct{ Matcher }
 
 func (m notMatcher) String() string { return fmt.Sprintf("Not(%s)", m.Matcher.String()) }
-func (m notMatcher) Match(r *http.Request) (*http.Request, bool) {
-	r, ok := m.Matcher.Match(r)
-	return r, !ok
+func (m notMatcher) Match(w http.ResponseWriter, r *http.Request) bool {
+	return !m.Matcher.Match(w, r)
 }
 
 // Not returns a NOT matcher based on the original matcher.
@@ -99,15 +99,14 @@ func (m andMatcher) String() string {
 }
 
 func (m andMatcher) Priority() int { return Matchers(m).Priority() }
-func (m andMatcher) Match(r *http.Request) (*http.Request, bool) {
-	var ok bool
+func (m andMatcher) Match(w http.ResponseWriter, r *http.Request) bool {
 	ms := Matchers(m)
 	for i, _len := 0, len(ms); i < _len; i++ {
-		if r, ok = ms[i].Match(r); !ok {
-			return r, false
+		if !ms[i].Match(w, r) {
+			return false
 		}
 	}
-	return r, true
+	return true
 }
 
 // And returns a new AND matcher.
@@ -137,15 +136,14 @@ func (m orMatcher) String() string {
 }
 
 func (m orMatcher) Priority() int { return Matchers(m).Priority() }
-func (m orMatcher) Match(r *http.Request) (*http.Request, bool) {
-	var ok bool
+func (m orMatcher) Match(w http.ResponseWriter, r *http.Request) bool {
 	ms := Matchers(m)
 	for i, _len := 0, len(ms); i < _len; i++ {
-		if r, ok = ms[i].Match(r); ok {
-			return r, true
+		if ms[i].Match(w, r) {
+			return true
 		}
 	}
-	return r, false
+	return false
 }
 
 // Or returns a new OR matcher.
@@ -203,9 +201,10 @@ var (
 	//
 	// For the default implementation, it supports the path parameters,
 	// such as "/{param1}/{param2}" or "/prefix/{param1}/path/{param2}/to".
+	//
 	// For the path arguments extracted from the request path, they will be
-	// put into the Data field of reqresp.Context that can be accessed from
-	// the new request returned by the matcher by using reqresp.GetContext.
+	// put into the Data field of reqresp.Context which is took out by the
+	// function reqresp.GetContext if reqresp.Context exists.
 	Path func(path string) (Matcher, error) = pathMatcher
 
 	// PathPrefix returns a path prefix matcher to match the prefix
@@ -213,11 +212,12 @@ var (
 	//
 	// For the default implementation, it supports the path parameters,
 	// such as "/{param1}/{param2}" or "/prefix/{param1}/path/{param2}/to".
-	// For the path arguments extracted from the request path, they will be
-	// put into the Data field of reqresp.Context that can be accessed from
-	// the new request returned by the matcher by using reqresp.GetContext.
 	// Furthermore, the prefix path "/prefix" matches the path "/prefix/",
 	// but the prefix path "/prefix/" does not match the path "/prefix".
+	//
+	// For the path arguments extracted from the request path, they will be
+	// put into the Data field of reqresp.Context which is took out by the
+	// function reqresp.GetContext if reqresp.Context exists.
 	PathPrefix func(pathPrefix string) (Matcher, error) = pathPrefixMatcher
 
 	// Method returns a method matcher to match the request method.
@@ -273,23 +273,23 @@ type urlPath struct {
 	plen     int
 }
 
-func (p urlPath) Match(old *http.Request) (new *http.Request, ok bool) {
+func (p urlPath) Match(w http.ResponseWriter, r *http.Request) (ok bool) {
 	if p.plen == 0 {
 		if p.isPrefix {
-			return old, strings.HasPrefix(GetPath(old), p.rawPath)
+			return strings.HasPrefix(GetPath(r), p.rawPath)
 		}
 
-		path := GetPath(old)
+		path := GetPath(r)
 		if p.rawPath[len(p.rawPath)-1] != '/' {
 			if _len := len(path); _len > 1 && path[_len-1] == '/' {
 				path = path[:_len-1]
 			}
 		}
-		return old, path == p.rawPath
+		return path == p.rawPath
 	}
 
 	args := kvpool.Get().([]kv)
-	path := GetPath(old)
+	path := GetPath(r)
 
 	var i int
 	for ; i < p.plen && len(path) > 0; i++ {
@@ -297,7 +297,7 @@ func (p urlPath) Match(old *http.Request) (new *http.Request, ok bool) {
 		if len(ap.name) == 0 {
 			if !strings.HasPrefix(path, ap.path) {
 				kvpool.Put(args[:0])
-				return old, false
+				return false
 			}
 
 			path = path[len(ap.path):]
@@ -318,14 +318,11 @@ func (p urlPath) Match(old *http.Request) (new *http.Request, ok bool) {
 		ok = len(path) == 0
 	}
 
-	new = old
 	if ok {
-		c, isnew := reqresp.GetOrNewContext(old)
-		for i, _len := 0, len(args); i < _len; i++ {
-			c.Data[args[i].key] = args[i].value
-		}
-		if isnew {
-			new = reqresp.SetContext(old, c)
+		if c := reqresp.GetContext(w, r); c != nil {
+			for i, _len := 0, len(args); i < _len; i++ {
+				c.Data[args[i].key] = args[i].value
+			}
 		}
 	}
 
@@ -399,8 +396,8 @@ func methodMatcher(method string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("Method(%s)", method)
-	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
-		return r, r.Method == method
+	return New(prioPath, desc, func(w http.ResponseWriter, r *http.Request) bool {
+		return r.Method == method
 	}), nil
 }
 
@@ -411,9 +408,9 @@ func clientIPMatcher(clientIP string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("ClientIP(%s)", clientIP)
-	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
+	return New(prioPath, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		remoteIP, _ := nets.SplitHostPort(r.RemoteAddr)
-		return r, ipChecker.CheckIPString(remoteIP)
+		return ipChecker.CheckIPString(remoteIP)
 	}), nil
 }
 
@@ -423,19 +420,21 @@ func queryMatcher(key, value string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("Query(%s=%s)", key, value)
-	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
-		c, new := reqresp.GetOrNewContext(r)
-		if new {
-			r = reqresp.SetContext(r, c)
+	return New(prioPath, desc, func(w http.ResponseWriter, r *http.Request) bool {
+		var queries url.Values
+		if c := reqresp.GetContext(w, r); c != nil {
+			queries = c.GetQueries()
+		} else {
+			queries = r.URL.Query()
 		}
 
 		var ok bool
 		if value == "" {
-			_, ok = c.GetQueries()[key]
+			_, ok = queries[key]
 		} else {
-			ok = c.GetQueries().Get(key) == value
+			ok = queries.Get(key) == value
 		}
-		return r, ok
+		return ok
 	}), nil
 }
 
@@ -445,14 +444,14 @@ func headerMatcher(key, value string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("Header(%s=%s)", key, value)
-	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
+	return New(prioPath, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		var ok bool
 		if value == "" {
 			_, ok = r.Header[textproto.CanonicalMIMEHeaderKey(key)]
 		} else {
 			ok = r.Header.Get(key) == value
 		}
-		return r, ok
+		return ok
 	}), nil
 }
 
@@ -463,15 +462,15 @@ func headerRegexpMatcher(key, regexpValue string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("HeaderRegexp(%s)", regexpValue)
-	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
-		return r, regexp.MatchString(r.Header.Get(key))
+	return New(prioPath, desc, func(w http.ResponseWriter, r *http.Request) bool {
+		return regexp.MatchString(r.Header.Get(key))
 	}), nil
 }
 
 func hostMatcher(host string) (Matcher, error) {
 	desc := fmt.Sprintf("Host(%s)", host)
-	return New(prioPath, desc, func(r *http.Request) (*http.Request, bool) {
-		return r, GetHost(r) == host
+	return New(prioPath, desc, func(w http.ResponseWriter, r *http.Request) bool {
+		return GetHost(r) == host
 	}), nil
 }
 
@@ -482,7 +481,7 @@ func hostRegexpMatcher(regexpHost string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("HostRegexp(%s)", regexpHost)
-	return New(prioHostRegexp, desc, func(r *http.Request) (*http.Request, bool) {
-		return r, regexp.MatchString(GetHost(r))
+	return New(prioHostRegexp, desc, func(w http.ResponseWriter, r *http.Request) bool {
+		return regexp.MatchString(GetHost(r))
 	}), nil
 }

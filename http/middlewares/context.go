@@ -27,17 +27,15 @@ import (
 func Context(priority int) mw.Middleware {
 	return mw.NewMiddleware("context", priority, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if c, new := reqresp.GetOrNewContext(r); new {
-				if rw, ok := w.(reqresp.ResponseWriter); ok {
-					c.ResponseWriter = rw
-				} else {
-					c.ResponseWriter = reqresp.NewResponseWriter(w)
-				}
-				w = c.ResponseWriter
-				r = reqresp.SetContext(r, c)
+			if c := reqresp.GetContext(w, r); c == nil {
+				c = reqresp.DefaultContextAllocator.Acquire()
+				c.ResponseWriter = reqresp.NewResponseWriter(w)
+				c.Request = reqresp.SetContext(r, c)
 				defer reqresp.DefaultContextAllocator.Release(c)
+				h.(http.Handler).ServeHTTP(c, c.Request)
+			} else {
+				h.(http.Handler).ServeHTTP(w, r)
 			}
-			h.(http.Handler).ServeHTTP(w, r)
 		})
 	})
 }

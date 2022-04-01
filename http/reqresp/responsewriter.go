@@ -103,8 +103,11 @@ func (rw *responseWriter) WriteString(s string) (n int, err error) {
 
 // NewResponseWriter returns a new ResponseWriter from http.ResponseWriter.
 func NewResponseWriter(w http.ResponseWriter) ResponseWriter {
-	if w == nil {
-		panic("http.ResponseWriter is nil")
+	switch rw := w.(type) {
+	case nil:
+		return nil
+	case ResponseWriter:
+		return rw
 	}
 
 	rw := &responseWriter{ResponseWriter: w}

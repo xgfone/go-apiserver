@@ -58,10 +58,6 @@ func putBuilder(b *builder) { b.Reset(); bpool.Put(b) }
 
 /// ----------------------------------------------------------------------- ///
 
-// DefaultRenderer is the default renderer, which will be used by the context
-// when no renderer is set.
-var DefaultRenderer render.Renderer = render.NewMuxRenderer()
-
 // ContextAllocator is used to allocate or release the request context.
 type ContextAllocator interface {
 	Acquire() *Context
@@ -111,96 +107,36 @@ func SetContext(req *http.Request, c *Context) (newreq *http.Request) {
 	return c.Request
 }
 
-// GetContext gets and returns the request context from the request.
+// GetContext returns a *Context, which (1) checks whether http.ResponseWriter
+// has implemented the interface ContentGetter, or (2) extracts *Context from
+// *http.Request.
 //
 // If the request context does not exist, reutrn nil.
-func GetContext(req *http.Request) *Context {
-	if c, ok := req.Context().Value(reqParam(255)).(*Context); ok {
+func GetContext(w http.ResponseWriter, r *http.Request) *Context {
+	switch c := w.(type) {
+	case *Context:
 		return c
+
+	case ContextGetter:
+		return c.GetContext(w, r)
+
+	default:
+		ctx, _ := r.Context().Value(reqParam(255)).(*Context)
+		return ctx
 	}
-	return nil
 }
 
-// GetOrNewContext is the same as GetContext, but create a new one
-// if the request context does not exist.
-func GetOrNewContext(req *http.Request) (c *Context, new bool) {
-	if c = GetContext(req); c == nil {
-		c = DefaultContextAllocator.Acquire()
-		c.Request = req
-		new = true
+func handleContextResult(c *Context) {
+	if !c.WroteHeader() {
+		switch e := c.Err.(type) {
+		case nil:
+			c.WriteHeader(200)
+		case herrors.Error:
+			c.BlobText(e.Code, e.CT, c.Err.Error())
+		default:
+			c.Text(500, c.Err.Error())
+		}
 	}
-	return
-}
-
-// GetReqDatas returns the all request parameters from the http request context.
-func GetReqDatas(req *http.Request) (datas map[string]interface{}) {
-	if c := GetContext(req); c != nil {
-		datas = c.Data
-	}
-	return
-}
-
-// GetReqData returns the any request parameter by the key from the http request
-// context.
-//
-// If the key does not exist, return nil.
-func GetReqData(req *http.Request, key string) (value interface{}) {
-	if c := GetContext(req); c != nil && c.Data != nil {
-		value = c.Data[key]
-	}
-	return
-}
-
-// SetReqData stores the any key-value request parameter into the http request
-// context, and returns the new http request.
-//
-// If no request context is not set, use DefaultContextAllocator to create
-// a new one and store it into the new http request.
-func SetReqData(req *http.Request, key string, value interface{}) (newreq *http.Request) {
-	if key == "" {
-		panic("the request parameter key is empty")
-	}
-	if value == nil {
-		panic("the request parameter value is nil")
-	}
-
-	c := GetContext(req)
-	if c == nil {
-		c = DefaultContextAllocator.Acquire()
-		req = SetContext(req, c)
-		c.Request = req
-	}
-
-	if c.Data == nil {
-		c.Data = make(map[string]interface{}, 8)
-	}
-	c.Data[key] = value
-
-	return req
-}
-
-// SetReqDatas is the same as SetReqData, but stores a set of key-value parameters.
-func SetReqDatas(req *http.Request, datas map[string]interface{}) (newreq *http.Request) {
-	if len(datas) == 0 {
-		return req
-	}
-
-	c := GetContext(req)
-	if c == nil {
-		c = DefaultContextAllocator.Acquire()
-		req = SetContext(req, c)
-		c.Request = req
-	}
-
-	if c.Data == nil {
-		c.Data = make(map[string]interface{}, 8+len(datas))
-	}
-
-	for key, value := range datas {
-		c.Data[key] = value
-	}
-
-	return req
 }
 
 // Handler is a handler to handle the http request.
@@ -208,28 +144,15 @@ type Handler func(*Context)
 
 // ServeHTTP implements the interface http.Handler.
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	c, new := GetOrNewContext(r)
-	if new {
-		if rw, ok := w.(ResponseWriter); ok {
-			c.ResponseWriter = rw
-		} else {
-			c.ResponseWriter = NewResponseWriter(w)
-		}
-
+	c := GetContext(w, r)
+	if c == nil {
+		c = DefaultContextAllocator.Acquire()
+		c.ResponseWriter = NewResponseWriter(w)
+		c.Request = r
 		defer DefaultContextAllocator.Release(c)
 	}
-
 	h(c)
-	if !c.WroteHeader() {
-		switch e := c.Err.(type) {
-		case nil:
-			c.WriteHeader(200)
-		case herrors.Error:
-			c.BlobText(e.Code, e.CT, c.Err.Error())
-		default:
-			c.Text(500, c.Err.Error())
-		}
-	}
+	handleContextResult(c)
 }
 
 // HandlerWithError is a handler to handle the http request with the error.
@@ -237,31 +160,25 @@ type HandlerWithError func(*Context) error
 
 // ServeHTTP implements the interface http.Handler.
 func (h HandlerWithError) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	c, new := GetOrNewContext(r)
-	if new {
-		if rw, ok := w.(ResponseWriter); ok {
-			c.ResponseWriter = rw
-		} else {
-			c.ResponseWriter = NewResponseWriter(w)
-		}
-
+	c := GetContext(w, r)
+	if c == nil {
+		c = DefaultContextAllocator.Acquire()
+		c.ResponseWriter = NewResponseWriter(w)
+		c.Request = r
 		defer DefaultContextAllocator.Release(c)
 	}
-
 	c.Err = h(c)
-	if !c.WroteHeader() {
-		switch e := c.Err.(type) {
-		case nil:
-			c.WriteHeader(200)
-		case herrors.Error:
-			c.BlobText(e.Code, e.CT, c.Err.Error())
-		default:
-			c.Text(500, c.Err.Error())
-		}
-	}
+	handleContextResult(c)
 }
 
 var _ ResponseWriter = &Context{}
+
+// ContextGetter is used to get the Context from the http request or response.
+type ContextGetter interface {
+	// Return the Context from the http request or response.
+	// If the Context does not exist, return nil.
+	GetContext(http.ResponseWriter, *http.Request) *Context
+}
 
 // Context is used to represents the context information of the request.
 type Context struct {
@@ -276,10 +193,25 @@ type Context struct {
 	Reg3 interface{}            // The register to save the temporary context value.
 	Data map[string]interface{} // A set of any key-value data
 
-	Renderer     render.Renderer // Render the content to the client
-	BodyBinder   binder.Binder   // Bind the value to the request body
-	QueryBinder  binder.Binder   // Bind the value to the request query
-	HeaderBinder binder.Binder   // Bind the value to the request header
+	// Render the content to the client.
+	//
+	// If nil, use render.DefaultRenderer instead.
+	Renderer render.Renderer
+
+	// Bind the value to the request body
+	//
+	// If nil, use binder.BodyBinder instead.
+	BodyBinder binder.Binder
+
+	// Bind the value to the request query.
+	//
+	// If nil, use binder.QueryBinder instead.
+	QueryBinder binder.Binder
+
+	// Bind the value to the request header.
+	//
+	// If nil, use binder.HeaderBinder instead.
+	HeaderBinder binder.Binder
 
 	// Query and Cookies are used to cache the parsed request query and cookies.
 	Cookies []*http.Cookie
@@ -289,6 +221,11 @@ type Context struct {
 // NewContext returns a new Context.
 func NewContext(dataCapSize int) *Context {
 	return &Context{Data: make(map[string]interface{}, dataCapSize)}
+}
+
+// GetContext implements the interface ContextGetter which returns itself.
+func (c *Context) GetContext(http.ResponseWriter, *http.Request) *Context {
+	return c
 }
 
 // Reset resets the context itself.
@@ -434,7 +371,7 @@ func (c *Context) Redirect(code int, toURL string) {
 // Render renders the response with the name and the the data.
 func (c *Context) Render(code int, name string, data interface{}) (err error) {
 	if c.Renderer == nil {
-		err = DefaultRenderer.Render(c.ResponseWriter, code, name, data)
+		err = render.DefaultRenderer.Render(c.ResponseWriter, code, name, data)
 	} else {
 		err = c.Renderer.Render(c.ResponseWriter, code, name, data)
 	}
