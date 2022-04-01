@@ -95,14 +95,16 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/xgfone/go-apiserver/http/middlewares"
 	"github.com/xgfone/go-apiserver/http/reqresp"
+	"github.com/xgfone/go-apiserver/http/router"
 	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
 	"github.com/xgfone/go-apiserver/http/vhost"
 )
 
 func httpHandler(route string) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		c := reqresp.GetContext(r)
+		c := reqresp.GetContext(rw, r)
 		fmt.Fprintf(rw, "%s: %s", route, c.Data["id"])
 	}
 }
@@ -136,7 +138,9 @@ func main() {
 	vhost4.Path("/path/{id}").GET(httpHandler("route4"))
 	vhosts.AddVHost("*.example2.com", vhost4)
 
-	http.ListenAndServe("127.0.0.1:80", vhosts)
+	router := router.NewRouter(vhosts)
+	router.Middlewares.Use(middlewares.Context(0)) // Add Context to support path parameters
+	http.ListenAndServe("127.0.0.1:80", router)
 
 	// Open a terminal and run the program:
 	// $ go run main.go

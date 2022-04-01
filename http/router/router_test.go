@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package router implements a router of the http handler.
 package router
 
 import (
@@ -29,6 +28,7 @@ import (
 
 type rmFunc func(http.ResponseWriter, *http.Request, http.Handler)
 
+func (f rmFunc) ServeHTTP(http.ResponseWriter, *http.Request) {}
 func (f rmFunc) Route(w http.ResponseWriter, r *http.Request, no http.Handler) {
 	f(w, r, no)
 }

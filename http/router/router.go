@@ -38,11 +38,14 @@ type Router struct {
 	NotFound http.Handler
 
 	// RouteManager is used to manage the routes.
-	RouteManager
+	//
+	// If implementing the interface RouteManager, use the method Route
+	// instead of ServeHTTP with NotFound.
+	RouteManager http.Handler
 }
 
 // NewRouter returns a new Router with the route manager.
-func NewRouter(routeManager RouteManager) *Router {
+func NewRouter(routeManager http.Handler) *Router {
 	r := &Router{
 		RouteManager: routeManager,
 		Middlewares:  middleware.NewManager(nil),
@@ -59,5 +62,9 @@ func (r *Router) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) serveHTTP(resp http.ResponseWriter, req *http.Request) {
-	r.Route(resp, req, r.NotFound)
+	if m, ok := r.RouteManager.(RouteManager); ok {
+		m.Route(resp, req, r.NotFound)
+	} else {
+		r.RouteManager.ServeHTTP(resp, req)
+	}
 }
