@@ -26,6 +26,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/binder"
 	"github.com/xgfone/go-apiserver/http/header"
+	"github.com/xgfone/go-apiserver/http/herrors"
 	"github.com/xgfone/go-apiserver/http/render"
 )
 
@@ -200,6 +201,64 @@ func SetReqDatas(req *http.Request, datas map[string]interface{}) (newreq *http.
 	}
 
 	return req
+}
+
+// Handler is a handler to handle the http request.
+type Handler func(*Context)
+
+// ServeHTTP implements the interface http.Handler.
+func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	c, new := GetOrNewContext(r)
+	if new {
+		if rw, ok := w.(ResponseWriter); ok {
+			c.ResponseWriter = rw
+		} else {
+			c.ResponseWriter = NewResponseWriter(w)
+		}
+
+		defer DefaultContextAllocator.Release(c)
+	}
+
+	h(c)
+	if !c.WroteHeader() {
+		switch e := c.Err.(type) {
+		case nil:
+			c.WriteHeader(200)
+		case herrors.Error:
+			c.BlobText(e.Code, e.CT, c.Err.Error())
+		default:
+			c.Text(500, c.Err.Error())
+		}
+	}
+}
+
+// HandlerWithError is a handler to handle the http request with the error.
+type HandlerWithError func(*Context) error
+
+// ServeHTTP implements the interface http.Handler.
+func (h HandlerWithError) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	c, new := GetOrNewContext(r)
+	if new {
+		if rw, ok := w.(ResponseWriter); ok {
+			c.ResponseWriter = rw
+		} else {
+			c.ResponseWriter = NewResponseWriter(w)
+		}
+
+		defer DefaultContextAllocator.Release(c)
+	}
+
+	c.Err = h(c)
+	if !c.WroteHeader() {
+		switch e := c.Err.(type) {
+		case nil:
+			c.WriteHeader(200)
+		case herrors.Error:
+			c.BlobText(e.Code, e.CT, c.Err.Error())
+		default:
+			c.Text(500, c.Err.Error())
+		}
+	}
 }
 
 var _ ResponseWriter = &Context{}

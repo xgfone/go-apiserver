@@ -18,7 +18,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/http/herrors"
 	"github.com/xgfone/go-apiserver/http/matcher"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/middleware"
@@ -244,60 +243,14 @@ func (b RouteBuilder) Use(middlewares ...middleware.Middleware) RouteBuilder {
 
 // ContextHandler is the same HandlerFunc, but wraps the request and response
 // into Context.
-func (b RouteBuilder) ContextHandler(h func(*reqresp.Context)) error {
-	return b.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, new := reqresp.GetOrNewContext(r)
-		if new {
-			if rw, ok := w.(reqresp.ResponseWriter); ok {
-				c.ResponseWriter = rw
-			} else {
-				c.ResponseWriter = reqresp.NewResponseWriter(w)
-			}
-
-			defer reqresp.DefaultContextAllocator.Release(c)
-		}
-
-		h(c)
-		if !c.WroteHeader() {
-			switch e := c.Err.(type) {
-			case nil:
-				c.WriteHeader(200)
-			case herrors.Error:
-				c.BlobText(e.Code, e.CT, c.Err.Error())
-			default:
-				c.Text(500, c.Err.Error())
-			}
-		}
-	})
+func (b RouteBuilder) ContextHandler(h reqresp.Handler) error {
+	return b.Handler(h)
 }
 
 // ContextHandlerWithError is the same ContextHandler, but supports to return
 // an error.
-func (b RouteBuilder) ContextHandlerWithError(h func(*reqresp.Context) error) error {
-	return b.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, new := reqresp.GetOrNewContext(r)
-		if new {
-			if rw, ok := w.(reqresp.ResponseWriter); ok {
-				c.ResponseWriter = rw
-			} else {
-				c.ResponseWriter = reqresp.NewResponseWriter(w)
-			}
-
-			defer reqresp.DefaultContextAllocator.Release(c)
-		}
-
-		c.Err = h(c)
-		if !c.WroteHeader() {
-			switch e := c.Err.(type) {
-			case nil:
-				c.WriteHeader(200)
-			case herrors.Error:
-				c.BlobText(e.Code, e.CT, c.Err.Error())
-			default:
-				c.Text(500, c.Err.Error())
-			}
-		}
-	})
+func (b RouteBuilder) ContextHandlerWithError(h reqresp.HandlerWithError) error {
+	return b.Handler(h)
 }
 
 // HandlerFunc registers the route with the handler functions.
