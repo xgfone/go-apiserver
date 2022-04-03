@@ -30,6 +30,11 @@ type Balancer interface {
 // ForwardFunc is the function to forward the request to one of the servers.
 type ForwardFunc func(http.ResponseWriter, *http.Request, upstream.Servers) error
 
+// NewBalancer returns a new balancer with the policy and the forward function.
+func NewBalancer(policy string, forward ForwardFunc) Balancer {
+	return balancer{forward: forward, policy: policy}
+}
+
 type balancer struct {
 	forward ForwardFunc
 	policy  string
@@ -38,27 +43,4 @@ type balancer struct {
 func (f balancer) Policy() string { return f.policy }
 func (f balancer) Forward(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
 	return f.forward(w, r, ss)
-}
-
-// NewBalancer returns a new balancer with the policy and the forward function.
-func NewBalancer(policy string, forward ForwardFunc) Balancer {
-	return balancer{forward: forward, policy: policy}
-}
-
-func forward(w http.ResponseWriter, r *http.Request, s upstream.Server) error {
-	return s.HandleHTTP(w, r)
-}
-
-func calcServerOnWeight(ss upstream.Servers, pos uint64) upstream.Server {
-	_len := len(ss) - 1
-	for {
-		var total uint64
-		for i := _len; i >= 0; i-- {
-			total += uint64(upstream.GetServerWeight(ss[i]))
-			if pos < total {
-				return ss[i]
-			}
-		}
-		pos %= total
-	}
 }

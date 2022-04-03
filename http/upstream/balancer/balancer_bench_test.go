@@ -25,27 +25,26 @@ import (
 func benchmarkBalancer(b *testing.B, balancer Balancer) {
 	servers := upstream.Servers{
 		newTestServer("127.0.0.1", 1),
-		newTestServer("127.0.0.2", 1),
-		newTestServer("127.0.0.3", 1),
-		newTestServer("127.0.0.4", 1),
-		newTestServer("127.0.0.5", 1),
-		newTestServer("127.0.0.6", 1),
-		newTestServer("127.0.0.7", 1),
-		newTestServer("127.0.0.8", 1),
+		newTestServer("127.0.0.2", 2),
+		newTestServer("127.0.0.3", 3),
+		newTestServer("127.0.0.4", 4),
+		newTestServer("127.0.0.5", 5),
+		newTestServer("127.0.0.6", 6),
+		newTestServer("127.0.0.7", 7),
+		newTestServer("127.0.0.8", 8),
 	}
 
 	rec := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1", nil)
+	req.RemoteAddr = "127.0.0.1"
 
 	b.ResetTimer()
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		balancer.Forward(rec, req, servers)
-	}
-}
-
-func BenchmarkSourceIPHash(b *testing.B) {
-	benchmarkBalancer(b, SourceIPHash())
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			balancer.Forward(rec, req, servers)
+		}
+	})
 }
 
 func BenchmarkRandom(b *testing.B) {
@@ -62,6 +61,10 @@ func BenchmarkWeightedRandom(b *testing.B) {
 
 func BenchmarkWeightedRoundRobin(b *testing.B) {
 	benchmarkBalancer(b, WeightedRoundRobin())
+}
+
+func BenchmarkSourceIPHash(b *testing.B) {
+	benchmarkBalancer(b, SourceIPHash())
 }
 
 func BenchmarkLeastConn(b *testing.B) {

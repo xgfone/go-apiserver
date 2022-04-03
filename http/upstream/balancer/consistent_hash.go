@@ -25,7 +25,11 @@ import (
 // The policy name is equal to hashPolicy with the prefix "consistent_hash_".
 func ConsistentHash(hashPolicy string, hash func(*http.Request) int) Balancer {
 	return NewBalancer("consistent_hash_"+hashPolicy,
-		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
-			return forward(w, r, s[hash(r)%len(s)])
+		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
+			_len := len(ss)
+			if _len == 1 {
+				return ss[0].HandleHTTP(w, r)
+			}
+			return ss[hash(r)%_len].HandleHTTP(w, r)
 		})
 }

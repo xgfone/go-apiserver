@@ -31,12 +31,15 @@ func init() {
 func LeastConn() Balancer {
 	return NewBalancer("least_conn",
 		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) (err error) {
+			if len(ss) == 1 {
+				return ss[0].HandleHTTP(w, r)
+			}
 			servers := upstream.DefaultServersPool.Acquire()
 			servers = append(servers, ss...)
 			sort.Stable(leastConnServers(servers))
-			err = forward(w, r, servers[0])
+			server := servers[0]
 			upstream.DefaultServersPool.Release(servers)
-			return err
+			return server.HandleHTTP(w, r)
 		})
 }
 

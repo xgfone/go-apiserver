@@ -16,10 +16,8 @@ package balancer
 
 import (
 	"encoding/binary"
-	"math/rand"
 	"net"
 	"net/http"
-	"time"
 
 	"github.com/xgfone/go-apiserver/http/upstream"
 	"github.com/xgfone/go-apiserver/nets"
@@ -33,12 +31,15 @@ func init() {
 //
 // The policy name is "source_ip_hash".
 func SourceIPHash() Balancer {
-	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	random := newRandom()
 	return NewBalancer("source_ip_hash",
 		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
-			var value uint64
 			_len := len(ss)
+			if _len == 1 {
+				return ss[0].HandleHTTP(w, r)
+			}
 
+			var value uint64
 			host, _ := nets.SplitHostPort(r.RemoteAddr)
 			switch ip := net.ParseIP(host); len(ip) {
 			case net.IPv4len:
@@ -46,9 +47,9 @@ func SourceIPHash() Balancer {
 			case net.IPv6len:
 				value = binary.BigEndian.Uint64(ip[8:16])
 			default:
-				value = uint64(random.Intn(_len))
+				value = uint64(random(_len))
 			}
 
-			return forward(w, r, ss[value%uint64(_len)])
+			return ss[value%uint64(_len)].HandleHTTP(w, r)
 		})
 }

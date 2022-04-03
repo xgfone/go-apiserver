@@ -34,8 +34,8 @@ func registerBuiltinBuidler(t string, f func() Balancer) {
 // For the builtin builders as following, they ignore the config parameter
 // and never return an error.
 //   - random
-//   - weight_random
 //   - round_robin
+//   - weight_random
 //   - weight_round_robin
 //   - source_ip_hash
 //   - least_conn

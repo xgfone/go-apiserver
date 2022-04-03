@@ -17,10 +17,22 @@ package balancer
 import (
 	"math/rand"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/xgfone/go-apiserver/http/upstream"
 )
+
+func newRandom() func(int) int {
+	lock := new(sync.Mutex)
+	random := rand.New(rand.NewSource(time.Now().UnixNano())).Intn
+	return func(i int) (n int) {
+		lock.Lock()
+		n = random(i)
+		lock.Unlock()
+		return
+	}
+}
 
 func init() {
 	registerBuiltinBuidler("random", Random)
@@ -31,10 +43,14 @@ func init() {
 //
 // The policy name is "random".
 func Random() Balancer {
-	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	random := newRandom()
 	return NewBalancer("random",
-		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
-			return forward(w, r, s[random.Intn(len(s))])
+		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
+			_len := len(ss)
+			if _len == 1 {
+				return ss[0].HandleHTTP(w, r)
+			}
+			return ss[random(_len)].HandleHTTP(w, r)
 		})
 }
 
@@ -42,10 +58,29 @@ func Random() Balancer {
 //
 // The policy name is "weight_random".
 func WeightedRandom() Balancer {
-	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	random := newRandom()
 	return NewBalancer("weight_random",
-		func(w http.ResponseWriter, r *http.Request, s upstream.Servers) error {
-			pos := uint64(random.Intn(len(s)))
-			return forward(w, r, calcServerOnWeight(s, pos))
+		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
+			_len := len(ss)
+			if _len == 1 {
+				return ss[0].HandleHTTP(w, r)
+			}
+
+			var total int
+			for i := 0; i < _len; i++ {
+				total += upstream.GetServerWeight(ss[i])
+			}
+
+			pos := random(total)
+			for {
+				var total int
+				for i := 0; i < _len; i++ {
+					total += upstream.GetServerWeight(ss[i])
+					if pos <= total {
+						return ss[i].HandleHTTP(w, r)
+					}
+				}
+				pos %= total
+			}
 		})
 }
