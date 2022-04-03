@@ -291,42 +291,126 @@ func (b RouteBuilder) addRoute(handler http.Handler) (err error) {
 
 // GET is a convenient function to register the route with the handler,
 // which is the same as b.Method(http.MethodGet).Handler(handler).
-func (b RouteBuilder) GET(handler http.HandlerFunc) RouteBuilder {
+func (b RouteBuilder) GET(handler http.Handler) RouteBuilder {
 	b.Method(http.MethodGet).SetPanic(true).Handler(handler)
 	return b
 }
 
 // PUT is a convenient function to register the route with the handler,
 // which is the same as b.Method(http.MethodPut).Handler(handler).
-func (b RouteBuilder) PUT(handler http.HandlerFunc) RouteBuilder {
+func (b RouteBuilder) PUT(handler http.Handler) RouteBuilder {
 	b.Method(http.MethodPut).SetPanic(true).Handler(handler)
 	return b
 }
 
 // POST is a convenient function to register the route with the handler,
 // which is the same as b.Method(http.MethodPost).Handler(handler).
-func (b RouteBuilder) POST(handler http.HandlerFunc) RouteBuilder {
+func (b RouteBuilder) POST(handler http.Handler) RouteBuilder {
 	b.Method(http.MethodPost).SetPanic(true).Handler(handler)
 	return b
 }
 
 // DELETE is a convenient function to register the route with the handler,
 // which is the same as b.Method(http.MethodDelete).Handler(handler).
-func (b RouteBuilder) DELETE(handler http.HandlerFunc) RouteBuilder {
+func (b RouteBuilder) DELETE(handler http.Handler) RouteBuilder {
 	b.Method(http.MethodDelete).SetPanic(true).Handler(handler)
 	return b
 }
 
 // PATCH is a convenient function to register the route with the handler,
 // which is the same as b.Method(http.MethodPatch).Handler(handler).
-func (b RouteBuilder) PATCH(handler http.HandlerFunc) RouteBuilder {
+func (b RouteBuilder) PATCH(handler http.Handler) RouteBuilder {
 	b.Method(http.MethodPatch).SetPanic(true).Handler(handler)
 	return b
 }
 
 // HEAD is a convenient function to register the route with the handler,
 // which is the same as b.Method(http.MethodHead).Handler(handler).
-func (b RouteBuilder) HEAD(handler http.HandlerFunc) RouteBuilder {
+func (b RouteBuilder) HEAD(handler http.Handler) RouteBuilder {
+	b.Method(http.MethodHead).SetPanic(true).Handler(handler)
+	return b
+}
+
+// GETFunc is a convenient function to register the route with the function
+// handler, which is the same as b.Method(http.MethodGet).Handler(handler).
+func (b RouteBuilder) GETFunc(handler http.HandlerFunc) RouteBuilder {
+	b.Method(http.MethodGet).SetPanic(true).Handler(handler)
+	return b
+}
+
+// PUTFunc is a convenient function to register the route with the function
+// handler, which is the same as b.Method(http.MethodPut).Handler(handler).
+func (b RouteBuilder) PUTFunc(handler http.HandlerFunc) RouteBuilder {
+	b.Method(http.MethodPut).SetPanic(true).Handler(handler)
+	return b
+}
+
+// POSTFunc is a convenient function to register the route with the function
+// handler, which is the same as b.Method(http.MethodPost).Handler(handler).
+func (b RouteBuilder) POSTFunc(handler http.HandlerFunc) RouteBuilder {
+	b.Method(http.MethodPost).SetPanic(true).Handler(handler)
+	return b
+}
+
+// DELETEFunc is a convenient function to register the route with the function
+// handler, which is the same as b.Method(http.MethodDelete).Handler(handler).
+func (b RouteBuilder) DELETEFunc(handler http.HandlerFunc) RouteBuilder {
+	b.Method(http.MethodDelete).SetPanic(true).Handler(handler)
+	return b
+}
+
+// PATCHFunc is a convenient function to register the route with the function
+// handler, which is the same as b.Method(http.MethodPatch).Handler(handler).
+func (b RouteBuilder) PATCHFunc(handler http.HandlerFunc) RouteBuilder {
+	b.Method(http.MethodPatch).SetPanic(true).Handler(handler)
+	return b
+}
+
+// HEADFunc is a convenient function to register the route with the function
+// handler, which is the same as b.Method(http.MethodHead).Handler(handler).
+func (b RouteBuilder) HEADFunc(handler http.HandlerFunc) RouteBuilder {
+	b.Method(http.MethodHead).SetPanic(true).Handler(handler)
+	return b
+}
+
+// GETContext is a convenient function to register the route with the context
+// handler, which is the same as b.Method(http.MethodGet).Handler(handler).
+func (b RouteBuilder) GETContext(handler reqresp.Handler) RouteBuilder {
+	b.Method(http.MethodGet).SetPanic(true).Handler(handler)
+	return b
+}
+
+// PUTContext is a convenient function to register the route with the context
+// handler, which is the same as b.Method(http.MethodPut).Handler(handler).
+func (b RouteBuilder) PUTContext(handler reqresp.Handler) RouteBuilder {
+	b.Method(http.MethodPut).SetPanic(true).Handler(handler)
+	return b
+}
+
+// POSTContext is a convenient function to register the route with the context
+// handler, which is the same as b.Method(http.MethodPost).Handler(handler).
+func (b RouteBuilder) POSTContext(handler reqresp.Handler) RouteBuilder {
+	b.Method(http.MethodPost).SetPanic(true).Handler(handler)
+	return b
+}
+
+// DELETEContext is a convenient function to register the route with the context
+// handler, which is the same as b.Method(http.MethodDelete).Handler(handler).
+func (b RouteBuilder) DELETEContext(handler reqresp.Handler) RouteBuilder {
+	b.Method(http.MethodDelete).SetPanic(true).Handler(handler)
+	return b
+}
+
+// PATCHContext is a convenient function to register the route with the context
+// handler, which is the same as b.Method(http.MethodPatch).Handler(handler).
+func (b RouteBuilder) PATCHContext(handler reqresp.Handler) RouteBuilder {
+	b.Method(http.MethodPatch).SetPanic(true).Handler(handler)
+	return b
+}
+
+// HEADContext is a convenient function to register the route with the context
+// handler, which is the same as b.Method(http.MethodHead).Handler(handler).
+func (b RouteBuilder) HEADContext(handler reqresp.Handler) RouteBuilder {
 	b.Method(http.MethodHead).SetPanic(true).Handler(handler)
 	return b
 }
