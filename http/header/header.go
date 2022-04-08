@@ -96,11 +96,14 @@ func SetContentType(header http.Header, ct string) {
 	}
 }
 
-// ContentType returns the Content-Type of the header without the charset.
-func ContentType(header http.Header) (ct string) {
-	ct = header.Get(HeaderContentType)
-	if index := strings.IndexAny(ct, ";"); index > 0 {
-		ct = strings.TrimSpace(ct[:index])
+// ContentType is the alias of the function MediaType.
+func ContentType(header http.Header) string { return MediaType(header) }
+
+// MediaType returns the MIME media type portion of the header "Content-Type".
+func MediaType(header http.Header) (mime string) {
+	mime = header.Get(HeaderContentType)
+	if index := strings.IndexAny(mime, ";"); index > 0 {
+		mime = strings.TrimSpace(mime[:index])
 	}
 	return
 }
@@ -109,7 +112,7 @@ func ContentType(header http.Header) (ct string) {
 //
 // Return "" if there is no charset.
 func Charset(header http.Header) string {
-	ct := header.Get("Content-Type")
+	ct := header.Get(HeaderContentType)
 	for loop := len(ct) > 0; loop; {
 		index := strings.IndexByte(ct, ';')
 		if loop = index > 0; loop {
@@ -128,6 +131,6 @@ func Charset(header http.Header) string {
 // IsWebSocket reports whether the request is websocket.
 func IsWebSocket(req *http.Request) bool {
 	return req.Method == http.MethodGet &&
-		req.Header.Get(HeaderConnection) == "Upgrade" &&
+		req.Header.Get(HeaderConnection) == HeaderUpgrade &&
 		req.Header.Get(HeaderUpgrade) == "websocket"
 }
