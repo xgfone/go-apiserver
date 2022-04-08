@@ -25,6 +25,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/upstream"
 	"github.com/xgfone/go-apiserver/http/upstream/balancer"
+	"github.com/xgfone/go-apiserver/http/upstream/healthcheck"
 	"github.com/xgfone/go-apiserver/internal/atomic"
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/nets"
@@ -65,6 +66,8 @@ func (s *upserver) SetOnline(online bool) (ok bool) {
 	}
 	return
 }
+
+var _ healthcheck.Updater = &LoadBalancer{}
 
 // LoadBalancer is used to forward the http request to one of the backend servers.
 type LoadBalancer struct {
@@ -214,18 +217,15 @@ func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // SetServerOnline sets the online status of the server by its id.
 //
-// If the server does not exist, do nothing and return false.
-func (lb *LoadBalancer) SetServerOnline(serverID string, online bool) (ok bool) {
+// If the server does not exist, do nothing.
+func (lb *LoadBalancer) SetServerOnline(serverID string, online bool) {
 	lb.slock.RLock()
-	upserver, ok := lb.servers[serverID]
-	if ok {
+	if upserver, ok := lb.servers[serverID]; ok {
 		if upserver.SetOnline(online) {
 			lb.updateServers()
 		}
 	}
 	lb.slock.RUnlock()
-
-	return
 }
 
 // SetServerOnlines sets the online statuses of a set of the servers.
@@ -307,13 +307,17 @@ func (lb *LoadBalancer) UpsertServers(servers ...upstream.Server) {
 	lb.updateServers()
 }
 
-// RemoveServer removes and returns the server by the server id.
+// UpsertServer adds or updates the given server with the online status.
+func (lb *LoadBalancer) UpsertServer(server upstream.Server) {
+	lb.UpsertServers(server)
+}
+
+// RemoveServer removes the server by the server id.
 //
-// If the server does not exist, do nothing and return nil.
-func (lb *LoadBalancer) RemoveServer(id string) (server upstream.Server) {
+// If the server does not exist, do nothing..
+func (lb *LoadBalancer) RemoveServer(id string) {
 	lb.slock.Lock()
-	if upserver, ok := lb.servers[id]; ok {
-		server = upserver.Server
+	if _, ok := lb.servers[id]; ok {
 		delete(lb.servers, id)
 		lb.updateServers()
 	}
