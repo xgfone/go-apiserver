@@ -14,55 +14,85 @@
 
 package action
 
-import "net/http"
+import (
+	"encoding/json"
+	"io"
+	"net/http"
+)
 
 // Response represents a response result.
 type Response struct {
-	RequestID string      `json:"RequestId,omitempty" xml:"RequestId,omitempty"`
-	Error     error       `json:",omitempty" xml:",omitempty"`
-	Data      interface{} `json:",omitempty" xml:",omitempty"`
+	RequestID string      `json:"RequestId,omitempty" yaml:"RequestId,omitempty"`
+	Error     error       `json:"Error,omitempty" yaml:"Error,omitempty"`
+	Data      interface{} `json:"Data,omitempty" yaml:"Data,omitempty"`
 }
 
-func respond(c *Context, resp Response) {
+// Respond sends the response by the context as JSON.
+func (r Response) Respond(c *Context) { c.Respond(r) }
+
+// WithRequestID returns a new Response with the given request id.
+func (r Response) WithRequestID(requestID string) Response {
+	r.RequestID = requestID
+	return r
+}
+
+// WithData returns a new Response with the given data.
+func (r Response) WithData(data interface{}) Response {
+	r.Data = data
+	return r
+}
+
+// WithError returns a new Response with the given error.
+func (r Response) WithError(err error) Response {
+	r.Error = err
+	return r
+}
+
+// Decode uses the decode function to decode the result to the response.
+func (r *Response) Decode(decode func(interface{}) error) (err error) {
+	return decode(r)
+}
+
+// DecodeJSON uses json decoder to decode from the reader into the response.
+func (r *Response) DecodeJSON(reader io.Reader) (err error) {
+	return json.NewDecoder(reader).Decode(r)
+}
+
+// DecodeJSONBytes uses json decoder to decode the []byte data into the response.
+func (r *Response) DecodeJSONBytes(data []byte) (err error) {
+	return json.Unmarshal(data, r)
+}
+
+// Respond is the same as c.JSON(200, response).
+func (c *Context) Respond(response Response) {
 	var err error
 	if c.respond != nil {
-		err = c.respond(c, resp)
+		err = c.respond(c, response)
 	} else {
-		err = c.JSON(200, resp)
+		err = c.JSON(200, response)
 	}
 
-	if err != nil {
+	if err != nil && c.Err == nil {
 		c.Err = err
 	}
 }
 
-// Respond is equal to
-//   r := Response{Data: data, Error: Error{Code: code, Message: msg, Causes: errs}}
-//   c.JSON(200, r).
-func (c *Context) Respond(code, msg string, data interface{}, errs ...error) {
-	resp := Response{Data: data}
-	if code != "" {
-		c.Err = NewError(code, msg).AppendCauses(errs...)
-	}
-	respond(c, resp)
-}
-
-// Success is equal to c.Respond("", "", data).
-func (c *Context) Success(data interface{}) {
-	respond(c, Response{Data: data})
-}
+// Success is equal to c.Respond(Response{Data: data}).
+func (c *Context) Success(data interface{}) { c.Respond(Response{Data: data}) }
 
 // Failure is the same as c.JSON(200, Response{Error: err}).
 //
 // If err is nil, it is equal to c.Success(nil).
 func (c *Context) Failure(err error) {
-	resp := Response{Error: err}
-	if _, ok := err.(Error); !ok && err == nil {
-		resp.Error = ErrInternalServerError.WithMessage(err.Error())
+	c.Err = err
+
+	switch err.(type) {
+	case nil, Error:
+	default:
+		err = ErrInternalServerError.WithError(err)
 	}
 
-	c.Err = err
-	respond(c, resp)
+	c.Respond(Response{Error: err})
 }
 
 func notFoundHandler(resp http.ResponseWriter, req *http.Request) {
