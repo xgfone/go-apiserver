@@ -19,54 +19,125 @@ import (
 	"strings"
 )
 
+// Predefine some error codes.
+const (
+	CodeInvalidAction        = "InvalidAction"
+	CodeInvalidVersion       = "InvalidVersion"
+	CodeInvalidParams        = "InvalidParams"
+	CodeUnsupportedProtocol  = "UnsupportedProtocol"
+	CodeUnsupportedOperation = "UnsupportedOperation"
+
+	CodeAuthFailureTokenFailure     = "AuthFailure.TokenFailure"
+	CodeAuthFailureSignatureFailure = "AuthFailure.SignatureFailure"
+	CodeAuthFailureSignatureExpire  = "AuthFailure.SignatureExpire"
+	CodeUnauthorizedOperation       = "UnauthorizedOperation"
+
+	CodeFailedOperation     = "FailedOperation"
+	CodeInternalServerError = "InternalServerError"
+	CodeGatewayTimeout      = "GatewayTimeout"
+	CodeServiceUnavailable  = "ServiceUnavailable"
+
+	CodeQuotaLimitExceeded   = "QuotaLimitExceeded"
+	CodeRequestLimitExceeded = "RequestLimitExceeded"
+
+	CodeInstanceInUse        = "InstanceInUse"
+	CodeInstanceNotFound     = "InstanceNotFound"
+	CodeInstanceUnavailable  = "InstanceUnavailable"
+	CodeInstanceInconsistent = "InstanceInconsistent"
+	CodeResourceInsufficient = "ResourceInsufficient"
+	CodeBalanceInsufficient  = "BalanceInsufficient"
+)
+
 // Predefine some errors.
 var (
-	ErrInvalidAction        = NewError("InvalidAction", "invalid action")
-	ErrInvalidVersion       = NewError("InvalidVersion", "invalid version")
-	ErrInvalidParameter     = NewError("InvalidParams", "invalid parameter")
-	ErrUnsupportedProtocol  = NewError("UnsupportedProtocol", "protocol is unsupported")
-	ErrUnsupportedOperation = NewError("UnsupportedOperation", "operation is unsupported")
+	ErrInvalidAction        = NewError(CodeInvalidAction, "invalid action")
+	ErrInvalidVersion       = NewError(CodeInvalidVersion, "invalid version")
+	ErrInvalidParameter     = NewError(CodeInvalidParams, "invalid parameter")
+	ErrUnsupportedProtocol  = NewError(CodeUnsupportedProtocol, "protocol is unsupported")
+	ErrUnsupportedOperation = NewError(CodeUnsupportedOperation, "operation is unsupported")
 
-	ErrAuthFailureTokenFailure     = NewError("AuthFailure.TokenFailure", "token verification failed")
-	ErrAuthFailureSignatureFailure = NewError("AuthFailure.SignatureFailure", "signature verification failed")
-	ErrAuthFailureSignatureExpire  = NewError("AuthFailure.SignatureExpire", "signature is expired")
-	ErrUnauthorizedOperation       = NewError("UnauthorizedOperation", "operation is unauthorized")
+	ErrAuthFailureTokenFailure     = NewError(CodeAuthFailureTokenFailure, "token verification failed")
+	ErrAuthFailureSignatureFailure = NewError(CodeAuthFailureSignatureFailure, "signature verification failed")
+	ErrAuthFailureSignatureExpire  = NewError(CodeAuthFailureSignatureExpire, "signature is expired")
+	ErrUnauthorizedOperation       = NewError(CodeUnauthorizedOperation, "operation is unauthorized")
 
-	ErrFailedOperation     = NewError("FailedOperation", "operation failed")
-	ErrInternalServerError = NewError("InternalServerError", "internal server error")
-	ErrGatewayTimeout      = NewError("GatewayTimeout", "gateway timeout")
-	ErrServiceUnavailable  = NewError("ServiceUnavailable", "service is unavailable")
+	ErrFailedOperation     = NewError(CodeFailedOperation, "operation failed")
+	ErrInternalServerError = NewError(CodeInternalServerError, "internal server error")
+	ErrGatewayTimeout      = NewError(CodeGatewayTimeout, "gateway timeout")
+	ErrServiceUnavailable  = NewError(CodeServiceUnavailable, "service is unavailable")
 
-	ErrQuotaLimitExceeded   = NewError("QuotaLimitExceeded", "exceed the quota limit")
-	ErrRequestLimitExceeded = NewError("RequestLimitExceeded", "exceed the request limit")
+	ErrQuotaLimitExceeded   = NewError(CodeQuotaLimitExceeded, "exceed the quota limit")
+	ErrRequestLimitExceeded = NewError(CodeRequestLimitExceeded, "exceed the request limit")
 
-	ErrInstanceInUse        = NewError("InstanceInUse", "instance is in use")
-	ErrInstanceNotFound     = NewError("InstanceNotFound", "instance is not found")
-	ErrInstanceUnavailable  = NewError("InstanceUnavailable", "instance is unavailable")
-	ErrInstanceInconsistent = NewError("InstanceInconsistent", "instance is inconsistent")
-	ErrResourceInsufficient = NewError("ResourceInsufficient", "resource is insufficient")
-	ErrBalanceInsufficient  = NewError("BalanceInsufficient", "balance is insufficient")
+	ErrInstanceInUse        = NewError(CodeInstanceInUse, "instance is in use")
+	ErrInstanceNotFound     = NewError(CodeInstanceNotFound, "instance is not found")
+	ErrInstanceUnavailable  = NewError(CodeInstanceUnavailable, "instance is unavailable")
+	ErrInstanceInconsistent = NewError(CodeInstanceInconsistent, "instance is inconsistent")
+	ErrResourceInsufficient = NewError(CodeResourceInsufficient, "resource is insufficient")
+	ErrBalanceInsufficient  = NewError(CodeBalanceInsufficient, "balance is insufficient")
 )
+
+// IsCode reports whether the code is equal to or the child-code of target.
+//
+// Example
+//
+//   IsCode("InstanceNotFound", "InstanceNotFound")    // => true
+//   IsCode("InstanceNotFound", "InstanceUnavailable") // => false
+//   IsCode("AuthFailure.TokenFailure", "AuthFailure") // => true
+//   IsCode("AuthFailure", "AuthFailure.TokenFailure") // => false
+//
+func IsCode(code, target string) bool {
+	if code == target {
+		return true
+	}
+
+	minlen := len(target)
+	return len(code) > minlen && code[minlen] == '.' && code[:minlen] == target
+}
+
+// ErrorIsCode reports whether the code of the error is equal to or the child-code
+// of the target code.
+//
+// If err has not implemented the interface CodeGetter, return false.
+func ErrorIsCode(err error, targetCode string) bool {
+	if c, ok := err.(CodeGetter); ok {
+		return IsCode(c.GetCode(), targetCode)
+	}
+	return false
+}
+
+// CodeGetter is an interface used to get the error code.
+type CodeGetter interface {
+	GetCode() string
+}
 
 // Error represents an error.
 type Error struct {
-	Code      string  `json:",omitempty" xml:",omitempty"`
-	Message   string  `json:",omitempty" xml:",omitempty"`
-	Component string  `json:",omitempty" xml:",omitempty"`
-	Causes    []error `json:",omitempty" xml:",omitempty"`
+	Code      string  `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
+	Message   string  `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
+	Component string  `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
+	Causes    []error `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
 }
 
 // NewError returns a new Error.
 func NewError(code, msg string) Error { return Error{Code: code, Message: msg} }
 
+// Respond sends the response by the context as JSON.
+func (e Error) Respond(c *Context) { c.Failure(e) }
+
 // Clone clones itself to a new one.
 func (e Error) Clone() Error {
-	ne := e
-	if len(e.Causes) == 0 {
-		ne.Causes = append([]error{}, e.Causes...)
+	if len(e.Causes) > 0 {
+		e.Causes = append([]error{}, e.Causes...)
 	}
-	return ne
+	return e
 }
+
+// IsCode is equal to IsCode(e.Code, target).
+func (e Error) IsCode(target string) bool { return IsCode(e.Code, target) }
+
+// GetCode returns the error code.
+func (e Error) GetCode() string { return e.Code }
 
 // Error implements the interface error.
 func (e Error) Error() string {
@@ -145,4 +216,9 @@ func (e Error) AppendCauses(errs ...error) Error {
 		e.Causes = append(e.Causes, errs...)
 	}
 	return e
+}
+
+// WithRequestID returns a Response with the error and request id.
+func (e Error) WithRequestID(requestID string) Response {
+	return Response{RequestID: requestID, Error: e}
 }
