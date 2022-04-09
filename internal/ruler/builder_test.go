@@ -44,7 +44,7 @@ func TestMatcherRuleBuilder(t *testing.T) {
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Method(`GET`, `POST`) || Path(`/path`)"
-	expect = "Or(Or(Method(GET), Method(POST)), Path(/path))"
+	expect = "Or(Method(GET), Method(POST), Path(/path))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) || Method(`GET`) || Path(`/path`)"

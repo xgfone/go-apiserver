@@ -29,6 +29,27 @@ func testMatcher(t *testing.T, req *http.Request, matcher Matcher, match bool) {
 	}
 }
 
+func TestAndOrMatchers(t *testing.T) {
+	m1 := Must(Path("/p1"))
+	m2 := Must(Path("/p2"))
+	m3 := Must(Path("/p3"))
+	m4 := Must(Path("/p4"))
+	m5 := Must(Path("/p5"))
+	m6 := Must(Path("/p6"))
+
+	expect1 := "And(Or(Path(/p1), Path(/p2)), Path(/p3), Path(/p4), Path(/p5), Path(/p6))"
+	s1 := And(Or(m1, m2), m3, And(m4, m5), m6).String()
+	if s1 != expect1 {
+		t.Errorf("expect '%s', but got '%s'", expect1, s1)
+	}
+
+	expect2 := "Or(And(Path(/p1), Path(/p2)), Path(/p3), Path(/p4), Path(/p5), Path(/p6))"
+	s2 := Or(And(m1, m2), m3, Or(m4, m5), m6).String()
+	if s2 != expect2 {
+		t.Errorf("expect '%s', but got '%s'", expect2, s2)
+	}
+}
+
 func TestMatcher(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://www.example.com/path/to/?v1=k1", nil)
 	req.Header.Set("Content-Type", "application/json")

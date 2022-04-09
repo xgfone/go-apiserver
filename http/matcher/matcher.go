@@ -118,8 +118,14 @@ func And(matchers ...Matcher) Matcher {
 		return matchers[0]
 	}
 
-	ms := make(Matchers, len(matchers))
-	copy(ms, matchers)
+	ms := make(Matchers, 0, len(matchers))
+	for _, m := range matchers {
+		if andm, ok := m.(andMatcher); ok {
+			ms = append(ms, Matchers(andm)...)
+		} else {
+			ms = append(ms, m)
+		}
+	}
 	sort.Stable(ms)
 	return andMatcher(ms)
 }
@@ -155,8 +161,14 @@ func Or(matchers ...Matcher) Matcher {
 		return matchers[0]
 	}
 
-	ms := make(Matchers, len(matchers))
-	copy(ms, matchers)
+	ms := make(Matchers, 0, len(matchers))
+	for _, m := range matchers {
+		if orm, ok := m.(orMatcher); ok {
+			ms = append(ms, Matchers(orm)...)
+		} else {
+			ms = append(ms, m)
+		}
+	}
 	sort.Stable(ms)
 	return orMatcher(ms)
 }
