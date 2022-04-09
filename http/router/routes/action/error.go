@@ -229,6 +229,11 @@ func (e Error) AppendCauses(errs ...error) Error {
 	return e
 }
 
+// WithData returns a Response with the error and data.
+func (e Error) WithData(data interface{}) Response {
+	return Response{Data: data, Error: e}
+}
+
 // WithRequestID returns a Response with the error and request id.
 func (e Error) WithRequestID(requestID string) Response {
 	return Response{RequestID: requestID, Error: e}
