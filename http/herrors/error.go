@@ -49,6 +49,23 @@ var (
 	ErrStatusHTTPVersionNotSupported = NewError(http.StatusHTTPVersionNotSupported)
 )
 
+// IsStatusCode reports whether the error has the given status code,
+// which gets the status code from the error by inspect whether it has
+// implemented the interface CodeGetter.
+func IsStatusCode(err error, statusCode int) bool {
+	if c, ok := err.(StatusCodeGetter); ok {
+		return statusCode == c.StatusCode()
+	}
+	return false
+}
+
+// StatusCodeGetter is an interface used to get the status code.
+type StatusCodeGetter interface {
+	StatusCode() int
+}
+
+var _ StatusCodeGetter = Error{}
+
 // Error represents a server error.
 type Error struct {
 	Code int
@@ -58,6 +75,9 @@ type Error struct {
 
 // NewError returns a new Error.
 func NewError(code int) Error { return Error{Code: code} }
+
+// StatusCode implements the interface to return the status code.
+func (e Error) StatusCode() int { return e.Code }
 
 // Error implements the interface error.
 func (e Error) Error() string {
