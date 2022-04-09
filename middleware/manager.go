@@ -26,6 +26,9 @@ import (
 	"github.com/xgfone/go-apiserver/tcp"
 )
 
+// DefaultManager is the default global middleware manager.
+var DefaultManager = NewManager(nil)
+
 type handlerWrapper struct{ Handler interface{} }
 type middlewaresWrapper struct{ Middlewares }
 

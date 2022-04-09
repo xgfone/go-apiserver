@@ -28,6 +28,9 @@ import (
 	"github.com/xgfone/go-apiserver/internal/ruler"
 )
 
+// DefaultRouter is the default global ruler router.
+var DefaultRouter = NewRouter()
+
 type routesWrapper struct{ Routes }
 
 // Router is used to manage a set of routes based on the ruler.

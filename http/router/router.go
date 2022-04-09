@@ -40,7 +40,7 @@ type Router struct {
 	// RouteManager is used to manage the routes.
 	//
 	// If implementing the interface RouteManager, use the method Route
-	// instead of ServeHTTP with NotFound.
+	// with NotFound instead of ServeHTTP.
 	RouteManager http.Handler
 }
 

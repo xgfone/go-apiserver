@@ -106,10 +106,21 @@ func ErrorIsCode(err error, targetCode string) bool {
 	return false
 }
 
+// GetCode gets the error code from the error if it implements
+// the interface CodeGetter. Or returns "".
+func GetCode(err error) string {
+	if c, ok := err.(CodeGetter); ok {
+		return c.GetCode()
+	}
+	return ""
+}
+
 // CodeGetter is an interface used to get the error code.
 type CodeGetter interface {
 	GetCode() string
 }
+
+var _ CodeGetter = Error{}
 
 // Error represents an error.
 type Error struct {

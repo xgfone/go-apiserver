@@ -89,6 +89,9 @@ func (hs vhosts) Less(i, j int) bool {
 type defaultVHost struct{ http.Handler }
 type vhostsWrapper struct{ vhosts }
 
+// DefaultManager is the default global virtual host manager.
+var DefaultManager = NewManager()
+
 // Manager is used to manage a set of virtual hosts.
 type Manager struct {
 	// GetHostname is used to get the hostname from the request

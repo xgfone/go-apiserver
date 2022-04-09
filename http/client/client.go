@@ -21,6 +21,11 @@ import (
 	"github.com/xgfone/go-apiserver/internal/atomic"
 )
 
+var (
+	_ Getter = &Client{}
+	_ Setter = &Client{}
+)
+
 // Getter is used to get the http client.
 type Getter interface {
 	GetHTTPClient() *http.Client

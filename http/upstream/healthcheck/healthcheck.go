@@ -27,15 +27,20 @@ import (
 	"github.com/xgfone/go-apiserver/log"
 )
 
+var (
+	// DefaultHealthChecker is the default global health checker.
+	DefaultHealthChecker = NewHealthChecker(time.Second * 2)
+
+	// DefaultHealthCheckInfo is the default healthcheck information.
+	DefaultHealthCheckInfo = Info{Failure: 1, Timeout: time.Second, Interval: time.Second * 10}
+)
+
 // Updater is used to update the server status.
 type Updater interface {
 	UpsertServer(upstream.Server)
 	RemoveServer(serverID string)
 	SetServerOnline(serverID string, online bool)
 }
-
-// DefaultHealthCheckInfo is the default healthcheck information.
-var DefaultHealthCheckInfo = Info{Failure: 1, Timeout: time.Second, Interval: time.Second * 10}
 
 // Info is the information of the health check.
 type Info struct {
@@ -160,6 +165,9 @@ func (s *serverContext) checkServer(info Info) (online bool) {
 
 // HealthChecker is a health checker to check whether a set of http servers
 // are healthy.
+//
+// Notice: if there are lots of servers to be checked, you maybe need
+// an external checker.
 type HealthChecker struct {
 	tick     time.Duration
 	exit     chan struct{}

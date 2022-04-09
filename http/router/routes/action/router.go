@@ -53,6 +53,9 @@ type Context struct {
 // Reset resets the context.
 func (c *Context) Reset() { *c = Context{} }
 
+// DefaultRouter is the default global action router.
+var DefaultRouter = NewRouter()
+
 // Router is used to manage the routes based on the action service.
 type Router struct {
 	// Middlewares is used to manage the middlewares of the action handlers,
