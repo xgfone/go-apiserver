@@ -56,7 +56,7 @@ type HTTPServer struct {
 // NewHTTPServer returns a new HTTP entrypoint Server.
 func NewHTTPServer(ln net.Listener, handler http.Handler) (server HTTPServer) {
 	if handler == nil {
-		handler = router.NewRouter(ruler.NewRouteManager())
+		handler = router.NewRouter(ruler.NewRouter())
 	}
 
 	server.HTTPHandler = handler

@@ -25,11 +25,11 @@ import (
 )
 
 func ExampleBuild() {
-	routeManger := ruleroute.NewRouteManager()
+	routeManger := ruleroute.NewRouter()
 
 	// Set the builder of the matcher rule
 	//
-	// Notice: NewRouteManager has set it as the default builder of the matcher rule.
+	// Notice: NewRouter has set it as the default builder of the matcher rule.
 	//         Here is only show-how.
 	routeManger.BuildMatcherRule = ruler.Build
 
