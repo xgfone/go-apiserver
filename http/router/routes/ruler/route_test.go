@@ -28,7 +28,7 @@ var (
 )
 
 func TestRoute(t *testing.T) {
-	router := NewRouteManager()
+	router := NewRouter()
 
 	router.Name("route1").Matcher(hostMatcher).
 		HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {

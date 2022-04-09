@@ -25,49 +25,49 @@ import (
 
 // Name returns a route builder with the name, which is equal to
 // NewRouteBuilder(m).Name(name).
-func (m *RouteManager) Name(name string) RouteBuilder {
+func (m *Router) Name(name string) RouteBuilder {
 	return NewRouteBuilder(m).Name(name)
 }
 
 // Matcher returns a route builder with the matcher,
 // which is equal to NewRouteBuilder(m).Matcher(matcher).
-func (m *RouteManager) Matcher(matcher matcher.Matcher) RouteBuilder {
+func (m *Router) Matcher(matcher matcher.Matcher) RouteBuilder {
 	return NewRouteBuilder(m).Matcher(matcher)
 }
 
 // Rule returns a route builder with the matcher rule,
 // which is equal to NewRouteBuilder(m).Rule(matcherRule).
-func (m *RouteManager) Rule(matcherRule string) RouteBuilder {
+func (m *Router) Rule(matcherRule string) RouteBuilder {
 	return NewRouteBuilder(m).Rule(matcherRule)
 }
 
 // Path returns a route builder with the path matcher,
 // which is equal to NewRouteBuilder(m).Path(path).
-func (m *RouteManager) Path(path string) RouteBuilder {
+func (m *Router) Path(path string) RouteBuilder {
 	return NewRouteBuilder(m).Path(path)
 }
 
 // PathPrefix returns a route builder with the path prefix matcher,
 // which is equal to NewRouteBuilder(m).PathPrefix(pathPrefix).
-func (m *RouteManager) PathPrefix(pathPrefix string) RouteBuilder {
+func (m *Router) PathPrefix(pathPrefix string) RouteBuilder {
 	return NewRouteBuilder(m).PathPrefix(pathPrefix)
 }
 
 // Host returns a route builder with the host matcher,
 // which is equal to NewRouteBuilder(m).Host(host).
-func (m *RouteManager) Host(host string) RouteBuilder {
+func (m *Router) Host(host string) RouteBuilder {
 	return NewRouteBuilder(m).Host(host)
 }
 
 // HostRegexp returns a route builder with the host regexp matcher,
 // which is equal to NewRouteBuilder(m).HostRegexp(regexpHost).
-func (m *RouteManager) HostRegexp(regexpHost string) RouteBuilder {
+func (m *Router) HostRegexp(regexpHost string) RouteBuilder {
 	return NewRouteBuilder(m).HostRegexp(regexpHost)
 }
 
 // RouteBuilder is used to build the route.
 type RouteBuilder struct {
-	manager  *RouteManager
+	manager  *Router
 	mdws     middleware.Middlewares
 	name     string
 	matcher  matcher.Matcher
@@ -78,7 +78,7 @@ type RouteBuilder struct {
 }
 
 // NewRouteBuilder returns a new RouteBuilder with the route manager.
-func NewRouteBuilder(m *RouteManager) RouteBuilder {
+func NewRouteBuilder(m *Router) RouteBuilder {
 	return RouteBuilder{manager: m, panic: true}
 }
 

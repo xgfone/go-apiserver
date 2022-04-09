@@ -20,8 +20,8 @@ import (
 	"testing"
 )
 
-func BenchmarkRouteManager(b *testing.B) {
-	router := NewRouteManager()
+func BenchmarkRouter(b *testing.B) {
+	router := NewRouter()
 	router.NotFound = http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic("notfound")
 	})

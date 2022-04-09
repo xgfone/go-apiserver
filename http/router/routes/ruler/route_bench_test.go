@@ -33,7 +33,7 @@ func BenchmarkParamRouteWithNoopMiddleware4(b *testing.B) {
 }
 
 func benchmarkRouteWithPath(b *testing.B, path string) {
-	router := NewRouteManager()
+	router := NewRouter()
 	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic("notfound")
 	})
