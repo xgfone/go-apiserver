@@ -50,7 +50,7 @@ func StartHTTPServer(addr string, handler http.Handler) (err error) {
 }
 
 func main() {
-	routeManager := ruler.NewRouteManager()
+	routeManager := ruler.NewRouter()
 
 	// Route 1: Build the route by the matcher rule string
 	routeManager.
@@ -113,28 +113,28 @@ func main() {
 	vhosts := vhost.NewManager()
 
 	// Set the default
-	defaultVhost := ruler.NewRouteManager()
+	defaultVhost := ruler.NewRouter()
 	defaultVhost.Path("/path/{id}").GET(httpHandler("default"))
 	vhosts.SetDefaultVHost(defaultVhost)
 	// vhosts.SetDefaultVHost(httpHandler("default")) // Use the http handler as vhost.
 
 	// VHost 1: www.example1.com
-	vhost1 := ruler.NewRouteManager()
+	vhost1 := ruler.NewRouter()
 	vhost1.Path("/path/{id}").GET(httpHandler("route1"))
 	vhosts.AddVHost("www.example1.com", vhost1)
 
 	// VHost 2: www.example2.com
-	vhost2 := ruler.NewRouteManager()
+	vhost2 := ruler.NewRouter()
 	vhost2.Path("/path/{id}").GET(httpHandler("route2"))
 	vhosts.AddVHost("www.example2.com", vhost2)
 
 	// VHost 3: *.example1.com
-	vhost3 := ruler.NewRouteManager()
+	vhost3 := ruler.NewRouter()
 	vhost3.Path("/path/{id}").GET(httpHandler("route3"))
 	vhosts.AddVHost("*.example1.com", vhost3)
 
 	// VHost 4: www.example2.com
-	vhost4 := ruler.NewRouteManager()
+	vhost4 := ruler.NewRouter()
 	vhost4.Path("/path/{id}").GET(httpHandler("route4"))
 	vhosts.AddVHost("*.example2.com", vhost4)
 
@@ -188,7 +188,7 @@ func main() {
 	flag.Parse()
 
 	// New the http router.
-	router := ruler.NewRouteManager()
+	router := ruler.NewRouter()
 	router.Path("/").ContextHandler(func(c *reqresp.Context) { c.Text(200, "OK") })
 
 	// New an entrypoint based on HTTP.
@@ -210,6 +210,7 @@ func main() {
 		tlsProviderManager := provider.NewManager(ep)
 		tlsProviderManager.AddProvider("tlsFileProvider", tlsFileProvider)
 		tlsProviderManager.Start(context.Background())
+		defer tlsProviderManager.Stop()
 
 		// Update the TLS configuration of the entrypoint.
 		ep.SetTLSConfig(new(tls.Config))
@@ -279,7 +280,7 @@ var (
 func main() {
 	flag.Parse()
 
-	routeManager := ruler.NewRouteManager()
+	routeManager := ruler.NewRouter()
 	initAdminManageAPI(routeManager)
 
 	router := router.NewRouter(routeManager)
@@ -294,7 +295,7 @@ func main() {
 	ep.Start()
 }
 
-func initAdminManageAPI(router *ruler.RouteManager) {
+func initAdminManageAPI(router *ruler.Router) {
 	router.
 		Path("/admin/route").
 		Method("POST").
@@ -371,8 +372,8 @@ $ curl -XPOST http://127.0.0.1/admin/route -H 'Content-Type: application/json' -
         "forwardPolicy": "weight_round_robin",
         "forwardUrl" : {"path": "/backend/path"},
         "servers": [
-            {"ip": "192.168.1.11", "port": 80, "weight": 1}, // 33.3% requests
-            {"ip": "192.168.1.12", "port": 80, "weight": 2}  // 66.7% requests
+            {"ip": "192.168.1.11", "port": 80, "weight": 10}, // 33.3% requests
+            {"ip": "192.168.1.12", "port": 80, "weight": 20}  // 66.7% requests
         ]
     }
 }'
