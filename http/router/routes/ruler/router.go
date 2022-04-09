@@ -30,8 +30,8 @@ import (
 
 type routesWrapper struct{ Routes }
 
-// RouteManager is used to manage a set of routes based on the ruler.
-type RouteManager struct {
+// Router is used to manage a set of routes based on the ruler.
+type Router struct {
 	// BuildMatcherRule is used to build the matcher by the rule string.
 	//
 	// Default: ruler.Build
@@ -49,21 +49,21 @@ type RouteManager struct {
 	routes atomic.Value
 }
 
-// NewRouteManager returns a new route manager.
-func NewRouteManager() *RouteManager {
-	m := &RouteManager{rmaps: make(map[string]Route, 16)}
+// NewRouter returns a new route manager.
+func NewRouter() *Router {
+	m := &Router{rmaps: make(map[string]Route, 16)}
 	m.BuildMatcherRule = ruler.Build
 	m.updateRoutes()
 	return m
 }
 
 // ServeHTTP implements the interface http.Handler.
-func (m *RouteManager) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+func (m *Router) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	m.Route(resp, req, m.NotFound)
 }
 
 // Route implements the interface router.RouteManager.
-func (m *RouteManager) Route(w http.ResponseWriter, r *http.Request, notFound http.Handler) {
+func (m *Router) Route(w http.ResponseWriter, r *http.Request, notFound http.Handler) {
 	if route, ok := m.MatchRoute(w, r); ok {
 		route.ServeHTTP(w, r)
 	} else if notFound != nil {
@@ -79,7 +79,7 @@ func (m *RouteManager) Route(w http.ResponseWriter, r *http.Request, notFound ht
 
 // MatchRoute uses the registered routes to match the http request,
 // and returns the matched route.
-func (m *RouteManager) MatchRoute(w http.ResponseWriter, r *http.Request) (Route, bool) {
+func (m *Router) MatchRoute(w http.ResponseWriter, r *http.Request) (Route, bool) {
 	routes := m.routes.Load().(routesWrapper).Routes
 	for i, _len := 0, len(routes); i < _len; i++ {
 		if ok := routes[i].Matcher.Match(w, r); ok {
@@ -90,7 +90,7 @@ func (m *RouteManager) MatchRoute(w http.ResponseWriter, r *http.Request) (Route
 }
 
 // GetRoute returns the route by the given name.
-func (m *RouteManager) GetRoute(name string) (route Route, ok bool) {
+func (m *Router) GetRoute(name string) (route Route, ok bool) {
 	m.rlock.RLock()
 	route, ok = m.rmaps[name]
 	m.rlock.RUnlock()
@@ -98,7 +98,7 @@ func (m *RouteManager) GetRoute(name string) (route Route, ok bool) {
 }
 
 // GetRoutes returns all the registered routes.
-func (m *RouteManager) GetRoutes() (routes Routes) {
+func (m *Router) GetRoutes() (routes Routes) {
 	origs := m.routes.Load().(routesWrapper).Routes
 	routes = make(Routes, len(origs))
 	copy(routes, origs)
@@ -106,7 +106,7 @@ func (m *RouteManager) GetRoutes() (routes Routes) {
 }
 
 // AddRoute adds the given route.
-func (m *RouteManager) AddRoute(route Route) (err error) {
+func (m *Router) AddRoute(route Route) (err error) {
 	if err = m.checkRoute(route); err != nil {
 		return
 	}
@@ -123,7 +123,7 @@ func (m *RouteManager) AddRoute(route Route) (err error) {
 }
 
 // DelRoute deletes and returns the route by the given name.
-func (m *RouteManager) DelRoute(name string) (route Route, ok bool) {
+func (m *Router) DelRoute(name string) (route Route, ok bool) {
 	if len(name) == 0 {
 		return
 	}
@@ -139,7 +139,7 @@ func (m *RouteManager) DelRoute(name string) (route Route, ok bool) {
 
 // UpdateRoutes updates the given routes, which will add the route
 // if it does not exist, or update it to the new.
-func (m *RouteManager) UpdateRoutes(routes ...Route) (err error) {
+func (m *Router) UpdateRoutes(routes ...Route) (err error) {
 	if err = m.checkRoutes(routes); err != nil {
 		return
 	}
@@ -157,7 +157,7 @@ func (m *RouteManager) UpdateRoutes(routes ...Route) (err error) {
 }
 
 // ResetRoutes discards all the original routes and resets them to routes.
-func (m *RouteManager) ResetRoutes(routes ...Route) (err error) {
+func (m *Router) ResetRoutes(routes ...Route) (err error) {
 	if err = m.checkRoutes(routes); err != nil {
 		return
 	}
@@ -176,7 +176,7 @@ func (m *RouteManager) ResetRoutes(routes ...Route) (err error) {
 	return
 }
 
-func (m *RouteManager) checkRoutes(routes Routes) (err error) {
+func (m *Router) checkRoutes(routes Routes) (err error) {
 	for _len := len(routes) - 1; _len >= 0; _len-- {
 		if err = m.checkRoute(routes[_len]); err != nil {
 			break
@@ -185,7 +185,7 @@ func (m *RouteManager) checkRoutes(routes Routes) (err error) {
 	return
 }
 
-func (m *RouteManager) checkRoute(route Route) error {
+func (m *Router) checkRoute(route Route) error {
 	if len(route.Name) == 0 {
 		return errors.New("the route name is empty")
 	} else if route.Handler == nil {
@@ -196,7 +196,7 @@ func (m *RouteManager) checkRoute(route Route) error {
 	return nil
 }
 
-func (m *RouteManager) updateRoutes() {
+func (m *Router) updateRoutes() {
 	routes := make(Routes, 0, len(m.rmaps))
 	for _, route := range m.rmaps {
 		routes = append(routes, route)

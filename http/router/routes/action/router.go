@@ -53,8 +53,8 @@ type Context struct {
 // Reset resets the context.
 func (c *Context) Reset() { *c = Context{} }
 
-// RouteManager is used to manage the routes based on the action service.
-type RouteManager struct {
+// Router is used to manage the routes based on the action service.
+type Router struct {
 	// Middlewares is used to manage the middlewares of the action handlers,
 	// which will wrap the handlers of all the actions and take effect
 	// after finding the action and before the action handler is executed.
@@ -82,9 +82,9 @@ type RouteManager struct {
 	actions atomic.Value
 }
 
-// NewRouteManager returns a new http router based on the action.
-func NewRouteManager() *RouteManager {
-	r := &RouteManager{amaps: make(map[string]http.Handler, 16)}
+// NewRouter returns a new http router based on the action.
+func NewRouter() *Router {
+	r := &Router{amaps: make(map[string]http.Handler, 16)}
 	r.NotFound = http.HandlerFunc(notFoundHandler)
 	r.Middlewares = middleware.NewManager(nil)
 	r.Middlewares.SetHandler(http.HandlerFunc(r.serveHTTP))
@@ -93,12 +93,12 @@ func NewRouteManager() *RouteManager {
 }
 
 // ServeHTTP implements the interface http.Handler.
-func (m *RouteManager) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+func (m *Router) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	m.Route(resp, req, m.NotFound)
 }
 
 // Route implements the interface router.RouteManager.
-func (m *RouteManager) Route(w http.ResponseWriter, r *http.Request, notFound http.Handler) {
+func (m *Router) Route(w http.ResponseWriter, r *http.Request, notFound http.Handler) {
 	var action string
 	if m.GetAction != nil {
 		action = m.GetAction(r)
@@ -123,7 +123,7 @@ func (m *RouteManager) Route(w http.ResponseWriter, r *http.Request, notFound ht
 	}
 }
 
-func (m *RouteManager) respond(action string, handler http.Handler,
+func (m *Router) respond(action string, handler http.Handler,
 	w http.ResponseWriter, r *http.Request) {
 	ctx := reqresp.GetContext(w, r)
 	if ctx == nil {
@@ -161,7 +161,7 @@ func releaseContext(c *Context) {
 	ctxpool.Put(c)
 }
 
-func (m *RouteManager) serveHTTP(w http.ResponseWriter, r *http.Request) {
+func (m *Router) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	GetContext(w, r).handler.ServeHTTP(w, r)
 }
 
@@ -170,7 +170,7 @@ func (m *RouteManager) serveHTTP(w http.ResponseWriter, r *http.Request) {
 // GetHandler returns the handler of the action.
 //
 // If the action does not exist, return nil.
-func (m *RouteManager) GetHandler(action string) (handler http.Handler) {
+func (m *Router) GetHandler(action string) (handler http.Handler) {
 	if len(action) == 0 {
 		panic("action name is empty")
 	}
@@ -182,7 +182,7 @@ func (m *RouteManager) GetHandler(action string) (handler http.Handler) {
 }
 
 // GetHandlers returns the handlers of all the actions.
-func (m *RouteManager) GetHandlers() (handlers map[string]http.Handler) {
+func (m *Router) GetHandlers() (handlers map[string]http.Handler) {
 	m.alock.RLock()
 	handlers = make(map[string]http.Handler, len(m.amaps))
 	for action, handler := range m.amaps {
@@ -193,7 +193,7 @@ func (m *RouteManager) GetHandlers() (handlers map[string]http.Handler) {
 }
 
 // GetActions returns the names of all the actions.
-func (m *RouteManager) GetActions() (actions []string) {
+func (m *Router) GetActions() (actions []string) {
 	m.alock.RLock()
 	actions = make([]string, 0, len(m.amaps))
 	for action := range m.amaps {
@@ -204,19 +204,19 @@ func (m *RouteManager) GetActions() (actions []string) {
 }
 
 // RegisterContextFunc is the same as RegisterFunc, but use Context instead.
-func (m *RouteManager) RegisterContextFunc(action string, f func(*Context)) (ok bool) {
+func (m *Router) RegisterContextFunc(action string, f func(*Context)) (ok bool) {
 	return m.RegisterFunc(action, func(w http.ResponseWriter, r *http.Request) {
 		f(GetContext(w, r))
 	})
 }
 
 // RegisterFunc is the same as Register, but use the function as the handler.
-func (m *RouteManager) RegisterFunc(action string, handler http.HandlerFunc) (ok bool) {
+func (m *Router) RegisterFunc(action string, handler http.HandlerFunc) (ok bool) {
 	return m.Register(action, handler)
 }
 
 // Register registers the action and the handler.
-func (m *RouteManager) Register(action string, handler http.Handler) (ok bool) {
+func (m *Router) Register(action string, handler http.Handler) (ok bool) {
 	m.checkAction(action, handler)
 
 	m.alock.Lock()
@@ -232,7 +232,7 @@ func (m *RouteManager) Register(action string, handler http.Handler) (ok bool) {
 
 // Update updates the given actions and handlers, which will add the action
 // if it does not exist, or update it to the new.
-func (m *RouteManager) Update(actions map[string]http.Handler) {
+func (m *Router) Update(actions map[string]http.Handler) {
 	if len(actions) == 0 {
 		return
 	}
@@ -250,7 +250,7 @@ func (m *RouteManager) Update(actions map[string]http.Handler) {
 }
 
 // Reset discards all the original actions and resets them to actions.
-func (m *RouteManager) Reset(actions map[string]http.Handler) {
+func (m *Router) Reset(actions map[string]http.Handler) {
 	for action, handler := range actions {
 		m.checkAction(action, handler)
 	}
@@ -268,7 +268,7 @@ func (m *RouteManager) Reset(actions map[string]http.Handler) {
 }
 
 // Unregister unregisters the given action.
-func (m *RouteManager) Unregister(action string) (ok bool) {
+func (m *Router) Unregister(action string) (ok bool) {
 	if action == "" {
 		panic("action name is empty")
 	}
@@ -283,7 +283,7 @@ func (m *RouteManager) Unregister(action string) (ok bool) {
 	return
 }
 
-func (m *RouteManager) updateActions() {
+func (m *Router) updateActions() {
 	actions := make(map[string]http.Handler, len(m.amaps))
 	for action, handler := range m.amaps {
 		actions[action] = handler
@@ -291,7 +291,7 @@ func (m *RouteManager) updateActions() {
 	m.actions.Store(actionsWrapper{actions: actions})
 }
 
-func (m *RouteManager) checkAction(action string, handler http.Handler) {
+func (m *Router) checkAction(action string, handler http.Handler) {
 	if len(action) == 0 {
 		panic("action name is empty")
 	}
