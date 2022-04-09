@@ -20,7 +20,20 @@ import (
 	"io"
 	"net"
 	"net/http"
+
+	"github.com/xgfone/go-apiserver/http/herrors"
 )
+
+// GetStatusCode gets the status code from the given value if it implements
+// the interface herrors.StatusCodeGetter. Or returns 0.
+//
+// v may be a ResponseWriter or herrors.Error.
+func GetStatusCode(v interface{}) int {
+	if c, ok := v.(herrors.StatusCodeGetter); ok {
+		return c.StatusCode()
+	}
+	return 0
+}
 
 // Unwrap unwraps the innest wrapped http ResponseWriter.
 //
