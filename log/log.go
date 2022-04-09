@@ -18,6 +18,7 @@ package log
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -32,6 +33,7 @@ var (
 	LvlWarn  = int(60)
 	LvlError = int(80)
 	LvlAlert = int(100)
+	LvlFatal = int(126)
 )
 
 // ParseLevel parses the level string, which supports
@@ -41,6 +43,7 @@ var (
 //   warn
 //   error
 //   alert
+//   fatal
 // And they are case insensitive.
 func ParseLevel(s string) (level int, err error) {
 	switch strings.ToLower(s) {
@@ -56,6 +59,8 @@ func ParseLevel(s string) (level int, err error) {
 		level = LvlError
 	case "alert":
 		level = LvlAlert
+	case "fatal":
+		level = LvlFatal
 	default:
 		err = fmt.Errorf("unknown level '%s'", s)
 	}
@@ -77,6 +82,8 @@ func FormatLevel(level int) string {
 		return "error"
 	case LvlAlert:
 		return "alert"
+	case LvlFatal:
+		return "fatal"
 	default:
 		if level < LvlDebug {
 			return fmt.Sprintf("trace%d", level)
@@ -88,8 +95,10 @@ func FormatLevel(level int) string {
 			return fmt.Sprintf("warn%d", level)
 		} else if level < LvlAlert {
 			return fmt.Sprintf("error%d", level)
-		} else {
+		} else if level < LvlFatal {
 			return fmt.Sprintf("alert%d", level)
+		} else {
+			return fmt.Sprintf("fatal%d", level)
 		}
 	}
 }
@@ -144,6 +153,12 @@ func Alert(msg string, keysAndValues ...interface{}) {
 	DefaultLogger.Log(LvlAlert, 1, msg, keysAndValues...)
 }
 
+// Fatal is equal to Log(LvlFatal, 0, msg, keysAndValues...), then os.Exit(1).
+func Fatal(msg string, keysAndValues ...interface{}) {
+	DefaultLogger.Log(LvlFatal, 1, msg, keysAndValues...)
+	os.Exit(1)
+}
+
 func fmtLog(level int, msg string, args ...interface{}) {
 	if len(args) > 0 {
 		msg = fmt.Sprintf(msg, args...)
@@ -169,6 +184,13 @@ func Errorf(fmt string, args ...interface{}) { fmtLog(LvlError, fmt, args...) }
 // Alertf is used to emit the log based on the string format with the Alert level.
 func Alertf(fmt string, args ...interface{}) { fmtLog(LvlAlert, fmt, args...) }
 
+// Fatalf is used to emit the log based on the string format with the Fatal level,
+// then exit by os.Exit(1).
+func Fatalf(fmt string, args ...interface{}) {
+	fmtLog(LvlFatal, fmt, args...)
+	os.Exit(1)
+}
+
 // Ef is equal to Error(fmt.Sprintf(format, args...), "err", err).
 func Ef(err error, format string, args ...interface{}) {
 	if len(args) > 0 {
@@ -183,7 +205,7 @@ func IfErr(err error, msg string, kvs ...interface{}) {
 	ifErr(err, 0, msg, kvs...)
 }
 
-// WrapPanic wraps and logs the panic, which should be called directly after defer,
+// WrapPanic wraps and logs the panic, which should be called directly with defer,
 // For example,
 //   defer WrapPanic()
 //   defer WrapPanic("key1", "value1")
