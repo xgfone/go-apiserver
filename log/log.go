@@ -199,10 +199,20 @@ func Ef(err error, format string, args ...interface{}) {
 	DefaultLogger.Log(LvlError, 1, format, "err", err)
 }
 
+// Err is the same as Error, but appends the error "err" into keysAndValues.
+func Err(err error, msg string, keysAndValues ...interface{}) {
+	if len(keysAndValues) == 0 {
+		keysAndValues = []interface{}{"err", err}
+	} else {
+		keysAndValues = append(keysAndValues, "err", err)
+	}
+	DefaultLogger.Log(LvlError, 1, msg, keysAndValues...)
+}
+
 // IfErr logs the message and key-values with the ERROR level
 // only if err is not equal to nil.
-func IfErr(err error, msg string, kvs ...interface{}) {
-	ifErr(err, 0, msg, kvs...)
+func IfErr(err error, msg string, keysAndValues ...interface{}) {
+	ifErr(err, 0, msg, keysAndValues...)
 }
 
 // WrapPanic wraps and logs the panic, which should be called directly with defer,
