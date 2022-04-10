@@ -19,8 +19,13 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/handler"
+	"github.com/xgfone/go-apiserver/http/middlewares"
+	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
 	"github.com/xgfone/go-apiserver/middleware"
 )
+
+// DefaultRouter is the default global router.
+var DefaultRouter = NewDefaultRouter(ruler.NewRouter())
 
 // RouteManager is used to manage the routes.
 type RouteManager interface {
@@ -53,6 +58,15 @@ func NewRouter(routeManager http.Handler) *Router {
 	}
 
 	r.Middlewares.SetHandler(http.HandlerFunc(r.serveHTTP))
+	return r
+}
+
+// NewDefaultRouter returns a new default router, which is the same as NewRouter,
+// but also adds the middlewares Context(1) and DefaultMiddlewares.
+func NewDefaultRouter(routeManager http.Handler) *Router {
+	r := NewRouter(routeManager)
+	r.Middlewares.Use(middlewares.DefaultMiddlewares...)
+	r.Middlewares.AddMiddleware(middlewares.Context(1))
 	return r
 }
 

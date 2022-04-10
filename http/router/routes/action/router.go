@@ -54,7 +54,7 @@ type Context struct {
 func (c *Context) Reset() { *c = Context{} }
 
 // DefaultRouter is the default global action router.
-var DefaultRouter = NewRouter()
+var DefaultRouter = NewDefaultRouter()
 
 // Router is used to manage the routes based on the action service.
 type Router struct {
@@ -92,6 +92,14 @@ func NewRouter() *Router {
 	r.Middlewares = middleware.NewManager(nil)
 	r.Middlewares.SetHandler(http.HandlerFunc(r.serveHTTP))
 	r.updateActions()
+	return r
+}
+
+// NewDefaultRouter returns a new default router, which is the same as NewRouter,
+// but also adds the middlewares Logger(10) and Recover(20).
+func NewDefaultRouter() *Router {
+	r := NewRouter()
+	r.Middlewares.Use(Logger(10), Recover(20))
 	return r
 }
 
