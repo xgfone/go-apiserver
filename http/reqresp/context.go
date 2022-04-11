@@ -410,6 +410,28 @@ func (c *Context) Render(code int, name string, data interface{}) (err error) {
 	return
 }
 
+// Error sends the error as the response, and returns the sent error.
+//
+//   If err is nil, it is equal to c.WriteHeader(200).
+//   If err implements http.Handler, it is equal to err.ServeHTTP(c.ResponseWriter, c.Request).
+//   Or, it is equal to c.Text(500, err.Error()).
+//
+// Notice: herrors.Error has implements the interface http.Handler.
+func (c *Context) Error(err error) error {
+	switch e := err.(type) {
+	case nil:
+		return c.WriteHeader(200)
+
+	case http.Handler:
+		e.ServeHTTP(c.ResponseWriter, c.Request)
+
+	default:
+		return c.Text(500, err.Error())
+	}
+
+	return
+}
+
 // Blob sends a blob response with the status code and the content type.
 func (c *Context) Blob(code int, contentType string, data []byte) (err error) {
 	c.SetContentType(contentType)
