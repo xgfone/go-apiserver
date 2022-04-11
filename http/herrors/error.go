@@ -54,7 +54,7 @@ var (
 
 // IsStatusCode reports whether the error has the given status code,
 // which gets the status code from the error by inspect whether it has
-// implemented the interface CodeGetter.
+// implemented the interface StatusCodeGetter.
 func IsStatusCode(err error, statusCode int) bool {
 	if c, ok := err.(StatusCodeGetter); ok {
 		return statusCode == c.StatusCode()
