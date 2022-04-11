@@ -18,7 +18,10 @@ package herrors
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+
+	"github.com/xgfone/go-apiserver/http/header"
 )
 
 // Some non-HTTP errors
@@ -102,4 +105,15 @@ func (e Error) Newf(msg string, args ...interface{}) Error {
 		return e.New(errors.New(msg))
 	}
 	return e.New(fmt.Errorf(msg, args...))
+}
+
+// ServeHTTP implements the interface http.Handler.
+func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if e.Code == 0 {
+		e.Code = 200
+	}
+
+	header.SetContentType(w.Header(), e.CT)
+	w.WriteHeader(e.Code)
+	io.WriteString(w, e.Error())
 }
