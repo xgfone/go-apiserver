@@ -420,7 +420,7 @@ func (c *Context) Render(code int, name string, data interface{}) (err error) {
 func (c *Context) Error(err error) error {
 	switch e := err.(type) {
 	case nil:
-		return c.WriteHeader(200)
+		c.WriteHeader(200)
 
 	case http.Handler:
 		e.ServeHTTP(c.ResponseWriter, c.Request)
@@ -429,7 +429,7 @@ func (c *Context) Error(err error) error {
 		return c.Text(500, err.Error())
 	}
 
-	return
+	return nil
 }
 
 // Blob sends a blob response with the status code and the content type.
