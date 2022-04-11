@@ -298,6 +298,38 @@ func (c *Context) ContentType() string { return header.ContentType(c.Request.Hea
 func (c *Context) Charset() string { return header.Charset(c.Request.Header) }
 
 // ---------------------------------------------------------------------------
+// Data
+// ---------------------------------------------------------------------------
+
+// GetDataString returns the value as the string by the key from the field Data.
+//
+// If the key does not exist, return "".
+func (c *Context) GetDataString(key string) string {
+	if value, ok := c.Data[key]; ok {
+		return value.(string)
+	}
+	return ""
+}
+
+// GetData returns the value by the key from the field Data.
+//
+// If the key does not exist, return nil.
+func (c *Context) GetData(key string) interface{} {
+	return c.Data[key]
+}
+
+// SetData sets the value with the key into the field Data.
+//
+// If value is nil, delete the key from the field Data.
+func (c *Context) SetData(key string, value interface{}) {
+	if value == nil {
+		delete(c.Data, key)
+	} else {
+		c.Data[key] = value
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Request Query
 // ---------------------------------------------------------------------------
 
