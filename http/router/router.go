@@ -25,7 +25,7 @@ import (
 )
 
 // DefaultRouter is the default global router.
-var DefaultRouter = NewDefaultRouter(ruler.NewRouter())
+var DefaultRouter = NewDefaultRouter(ruler.DefaultRouter)
 
 // RouteManager is used to manage the routes.
 type RouteManager interface {
