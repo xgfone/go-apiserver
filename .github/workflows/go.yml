@@ -2,6 +2,7 @@ name: Go
 on: push
 env:
   GO111MODULE: on
+  GOPATH: /home/runner/go
 jobs:
   build:
     runs-on: ubuntu-18.04
@@ -21,4 +22,8 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: ${{ matrix.go }}
-    - run: go test -cover -race ./...
+    - run: |
+        mkdir -p $PATH/src/github.com/xgfone/go-apiserver
+        cp -r ./* $PATH/src/github.com/xgfone/go-apiserver
+        cd $PATH/src/github.com/xgfone/go-apiserver
+        go test -cover -race ./...
