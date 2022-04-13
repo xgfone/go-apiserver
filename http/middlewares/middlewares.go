@@ -18,4 +18,4 @@ package middlewares
 import "github.com/xgfone/go-apiserver/middleware"
 
 // DefaultMiddlewares is a set of the default middlewares.
-var DefaultMiddlewares = middleware.Middlewares{Logger(10), Recover(20)}
+var DefaultMiddlewares = middleware.Middlewares{Context(1), Logger(10), Recover(20)}
