@@ -66,7 +66,6 @@ func NewRouter(routeManager http.Handler) *Router {
 func NewDefaultRouter(routeManager http.Handler) *Router {
 	r := NewRouter(routeManager)
 	r.Middlewares.Use(middlewares.DefaultMiddlewares...)
-	r.Middlewares.AddMiddleware(middlewares.Context(1))
 	return r
 }
 
