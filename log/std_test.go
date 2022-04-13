@@ -51,3 +51,64 @@ func TestStdLogger(t *testing.T) {
 		}
 	}
 }
+
+func handleBusiness() {
+	func(s string) {
+		panic(s)
+	}("test")
+}
+
+func testHandleBusiness() {
+	defer WrapPanic()
+	handleBusiness()
+}
+
+func TestWrapPanic(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	DefaultLogger = NewLogger(buf, "", log.Lshortfile, LvlTrace)
+
+	testHandleBusiness()
+
+	results := strings.Split(buf.String(), "\n")
+	if len(results) != 2 {
+		t.Errorf("expect %d line logs, but got %d", 2, len(results))
+		return
+	}
+
+	prefix := "std_test.go:57: wrap a panic; level=error; stacks=["
+	if !strings.HasPrefix(results[0], prefix) {
+		t.Errorf("unexpected line: %s", results[0])
+		return
+	}
+
+	stack := results[0][len(prefix):]
+	if index := strings.IndexByte(stack, ']'); index > -1 {
+		stack = stack[:index]
+	}
+
+	expects := []string{
+		"github.com/xgfone/go-apiserver/log/std_test.go:func1:57",
+		"github.com/xgfone/go-apiserver/log/std_test.go:handleBusiness:58",
+		"github.com/xgfone/go-apiserver/log/std_test.go:testHandleBusiness:63",
+		"github.com/xgfone/go-apiserver/log/std_test.go:TestWrapPanic:70",
+	}
+
+	stacks := strings.Fields(stack)
+	for i, stack := range stacks { // Remove the testing.go.
+		if strings.HasPrefix(stack, "testing/testing.go:") {
+			stacks = stacks[:i]
+			break
+		}
+	}
+
+	if len(expects) != len(stacks) {
+		t.Errorf("expect %d stacks, but got %d", len(expects), len(stacks))
+	} else {
+		for i, line := range expects {
+			if stacks[i] != line {
+				t.Errorf("%d: expect stack '%s', but got '%s'", i, line, stacks[i])
+			}
+		}
+	}
+
+}

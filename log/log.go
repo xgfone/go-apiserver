@@ -19,8 +19,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"strings"
 )
+
+// RecoverStackSkip is used to skip some stacks.
+const RecoverStackSkip = 4
 
 // DefaultLogger is the default logger implementation.
 var DefaultLogger Logger
@@ -212,7 +216,15 @@ func Err(err error, msg string, keysAndValues ...interface{}) {
 // IfErr logs the message and key-values with the ERROR level
 // only if err is not equal to nil.
 func IfErr(err error, msg string, keysAndValues ...interface{}) {
-	ifErr(err, 0, msg, keysAndValues...)
+	if err != nil {
+		if len(keysAndValues) == 0 {
+			keysAndValues = []interface{}{"err", err}
+		} else {
+			keysAndValues = append(keysAndValues, "err", err)
+		}
+
+		DefaultLogger.Log(LvlError, 1, msg, keysAndValues...)
+	}
 }
 
 // WrapPanic wraps and logs the panic, which should be called directly with defer,
@@ -222,12 +234,47 @@ func IfErr(err error, msg string, keysAndValues ...interface{}) {
 //   defer WrapPanic("key1", "value1", "key2", "value2")
 //   defer WrapPanic("key1", "value1", "key2", "value2", "key3", "value3")
 func WrapPanic(kvs ...interface{}) {
-	ifErr(recover(), 1, "panic", kvs...)
+	if r := recover(); r != nil {
+		if len(kvs) == 0 {
+			kvs = make([]interface{}, 0, 4)
+		}
+
+		kvs = append(kvs, "stacks", GetCallStack(RecoverStackSkip), "panic", r)
+		DefaultLogger.Log(LvlError, 2, "wrap a panic", kvs...)
+	}
 }
 
-func ifErr(err interface{}, depth int, msg string, kvs ...interface{}) {
-	if err == nil {
-		return
+// GetCallStack returns the most 64 call stacks.
+func GetCallStack(skip int) []string {
+	var pcs [64]uintptr
+	n := runtime.Callers(skip, pcs[:])
+	if n == 0 {
+		return nil
 	}
-	DefaultLogger.Log(LvlError, 2+depth, msg, append(kvs, "err", err)...)
+
+	stacks := make([]string, 0, n)
+	frames := runtime.CallersFrames(pcs[:n])
+	for {
+		frame, more := frames.Next()
+		if !more {
+			break
+		}
+
+		const mark = "/src/"
+		if index := strings.Index(frame.File, mark); index > -1 {
+			frame.File = frame.File[index+len(mark):]
+		}
+
+		if frame.Function == "" {
+			stacks = append(stacks, fmt.Sprintf("%s:%d", frame.File, frame.Line))
+		} else {
+			name := frame.Function
+			if index := strings.LastIndexByte(frame.Function, '.'); index > -1 {
+				name = frame.Function[index+1:]
+			}
+			stacks = append(stacks, fmt.Sprintf("%s:%s:%d", frame.File, name, frame.Line))
+		}
+	}
+
+	return stacks
 }
