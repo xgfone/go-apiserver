@@ -31,9 +31,13 @@ func Logger(priority int) mw.Middleware {
 			h.(http.Handler).ServeHTTP(w, r)
 			cost := time.Since(start)
 
+			var code int
 			var err error
 			if c := reqresp.GetContext(w, r); c != nil {
+				code = c.StatusCode()
 				err = c.Err
+			} else if rw, ok := w.(reqresp.ResponseWriter); ok {
+				code = rw.StatusCode()
 			}
 
 			level := log.LvlInfo
@@ -50,12 +54,9 @@ func Logger(priority int) mw.Middleware {
 				"addr", r.RemoteAddr,
 				"method", r.Method,
 				"path", r.URL.Path,
+				"code", code,
 				"start", start.Unix(),
 				"cost", cost)
-
-			if rw, ok := w.(reqresp.ResponseWriter); ok {
-				kvs = append(kvs, "code", rw.StatusCode())
-			}
 
 			if err != nil {
 				kvs = append(kvs, "err", err)
