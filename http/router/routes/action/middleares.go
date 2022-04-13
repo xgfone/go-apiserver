@@ -24,19 +24,24 @@ import (
 )
 
 func wrapPanic(w http.ResponseWriter, r *http.Request) {
-	switch e := recover().(type) {
-	case nil:
-	case Error:
-		GetContext(w, r).Err = e
+	if err := recover(); err != nil {
+		stacks := log.GetCallStack(log.RecoverStackSkip)
+		log.Error("wrap a panic", "addr", r.RemoteAddr, "method", r.Method,
+			"uri", r.RequestURI, "panic", err, "stacks", stacks)
 
-	case string:
-		GetContext(w, r).Err = ErrInternalServerError.WithMessage(e)
+		switch e := err.(type) {
+		case Error:
+			GetContext(w, r).Err = e
 
-	case error:
-		GetContext(w, r).Err = ErrInternalServerError.WithMessage(e.Error())
+		case string:
+			GetContext(w, r).Err = ErrInternalServerError.WithMessage(e)
 
-	default:
-		GetContext(w, r).Err = ErrInternalServerError.WithMessage(fmt.Sprint(e))
+		case error:
+			GetContext(w, r).Err = ErrInternalServerError.WithMessage(e.Error())
+
+		default:
+			GetContext(w, r).Err = ErrInternalServerError.WithMessage(fmt.Sprint(e))
+		}
 	}
 }
 

@@ -16,12 +16,38 @@ package middlewares
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/log"
 	mw "github.com/xgfone/go-apiserver/middleware"
 )
+
+// PanicHandler is used to handle the panic.
+var PanicHandler func(w http.ResponseWriter, r *http.Request, recover interface{})
+
+func init() { PanicHandler = defaultHandler }
+func defaultHandler(w http.ResponseWriter, r *http.Request, recover interface{}) {
+	var err error
+	if e, ok := recover.(error); ok {
+		err = e
+	} else {
+		err = fmt.Errorf("panic: %v", recover)
+	}
+
+	if c := reqresp.GetContext(w, r); c != nil {
+		c.Err = err
+		if !c.WroteHeader() {
+			c.Text(500, err.Error())
+		}
+	} else {
+		if rw, ok := w.(reqresp.ResponseWriter); ok && !rw.WroteHeader() {
+			rw.WriteHeader(500)
+			io.WriteString(rw, err.Error())
+		}
+	}
+}
 
 // Recover returns a new http handler middleware, which is used to wrap
 // and recover the panic.
@@ -36,17 +62,14 @@ func Recover(priority int) mw.Middleware {
 
 func wrapPanic(w http.ResponseWriter, r *http.Request) {
 	if e := recover(); e != nil {
-		if c := reqresp.GetContext(w, r); c == nil {
-			log.Error("wrap a panic", "addr", r.RemoteAddr, "method", r.Method,
-				"uri", r.RequestURI, "panic", e)
-
-			if rw, ok := w.(reqresp.ResponseWriter); ok && !rw.WroteHeader() {
-				rw.WriteHeader(500)
-			}
-		} else if err, ok := e.(error); ok {
-			c.Err = fmt.Errorf("panic: %w", err)
+		if PanicHandler != nil {
+			PanicHandler(w, r, e)
 		} else {
-			c.Err = fmt.Errorf("panic: %v", e)
+			defaultHandler(w, r, e)
 		}
+
+		stacks := log.GetCallStack(log.RecoverStackSkip)
+		log.Error("wrap a panic", "addr", r.RemoteAddr, "method", r.Method,
+			"uri", r.RequestURI, "panic", e, "stacks", stacks)
 	}
 }
