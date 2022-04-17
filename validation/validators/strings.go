@@ -15,6 +15,7 @@
 package validators
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/xgfone/go-apiserver/helper"
@@ -28,7 +29,13 @@ func OneOf(values ...string) validation.Validator {
 		panic("OneOf: the values must be empty")
 	}
 
-	return validation.NewValidator("oneof", func(i interface{}) error {
+	bs, err := json.Marshal(values)
+	if err != nil {
+		panic(err)
+	}
+
+	desc := fmt.Sprintf("oneof(%s)", string(bs[1:len(bs)-1]))
+	return validation.NewValidator(desc, func(i interface{}) error {
 		if s, ok := i.(string); ok {
 			if helper.InStrings(s, values) {
 				return nil
