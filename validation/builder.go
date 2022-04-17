@@ -77,6 +77,16 @@ func (f BuilderFunction) fn(c predicate.BuilderContext, args ...interface{}) err
 // DefaultBuilder is the global default validation rule builder.
 var DefaultBuilder = NewBuilder()
 
+// RegisterSymbol is equal to DefaultBuilder.RegisterSymbol(name, value).
+func RegisterSymbol(name string, value interface{}) {
+	DefaultBuilder.RegisterSymbol(name, value)
+}
+
+// RegisterSymbols is equal to DefaultBuilder.RegisterSymbols(maps).
+func RegisterSymbols(maps map[string]interface{}) {
+	DefaultBuilder.RegisterSymbols(maps)
+}
+
 // RegisterFunc is eqaul to DefaultBuilder.RegisterFunc(name, f).
 func RegisterFunc(name string, f BuilderFunction) {
 	DefaultBuilder.RegisterFunc(name, f)
@@ -126,6 +136,10 @@ type Builder struct {
 	// If nil, use LookupStructFieldNameByTags("json") instead.
 	LookupStructFieldName func(reflect.StructField) string
 
+	// Symbols is used to define the global symbols,
+	// which is used by the default of GetIdentifier.
+	Symbols map[string]interface{}
+
 	*predicate.Builder
 	validators atomic.Value
 	vcacheLock sync.Mutex
@@ -134,30 +148,63 @@ type Builder struct {
 
 // NewBuilder returns a new validation rule builder.
 func NewBuilder() *Builder {
-	builder := predicate.NewBuilder()
-
-	builder.GetIdentifier = func(selector []string) (interface{}, error) {
-		// Support the format "zero" instead of "zero()"
-		if f := builder.GetFunc(selector[0]); f != nil {
-			return f, nil
-		}
-		return nil, fmt.Errorf("%s is not defined", selector[0])
+	builder := &Builder{
+		vcacheMap: make(map[string]Validator),
+		Symbols:   make(map[string]interface{}),
 	}
 
-	builder.EQ = func(ctx predicate.BuilderContext, left, right interface{}) error {
-		// Support the format "min == 123" or "123 == min"
-		if f, ok := left.(predicate.BuilderFunction); ok {
-			return f(ctx, right)
-		}
-		if f, ok := right.(predicate.BuilderFunction); ok {
-			return f(ctx, left)
-		}
-		return fmt.Errorf("left or right is not BuilderFunction: %T, %T", left, right)
+	builder.Builder = predicate.NewBuilder()
+	builder.Builder.GetIdentifier = builder.getIdentifier
+	builder.Builder.EQ = builder.eq
+
+	builder.updateValidators()
+	return builder
+}
+
+func (b *Builder) getIdentifier(selector []string) (interface{}, error) {
+	// Support the format "zero" instead of "zero()"
+
+	// First, lookup the symbol table.
+	if v, ok := b.Symbols[selector[0]]; ok {
+		return v, nil
 	}
 
-	b := &Builder{Builder: builder, vcacheMap: make(map[string]Validator)}
-	b.updateValidators()
-	return b
+	// Second, lookup the function table.
+	if f := b.GetFunc(selector[0]); f != nil {
+		return f, nil
+	}
+
+	// We find no the identifier.
+	return nil, fmt.Errorf("%s is not defined", selector[0])
+}
+
+func (b *Builder) eq(ctx predicate.BuilderContext, left, right interface{}) error {
+	// Support the format "min == 123" or "123 == min"
+	if f, ok := left.(predicate.BuilderFunction); ok {
+		return f(ctx, right)
+	}
+	if f, ok := right.(predicate.BuilderFunction); ok {
+		return f(ctx, left)
+	}
+	return fmt.Errorf("left or right is not BuilderFunction: %T, %T", left, right)
+}
+
+// RegisterSymbol registers the symbol with the name and value.
+func (b *Builder) RegisterSymbol(name string, value interface{}) {
+	if name == "" {
+		panic("the symbol name must not be empty")
+	}
+	if value == nil {
+		panic("the symbol value must not be nil")
+	}
+	b.Symbols[name] = value
+}
+
+// RegisterSymbols registers a set of symbols from a map.
+func (b *Builder) RegisterSymbols(maps map[string]interface{}) {
+	for name, value := range maps {
+		b.RegisterSymbol(name, value)
+	}
 }
 
 // RegisterFunc registers the builder function with the name.

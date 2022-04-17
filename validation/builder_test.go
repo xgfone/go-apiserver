@@ -23,6 +23,7 @@ import (
 )
 
 func ExampleBuilder() {
+	// Register the builder functions.
 	helper.RegisterFuncNoArg(validation.DefaultBuilder, "zero", validators.Zero)
 	helper.RegisterFuncOneFloat(validation.DefaultBuilder, "min", validators.Min)
 	helper.RegisterFuncOneFloat(validation.DefaultBuilder, "max", validators.Max)
@@ -31,6 +32,10 @@ func ExampleBuilder() {
 	helper.RegisterFuncValidators(validation.DefaultBuilder, "mapk", validation.MapK)
 	helper.RegisterFuncValidators(validation.DefaultBuilder, "mapv", validation.MapV)
 	helper.RegisterFuncValidators(validation.DefaultBuilder, "mapkv", validation.MapKV)
+
+	// Add the global symbols.
+	validation.RegisterSymbol("v1", "a")
+	validation.RegisterSymbol("v2", "b")
 
 	// Example 1: function mode
 	fmt.Println("\n--- Function Mode ---")
@@ -50,8 +55,8 @@ func ExampleBuilder() {
 	fmt.Println(validator.Validate(10))
 	fmt.Println(validator.Validate(11))
 
-	// Example 2: identity+operator mode
-	fmt.Println("\n--- Identity+Operator Mode ---")
+	// Example 2: Identifier+operator mode
+	fmt.Println("\n--- Identifier+Operator Mode ---")
 
 	c = validation.NewContext()
 	err = validation.Build(c, "zero || (min==3 && max==10)")
@@ -91,6 +96,7 @@ func ExampleBuilder() {
 	fmt.Println(validation.Validate(map[string]int8{"abcd": 123}, rule3))
 
 	const rule4 = `mapv(min==10 && max==100)`
+	fmt.Println(validation.BuildValidator(rule4))
 	fmt.Println(validation.Validate(map[string]int16{"a": 10}, rule4))
 	fmt.Println(validation.Validate(map[string]int32{"abcd": 123}, rule4))
 
@@ -109,7 +115,7 @@ func ExampleBuilder() {
 
 	// Example 7: Others
 	fmt.Println("\n--- Others ---")
-	const oneof = `oneof("a", "b", "c")`
+	const oneof = `oneof(v1, v2, "c")`
 	fmt.Println(validation.Validate("a", oneof))
 	fmt.Println(validation.Validate("x", oneof))
 
@@ -123,7 +129,7 @@ func ExampleBuilder() {
 	// <nil>
 	// the integer is greater than 10
 	//
-	// --- Identity+Operator Mode ---
+	// --- Identifier+Operator Mode ---
 	// Rule: (zero || (min(3) && max(10)))
 	// <nil>
 	// the string length is less than 3
@@ -145,6 +151,7 @@ func ExampleBuilder() {
 	// --- Map ---
 	// <nil>
 	// map key 'abcd' is invalid: the string length is greater than 3
+	// mapv(min(10) && max(100)) <nil>
 	// <nil>
 	// map value '123' is invalid: the integer is greater than 100
 	//
