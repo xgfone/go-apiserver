@@ -25,6 +25,8 @@ import (
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
+	"github.com/xgfone/go-apiserver/validation"
+	_ "github.com/xgfone/go-apiserver/validation/validators/defaults"
 )
 
 // Predefine some binder to bind the body, query and header of the request.
@@ -41,11 +43,13 @@ func init() {
 	mb.Add(header.MIMEApplicationForm, FormBinder(10<<20))
 	BodyBinder = &DefaultValidateBinder{
 		SetDefault: helper.SetStructFieldToDefault,
+		Validate:   validation.ValidateStruct,
 		Binder:     mb,
 	}
 
 	QueryBinder = &DefaultValidateBinder{
 		SetDefault: helper.SetStructFieldToDefault,
+		Validate:   validation.ValidateStruct,
 		Binder: BinderFunc(func(dst interface{}, req *http.Request) error {
 			return BindURLValues(dst, req.URL.Query(), "query")
 		}),
@@ -53,6 +57,7 @@ func init() {
 
 	HeaderBinder = &DefaultValidateBinder{
 		SetDefault: helper.SetStructFieldToDefault,
+		Validate:   validation.ValidateStruct,
 		Binder: BinderFunc(func(dst interface{}, req *http.Request) error {
 			return BindURLValues(dst, url.Values(req.Header), "header")
 		}),
