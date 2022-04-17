@@ -41,7 +41,7 @@ type validator struct {
 func (v validator) Validate(i interface{}) error { return v.f(i) }
 func (v validator) String() string               { return v.s }
 
-func formatValidators(name string, validators []Validator) string {
+func formatValidators(sep string, validators []Validator) string {
 	switch len(validators) {
 	case 0:
 		return ""
@@ -55,13 +55,24 @@ func formatValidators(name string, validators []Validator) string {
 	b.WriteByte('(')
 	for i, validator := range validators {
 		if i > 0 {
-			b.WriteString(name)
+			b.WriteString(sep)
 		}
 		b.WriteString(validator.String())
 	}
 	b.WriteByte(')')
 
 	return b.String()
+}
+
+func composeValidators(name string, validators ...Validator) (Validator, string) {
+	validator := And(validators...)
+	desc := validator.String()
+	if desc[0] == '(' {
+		desc = name + desc
+	} else {
+		desc = fmt.Sprintf("%s(%s)", name, desc)
+	}
+	return validator, desc
 }
 
 // ************************************************************************* //
@@ -153,8 +164,7 @@ func Array(validators ...Validator) Validator {
 		panic("ArrayValidator: need at least one validator")
 	}
 
-	validator := And(validators...)
-	desc := fmt.Sprintf("array(%s)", validator.String())
+	validator, desc := composeValidators("array", validators...)
 	return NewValidator(desc, func(i interface{}) error {
 		switch vs := i.(type) {
 		case []string:
@@ -196,8 +206,7 @@ func MapK(validators ...Validator) Validator {
 		panic("MapKValidator: need at least one validator")
 	}
 
-	validator := And(validators...)
-	desc := fmt.Sprintf("mapk(%s)", validator.String())
+	validator, desc := composeValidators("mapk", validators...)
 	return NewValidator(desc, func(i interface{}) error {
 		switch vs := i.(type) {
 		case map[string]string:
@@ -238,8 +247,7 @@ func MapV(validators ...Validator) Validator {
 		panic("MapVValidator: need at least one validator")
 	}
 
-	validator := And(validators...)
-	desc := fmt.Sprintf("mapv(%s)", validator.String())
+	validator, desc := composeValidators("mapv", validators...)
 	return NewValidator(desc, func(i interface{}) error {
 		switch vs := i.(type) {
 		case map[string]string:
@@ -289,8 +297,7 @@ func MapKV(validators ...Validator) Validator {
 		panic("MapKVValidator: need at least one validator")
 	}
 
-	validator := And(validators...)
-	desc := fmt.Sprintf("mapkv(%s)", validator.String())
+	validator, desc := composeValidators("mapkv", validators...)
 	return NewValidator(desc, func(i interface{}) error {
 		switch vs := i.(type) {
 		case map[string]string:
