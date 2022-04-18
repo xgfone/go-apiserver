@@ -244,6 +244,8 @@ func WrapPanic(kvs ...interface{}) {
 	}
 }
 
+var trimPrefixes = []string{"/src/", "/pkg/mod/"}
+
 // GetCallStack returns the most 64 call stacks.
 func GetCallStack(skip int) []string {
 	var pcs [64]uintptr
@@ -260,9 +262,11 @@ func GetCallStack(skip int) []string {
 			break
 		}
 
-		const mark = "/src/"
-		if index := strings.Index(frame.File, mark); index > -1 {
-			frame.File = frame.File[index+len(mark):]
+		for _, mark := range trimPrefixes {
+			if index := strings.Index(frame.File, mark); index > -1 {
+				frame.File = frame.File[index+len(mark):]
+				break
+			}
 		}
 
 		if frame.Function == "" {
