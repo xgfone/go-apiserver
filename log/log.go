@@ -19,12 +19,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"runtime"
 	"strings"
-)
 
-// RecoverStackSkip is used to skip some stacks.
-const RecoverStackSkip = 4
+	"github.com/xgfone/go-apiserver/helper"
+)
 
 // DefaultLogger is the default logger implementation.
 var DefaultLogger Logger
@@ -239,46 +237,8 @@ func WrapPanic(kvs ...interface{}) {
 			kvs = make([]interface{}, 0, 4)
 		}
 
-		kvs = append(kvs, "stacks", GetCallStack(RecoverStackSkip), "panic", r)
+		stacks := helper.GetCallStack(helper.RecoverStackSkip)
+		kvs = append(kvs, "stacks", stacks, "panic", r)
 		DefaultLogger.Log(LvlError, 2, "wrap a panic", kvs...)
 	}
-}
-
-var trimPrefixes = []string{"/src/", "/pkg/mod/"}
-
-// GetCallStack returns the most 64 call stacks.
-func GetCallStack(skip int) []string {
-	var pcs [64]uintptr
-	n := runtime.Callers(skip, pcs[:])
-	if n == 0 {
-		return nil
-	}
-
-	stacks := make([]string, 0, n)
-	frames := runtime.CallersFrames(pcs[:n])
-	for {
-		frame, more := frames.Next()
-		if !more {
-			break
-		}
-
-		for _, mark := range trimPrefixes {
-			if index := strings.Index(frame.File, mark); index > -1 {
-				frame.File = frame.File[index+len(mark):]
-				break
-			}
-		}
-
-		if frame.Function == "" {
-			stacks = append(stacks, fmt.Sprintf("%s:%d", frame.File, frame.Line))
-		} else {
-			name := frame.Function
-			if index := strings.LastIndexByte(frame.Function, '.'); index > -1 {
-				name = frame.Function[index+1:]
-			}
-			stacks = append(stacks, fmt.Sprintf("%s:%s:%d", frame.File, name, frame.Line))
-		}
-	}
-
-	return stacks
 }

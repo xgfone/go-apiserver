@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package log
+package helper
 
 import (
 	"strings"
@@ -29,8 +29,8 @@ func TestGetCallStack(t *testing.T) {
 	}
 
 	expects := []string{
-		"github.com/xgfone/go-apiserver/log/log.go:GetCallStack:250",
-		"github.com/xgfone/go-apiserver/log/log_test.go:TestGetCallStack:23",
+		"github.com/xgfone/go-apiserver/helper/stack.go:GetCallStack:31",
+		"github.com/xgfone/go-apiserver/helper/stack_test.go:TestGetCallStack:23",
 	}
 
 	if len(expects) != len(stacks) {

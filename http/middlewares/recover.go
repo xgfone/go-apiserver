@@ -19,6 +19,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/log"
 	mw "github.com/xgfone/go-apiserver/middleware"
@@ -68,7 +69,7 @@ func wrapPanic(w http.ResponseWriter, r *http.Request) {
 			defaultHandler(w, r, e)
 		}
 
-		stacks := log.GetCallStack(log.RecoverStackSkip)
+		stacks := helper.GetCallStack(helper.RecoverStackSkip)
 		log.Error("wrap a panic", "addr", r.RemoteAddr, "method", r.Method,
 			"uri", r.RequestURI, "panic", e, "stacks", stacks)
 	}
