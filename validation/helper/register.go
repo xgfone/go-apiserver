@@ -44,7 +44,7 @@ func RegisterFuncOneFloat(b *validation.Builder, name string, newf func(float64)
 		}
 
 		v, err := getFloat(name, -1, args[0])
-		if err != nil {
+		if err == nil {
 			c.AppendValidators(newf(v))
 		}
 
