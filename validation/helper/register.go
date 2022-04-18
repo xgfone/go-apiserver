@@ -17,7 +17,6 @@ package helper
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/xgfone/go-apiserver/validation"
 	"github.com/xgfone/predicate"
@@ -44,23 +43,69 @@ func RegisterFuncOneFloat(b *validation.Builder, name string, newf func(float64)
 			return fmt.Errorf("%s must have and only have one argument", name)
 		}
 
-		switch v := args[0].(type) {
-		case int:
-			c.AppendValidators(newf(float64(v)))
-
-		case float64:
+		v, err := getFloat(name, -1, args[0])
+		if err != nil {
 			c.AppendValidators(newf(v))
-
-		case string:
-			var f float64
-			if f, err = strconv.ParseFloat(v, 64); err == nil {
-				c.AppendValidators(newf(f))
-			}
-
-		default:
-			err = fmt.Errorf("%s does not support the argument type %T", name, v)
 		}
 
+		return
+	})
+}
+
+func getFloat(name string, index int, i interface{}) (f float64, err error) {
+	switch v := i.(type) {
+	case int:
+		f = float64(v)
+
+	case float64:
+		f = v
+
+	default:
+		if index < 0 {
+			err = fmt.Errorf("%s does not support the argument type %T", name, i)
+		} else {
+			err = fmt.Errorf("%s expects %dth argument is an int or float, but got %T", name, index, i)
+		}
+	}
+
+	return
+}
+
+// RegisterFuncTwoFloats is used to help to register the builder function
+// into builder to parse the validator with only two float64 arguments.
+func RegisterFuncTwoFloats(b *validation.Builder, name string, newf func(float64, float64) validation.Validator) {
+	b.RegisterFunc(name, func(c *validation.Context, args ...interface{}) (err error) {
+		if len(args) != 2 {
+			return fmt.Errorf("%s must have and only have two argument", name)
+		}
+
+		first, err := getFloat(name, 0, args[0])
+		if err != nil {
+			return
+		}
+
+		second, err := getFloat(name, 1, args[1])
+		if err != nil {
+			return
+		}
+
+		c.AppendValidators(newf(first, second))
+		return
+	})
+}
+
+// RegisterFuncFloats is used to help to register the builder function
+// into builder to parse the validator with a set of float64 arguments.
+func RegisterFuncFloats(b *validation.Builder, name string, newf func(...float64) validation.Validator) {
+	b.RegisterFunc(name, func(c *validation.Context, args ...interface{}) (err error) {
+		vs := make([]float64, len(args))
+		for i, v := range args {
+			if vs[i], err = getFloat(name, i, v); err != nil {
+				return err
+			}
+		}
+
+		c.AppendValidators(newf(vs...))
 		return
 	})
 }
@@ -73,7 +118,7 @@ func RegisterFuncStrings(b *validation.Builder, name string, newf func(...string
 		ss := make([]string, len(args))
 		for i, v := range args {
 			if ss[i], ok = v.(string); !ok {
-				return fmt.Errorf("expect the %dth argument is a string, but got %T", i, v)
+				return fmt.Errorf("%s expects %dth argument is a string, but got %T", name, i, v)
 			}
 		}
 		c.AppendValidators(newf(ss...))
@@ -94,7 +139,7 @@ func RegisterFuncValidators(b *validation.Builder, name string,
 		for i, arg := range args {
 			b, ok := arg.(predicate.ContextBuilder)
 			if !ok {
-				return fmt.Errorf("expect the %dth argument is a validator, but got %T", i, arg)
+				return fmt.Errorf("%s expects %dth argument is a validator, but got %T", name, i, arg)
 			}
 
 			nc := ac.New()
