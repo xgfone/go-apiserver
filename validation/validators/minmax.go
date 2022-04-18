@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/validation"
 )
 
@@ -27,12 +28,16 @@ import (
 // Support the types as follow:
 //   - Integer, Float: compare the value
 //   - String, Array, Slice, Map: compare the length of them
+//   - Pointer to types above
 //
 func Min(i float64) validation.Validator {
 	s := strconv.FormatFloat(i, 'f', -1, 64)
 	rule := fmt.Sprintf("min(%s)", s)
 	return validation.NewValidator(rule, func(v interface{}) error {
-		switch t := v.(type) {
+		switch t := helper.Indirect(v).(type) {
+		case nil:
+			return fmt.Errorf("unexpected empty pointer")
+
 		case int:
 			if float64(t) < i {
 				return fmt.Errorf("the integer is less than %s", s)
@@ -90,8 +95,7 @@ func Min(i float64) validation.Validator {
 			}
 
 		default:
-			vf := reflect.ValueOf(v)
-			switch vf.Kind() {
+			switch vf := reflect.ValueOf(t); vf.Kind() {
 			case reflect.Array, reflect.Slice, reflect.Map:
 				if vf.Len() < int(i) {
 					return fmt.Errorf("the length is less than %s", s)
@@ -115,7 +119,10 @@ func Max(i float64) validation.Validator {
 	s := strconv.FormatFloat(i, 'f', -1, 64)
 	rule := fmt.Sprintf("max(%s)", s)
 	return validation.NewValidator(rule, func(v interface{}) error {
-		switch t := v.(type) {
+		switch t := helper.Indirect(v).(type) {
+		case nil:
+			return fmt.Errorf("unexpected empty pointer")
+
 		case int:
 			if float64(t) > i {
 				return fmt.Errorf("the integer is greater than %s", s)
@@ -173,8 +180,7 @@ func Max(i float64) validation.Validator {
 			}
 
 		default:
-			vf := reflect.ValueOf(v)
-			switch vf.Kind() {
+			switch vf := reflect.ValueOf(t); vf.Kind() {
 			case reflect.Array, reflect.Slice, reflect.Map:
 				if vf.Len() > int(i) {
 					return fmt.Errorf("the length is greater than %s", s)

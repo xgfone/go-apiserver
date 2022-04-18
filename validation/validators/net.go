@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/nets"
 	"github.com/xgfone/go-apiserver/validation"
 )
 
 var (
-	errInvalidMac = errors.New("the string is not a valid mac")
+	errInvalidMac        = errors.New("the string is not a valid mac")
+	errInvalidStringAddr = errors.New("the string is not a valid address")
 
 	errInvalidIP       = errors.New("invalid ip")
 	errInvalidStringIP = errors.New("the string is not a valid ip")
@@ -36,13 +38,22 @@ var (
 // Mac returns a new Validator to chech whether the string value is a valid MAC.
 func Mac() validation.Validator {
 	return validation.NewValidator("mac", func(i interface{}) error {
-		if s, ok := i.(string); ok {
-			if nets.NormalizeMac(s) == "" {
+		switch v := helper.Indirect(i).(type) {
+		case string:
+			if nets.NormalizeMac(v) == "" {
 				return errInvalidMac
 			}
-			return nil
+
+		case fmt.Stringer:
+			if nets.NormalizeMac(v.String()) == "" {
+				return errInvalidMac
+			}
+
+		default:
+			return fmt.Errorf("expect a string, but got %T", i)
 		}
-		return fmt.Errorf("expect a string, but got %T", i)
+
+		return nil
 	})
 }
 
@@ -51,7 +62,7 @@ func Mac() validation.Validator {
 // Support the types: string or net.IP.
 func IP() validation.Validator {
 	return validation.NewValidator("ip", func(i interface{}) error {
-		switch v := i.(type) {
+		switch v := helper.Indirect(i).(type) {
 		case string:
 			if net.ParseIP(v) == nil {
 				return errInvalidStringIP
@@ -62,6 +73,11 @@ func IP() validation.Validator {
 			case net.IPv4len, net.IPv6len:
 			default:
 				return errInvalidIP
+			}
+
+		case fmt.Stringer:
+			if net.ParseIP(v.String()) == nil {
+				return errInvalidStringIP
 			}
 
 		default:
@@ -86,6 +102,35 @@ func Cidr() validation.Validator {
 		case *net.IPNet:
 			if v == nil {
 				return errInvalidCidr
+			}
+
+		case fmt.Stringer:
+			if _, _, err := net.ParseCIDR(v.String()); err != nil {
+				return errInvalidStringCidr
+			}
+
+		default:
+			return fmt.Errorf("unsupported type %T", i)
+		}
+
+		return nil
+	})
+}
+
+// Addr returns a new Validator to chech whether the value is a valid HOST:PORT.
+//
+// Support the types: string.
+func Addr() validation.Validator {
+	return validation.NewValidator("addr", func(i interface{}) error {
+		switch v := helper.Indirect(i).(type) {
+		case string:
+			if h, p := nets.SplitHostPort(v); len(h) == 0 || len(p) == 0 {
+				return errInvalidStringAddr
+			}
+
+		case fmt.Stringer:
+			if h, p := nets.SplitHostPort(v.String()); len(h) == 0 || len(p) == 0 {
+				return errInvalidStringAddr
 			}
 
 		default:

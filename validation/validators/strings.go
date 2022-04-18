@@ -36,12 +36,21 @@ func OneOf(values ...string) validation.Validator {
 
 	desc := fmt.Sprintf("oneof(%s)", string(bs[1:len(bs)-1]))
 	return validation.NewValidator(desc, func(i interface{}) error {
-		if s, ok := i.(string); ok {
-			if helper.InStrings(s, values) {
-				return nil
+		switch v := helper.Indirect(i).(type) {
+		case string:
+			if !helper.InStrings(v, values) {
+				return fmt.Errorf("the string '%s' is not one of %v", v, values)
 			}
-			return fmt.Errorf("the string '%s' is one of %v", s, values)
+
+		case fmt.Stringer:
+			if s := v.String(); !helper.InStrings(s, values) {
+				return fmt.Errorf("the string '%s' is not one of %v", s, values)
+			}
+
+		default:
+			return fmt.Errorf("expect a string, but got %T", i)
 		}
-		return fmt.Errorf("expect a string, but got %T", i)
+
+		return nil
 	})
 }

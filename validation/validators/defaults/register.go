@@ -33,6 +33,7 @@ func RegisterDefaults(b *validation.Builder) {
 	helper.RegisterFuncNoArg(validation.DefaultBuilder, "ip", validators.IP)
 	helper.RegisterFuncNoArg(validation.DefaultBuilder, "mac", validators.Mac)
 	helper.RegisterFuncNoArg(validation.DefaultBuilder, "cidr", validators.Cidr)
+	helper.RegisterFuncNoArg(validation.DefaultBuilder, "addr", validators.Addr)
 
 	helper.RegisterFuncOneFloat(validation.DefaultBuilder, "min", validators.Min)
 	helper.RegisterFuncOneFloat(validation.DefaultBuilder, "max", validators.Max)
