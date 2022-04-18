@@ -164,14 +164,14 @@ func NewBuilder() *Builder {
 func (b *Builder) getIdentifier(selector []string) (interface{}, error) {
 	// Support the format "zero" instead of "zero()"
 
-	// First, lookup the symbol table.
-	if v, ok := b.Symbols[selector[0]]; ok {
-		return v, nil
-	}
-
-	// Second, lookup the function table.
+	// First, lookup the function table.
 	if f := b.GetFunc(selector[0]); f != nil {
 		return f, nil
+	}
+
+	// Second, lookup the symbol table.
+	if v, ok := b.Symbols[selector[0]]; ok {
+		return v, nil
 	}
 
 	// We find no the identifier.
@@ -293,36 +293,74 @@ func (b *Builder) ValidateStruct(s interface{}) error {
 		panic(fmt.Errorf("the value is %T, not a struct", v.Interface()))
 	}
 
-	var errs NamedErrors
+	errs := b.validateStruct("", v, nil)
+	if len(errs) > 0 {
+		return errs
+	}
+	return nil
+}
 
+var validatorImpl = reflect.TypeOf((*ValueValidator)(nil)).Elem()
+
+func (b *Builder) validateStruct(prefix string, v reflect.Value, errs NamedErrors) NamedErrors {
 	t := v.Type()
 	for i, _len := 0, v.NumField(); i < _len; i++ {
 		ft := t.Field(i)
+		fv := v.Field(i)
+
+		// Validate the fields of the sub-struct recursively.
+		if ft.Type.Kind() == reflect.Struct {
+			name := b.getStructFieldName(prefix, ft)
+			errs = b.validateStruct(name, fv, errs)
+			if errs == nil {
+				if ft.Type.Implements(validatorImpl) {
+					err := fv.Interface().(ValueValidator).Validate()
+					errs = addError(errs, name, err)
+				}
+			}
+			continue
+		}
 
 		rule := ft.Tag.Get("validate")
 		if rule == "" {
 			continue
 		}
 
-		err := b.Validate(v.Field(i).Interface(), rule)
+		err := b.Validate(fv.Interface(), rule)
 		if err != nil {
-			var name string
-			if b.LookupStructFieldName == nil {
-				name = lookupStructFieldName(ft)
-			} else {
-				name = b.LookupStructFieldName(ft)
-			}
-
-			if errs == nil {
-				errs = make(NamedErrors, _len)
-				errs.Add(name, err)
-			}
+			errs = addError(errs, b.getStructFieldName(prefix, ft), err)
 		}
 	}
 
-	if errs == nil {
-		return nil
+	return errs
+}
+
+func (b *Builder) getStructFieldName(prefix string, ft reflect.StructField) (name string) {
+	if b.LookupStructFieldName == nil {
+		name = lookupStructFieldName(ft)
+	} else {
+		name = b.LookupStructFieldName(ft)
 	}
+
+	if name == "" {
+		name = ft.Name
+	}
+
+	if prefix != "" {
+		name = strings.Join([]string{prefix, name}, ".")
+	}
+
+	return
+}
+
+func addError(errs NamedErrors, name string, err error) NamedErrors {
+	if err != nil {
+		if errs == nil {
+			errs = make(NamedErrors, 4)
+		}
+		errs[name] = err
+	}
+
 	return errs
 }
 

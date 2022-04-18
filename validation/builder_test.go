@@ -16,11 +16,58 @@ package validation_test
 
 import (
 	"fmt"
+	"testing"
 
 	"github.com/xgfone/go-apiserver/validation"
 	"github.com/xgfone/go-apiserver/validation/helper"
 	"github.com/xgfone/go-apiserver/validation/validators"
+	"github.com/xgfone/go-apiserver/validation/validators/defaults"
 )
+
+type testT2 struct {
+	F1 string `validate:"required"`
+	F2 int    `validate:"zero || min==5"`
+}
+
+func (t testT2) Validate() error {
+	if t.F2 > 0 && t.F2 != len(t.F1) {
+		return fmt.Errorf("F2 is not equal to the length of F1")
+	}
+	return nil
+}
+
+func TestBuilderValidateStruct(t *testing.T) {
+	defaults.RegisterDefaults(validation.DefaultBuilder)
+
+	var s struct {
+		F testT2
+	}
+
+	s.F.F1 = "abc"
+	if err := validation.ValidateStruct(s); err != nil {
+		t.Error(err)
+	}
+
+	s.F.F2 = 3
+	if err := validation.ValidateStruct(s); err == nil {
+		t.Errorf("expect an error, but got nil")
+	} else if s := "F.F2: the integer is less than 5"; err.Error() != s {
+		t.Errorf("expect the error '%s', but got '%s'", s, err.Error())
+	}
+
+	s.F.F2 = 5
+	if err := validation.ValidateStruct(s); err == nil {
+		t.Errorf("expect an error, but got nil")
+	} else if s := "F: F2 is not equal to the length of F1"; err.Error() != s {
+		t.Errorf("expect the error '%s', but got '%s'", s, err.Error())
+	}
+
+	s.F.F1 = "abcde"
+	s.F.F2 = len(s.F.F1)
+	if err := validation.ValidateStruct(s); err != nil {
+		t.Errorf("unexpected error '%s'", err.Error())
+	}
+}
 
 func ExampleBuilder() {
 	// Register the builder functions.
@@ -74,7 +121,6 @@ func ExampleBuilder() {
 
 	// Example 3: The simpler validation way
 	const rule1 = "zero || (min==3 && max==10)"
-	fmt.Println()
 	fmt.Println(validation.Validate("", rule1))
 	fmt.Println(validation.Validate("a", rule1))
 	fmt.Println(validation.Validate("abc", rule1))
@@ -103,15 +149,35 @@ func ExampleBuilder() {
 	// Exampe 6: Validate the struct
 	fmt.Println("\n--- Struct ---")
 	type s struct {
-		F1 string `validate:"zero || max(8)"`
-		F2 int    `validate:"min(1) && max==10"`
-	}
-	fmt.Println(validation.ValidateStruct(s{F1: "", F2: 1}))
-	fmt.Println(validation.ValidateStruct(s{F1: "abc", F2: 2}))
-	fmt.Println(validation.ValidateStruct(s{F1: "abcdefgxyz", F2: 3}))
+		F1 string `validate:"zero || max(8)"`    // General Type
+		F2 *int64 `validate:"min(1) && max==10"` // Pointer Type
 
-	// Only return the error of F1 because And validator uses the short circuit.
-	fmt.Println(validation.ValidateStruct(s{F1: "abcdefgxyz", F2: 0}))
+		F3 struct { // Embedded Anonymous Struct
+			F4 string `validate:"oneof(\"a\", \"b\")"`
+			F5 *[]int `validate:"array(min(1))"`
+		}
+	}
+	var v s
+	v.F2 = new(int64)
+	v.F3.F5 = &[]int{1, 2}
+	v.F3.F4 = "a"
+
+	*v.F2 = 1
+	fmt.Println(validation.ValidateStruct(v))
+
+	v.F1 = "abc"
+	fmt.Println(validation.ValidateStruct(v))
+
+	v.F1 = "abcdefgxyz"
+	fmt.Println(validation.ValidateStruct(v))
+
+	v.F1 = ""
+	v.F3.F4 = "c"
+	fmt.Println(validation.ValidateStruct(v))
+
+	v.F3.F4 = "a"
+	(*v.F3.F5)[0] = 0
+	fmt.Println(validation.ValidateStruct(v))
 
 	// Example 7: Others
 	fmt.Println("\n--- Others ---")
@@ -135,7 +201,6 @@ func ExampleBuilder() {
 	// the string length is less than 3
 	// <nil>
 	// the string length is greater than 10
-	//
 	// <nil>
 	// the string length is less than 3
 	// <nil>
@@ -159,9 +224,10 @@ func ExampleBuilder() {
 	// <nil>
 	// <nil>
 	// F1: the string length is greater than 8
-	// F1: the string length is greater than 8
+	// F3.F4: the string 'c' is not one of [a b]
+	// F3.F5: 0th element is invalid: the integer is less than 1
 	//
 	// --- Others ---
 	// <nil>
-	// the string 'x' is not in [a b c]
+	// the string 'x' is not one of [a b c]
 }

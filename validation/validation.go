@@ -21,6 +21,13 @@ import (
 	"strings"
 )
 
+// ValueValidator represents the interface implemented by the value.
+//
+// If a value has implemented the interface, it can validate itself.
+type ValueValidator interface {
+	Validate() error
+}
+
 // Validator is a validator to check whether a value is valid.
 type Validator interface {
 	Validate(i interface{}) error
