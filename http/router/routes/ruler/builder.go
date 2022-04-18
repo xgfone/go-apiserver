@@ -414,3 +414,45 @@ func (b RouteBuilder) HEADContext(handler reqresp.Handler) RouteBuilder {
 	b.Method(http.MethodHead).SetPanic(true).Handler(handler)
 	return b
 }
+
+// GETContextWithError is a convenient function to register the route with the
+// context handler, which is the same as b.Method(http.MethodGet).Handler(handler).
+func (b RouteBuilder) GETContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
+	b.Method(http.MethodGet).SetPanic(true).Handler(handler)
+	return b
+}
+
+// PUTContextWithError is a convenient function to register the route with the
+// context handler, which is the same as b.Method(http.MethodPut).Handler(handler).
+func (b RouteBuilder) PUTContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
+	b.Method(http.MethodPut).SetPanic(true).Handler(handler)
+	return b
+}
+
+// POSTContextWithError is a convenient function to register the route with the
+// context handler, which is the same as b.Method(http.MethodPost).Handler(handler).
+func (b RouteBuilder) POSTContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
+	b.Method(http.MethodPost).SetPanic(true).Handler(handler)
+	return b
+}
+
+// DELETEContextWithError is a convenient function to register the route with the
+// context handler, which is the same as b.Method(http.MethodDelete).Handler(handler).
+func (b RouteBuilder) DELETEContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
+	b.Method(http.MethodDelete).SetPanic(true).Handler(handler)
+	return b
+}
+
+// PATCHContextWithError is a convenient function to register the route with the
+// context handler, which is the same as b.Method(http.MethodPatch).Handler(handler).
+func (b RouteBuilder) PATCHContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
+	b.Method(http.MethodPatch).SetPanic(true).Handler(handler)
+	return b
+}
+
+// HEADContextWithError is a convenient function to register the route with the
+// context handler, which is the same as b.Method(http.MethodHead).Handler(handler).
+func (b RouteBuilder) HEADContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
+	b.Method(http.MethodHead).SetPanic(true).Handler(handler)
+	return b
+}
