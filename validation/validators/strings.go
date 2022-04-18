@@ -40,7 +40,7 @@ func OneOf(values ...string) validation.Validator {
 			if helper.InStrings(s, values) {
 				return nil
 			}
-			return fmt.Errorf("the string '%s' is not in %v", s, values)
+			return fmt.Errorf("the string '%s' is one of %v", s, values)
 		}
 		return fmt.Errorf("expect a string, but got %T", i)
 	})

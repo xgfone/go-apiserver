@@ -40,6 +40,7 @@ func Mac() validation.Validator {
 			if nets.NormalizeMac(s) == "" {
 				return errInvalidMac
 			}
+			return nil
 		}
 		return fmt.Errorf("expect a string, but got %T", i)
 	})
