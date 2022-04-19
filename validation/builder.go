@@ -39,6 +39,11 @@ func RegisterSymbols(maps map[string]interface{}) {
 	DefaultBuilder.RegisterSymbols(maps)
 }
 
+// RegisterSymbolNames is equal to DefaultBuilder.RegisterSymbolNames(names...).
+func RegisterSymbolNames(names ...string) {
+	DefaultBuilder.RegisterSymbolNames(names...)
+}
+
 // RegisterFunction is eqaul to DefaultBuilder.RegisterFunction(function).
 func RegisterFunction(function Function) {
 	DefaultBuilder.RegisterFunction(function)
@@ -174,6 +179,14 @@ func (b *Builder) RegisterSymbol(name string, value interface{}) {
 func (b *Builder) RegisterSymbols(maps map[string]interface{}) {
 	for name, value := range maps {
 		b.RegisterSymbol(name, value)
+	}
+}
+
+// RegisterSymbolNames registers a set of symbols with the names,
+// the value of whose are equal to their name.
+func (b *Builder) RegisterSymbolNames(names ...string) {
+	for _, name := range names {
+		b.RegisterSymbol(name, name)
 	}
 }
 
