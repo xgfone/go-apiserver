@@ -34,19 +34,70 @@ type Validator interface {
 	String() string
 }
 
+// ValidatorFunc represents a validation function.
+type ValidatorFunc func(interface{}) error
+
 // NewValidator returns the new Validator based on the validation rule
 // and function.
-func NewValidator(rule string, validate func(interface{}) error) Validator {
+func NewValidator(rule string, validate ValidatorFunc) Validator {
 	return validator{s: rule, f: validate}
 }
 
 type validator struct {
 	s string
-	f func(interface{}) error
+	f ValidatorFunc
 }
 
 func (v validator) Validate(i interface{}) error { return v.f(i) }
 func (v validator) String() string               { return v.s }
+
+// BoolValidatorFunc converts a bool validation function to ValidatorFunc,
+// which returns err if validate returns false, or nil if true.
+func BoolValidatorFunc(validate func(interface{}) bool, err error) ValidatorFunc {
+	if err == nil {
+		panic("BoolValidatorFunc: the error must not be nil")
+	}
+	if validate == nil {
+		panic("BoolValidatorFunc: the validation function must not be nil")
+	}
+
+	return func(i interface{}) error {
+		if validate(i) {
+			return nil
+		}
+		return err
+	}
+}
+
+// BoolStringValidatorFunc converts a bool validation function to ValidatorFunc,
+// which returns err if validate returns false, or nil if true.
+func BoolStringValidatorFunc(validate func(string) bool, err error) ValidatorFunc {
+	if err == nil {
+		panic("BoolStringValidatorFunc: the error must not be nil")
+	}
+	if validate == nil {
+		panic("BoolStringValidatorFunc: the validation function must not be nil")
+	}
+
+	return func(i interface{}) error {
+		var ok bool
+		switch t := i.(type) {
+		case string:
+			ok = validate(t)
+
+		case fmt.Stringer:
+			ok = validate(t.String())
+
+		default:
+			return fmt.Errorf("unsupported type '%T'", i)
+		}
+
+		if ok {
+			return nil
+		}
+		return err
+	}
+}
 
 func formatValidators(sep string, validators []Validator) string {
 	switch len(validators) {
