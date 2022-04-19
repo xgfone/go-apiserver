@@ -81,7 +81,7 @@ func ExampleBuilder() {
 
 	// Register the validator building function based on the bool validation.
 	isZero := func(i interface{}) bool { return reflect.ValueOf(i).IsZero() }
-	validation.RegisterBoolValidatorFunc("zero", isZero, fmt.Errorf("the value is expected to be zero"))
+	validation.RegisterValidatorFuncBool("zero", isZero, fmt.Errorf("the value is expected to be zero"))
 
 	// Add the global symbols.
 	validation.RegisterSymbol("v1", "a")

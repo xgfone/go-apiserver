@@ -20,7 +20,7 @@ import (
 	"github.com/xgfone/predicate"
 )
 
-// Function represents a function to be called.
+// Function is called by the builder to parse and build the validator.
 type Function interface {
 	Call(c *Context, args ...interface{}) error
 	Name() string

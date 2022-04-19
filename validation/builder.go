@@ -50,16 +50,16 @@ func RegisterValidatorFunc(name string, f ValidatorFunc) {
 	DefaultBuilder.RegisterValidatorFunc(name, f)
 }
 
-// RegisterBoolValidatorFunc is equal to
-// DefaultBuilder.RegisterBoolValidatorFunc(name, f, err).
-func RegisterBoolValidatorFunc(name string, f func(interface{}) bool, err error) {
-	DefaultBuilder.RegisterBoolValidatorFunc(name, f, err)
+// RegisterValidatorFuncBool is equal to
+// DefaultBuilder.RegisterValidatorFuncBool(name, f, err).
+func RegisterValidatorFuncBool(name string, f func(interface{}) bool, err error) {
+	DefaultBuilder.RegisterValidatorFuncBool(name, f, err)
 }
 
-// RegisterStringBoolValidatorFunc is equal to
-// DefaultBuilder.RegisterStringBoolValidatorFunc(name, f, err).
-func RegisterStringBoolValidatorFunc(name string, f func(string) bool, err error) {
-	DefaultBuilder.RegisterStringBoolValidatorFunc(name, f, err)
+// RegisterValidatorFuncBoolString is equal to
+// DefaultBuilder.RegisterValidatorFuncBoolString(name, f, err).
+func RegisterValidatorFuncBoolString(name string, f func(string) bool, err error) {
+	DefaultBuilder.RegisterValidatorFuncBoolString(name, f, err)
 }
 
 // Build is equal to DefaultBuilder.Build(c, rule).
@@ -185,7 +185,13 @@ func (b *Builder) RegisterFunction(function Function) {
 }
 
 // RegisterValidatorFunc is a convenient method to treat the validation
-// function with the name as a builder function to be registered.
+// function with the name as a builder function to be registered, which
+// is equal to
+//
+//   b.RegisterFunction(NewFunctionWithoutArgs(name, func() Validator {
+//       return NewValidator(name, f)
+//   }))
+//
 func (b *Builder) RegisterValidatorFunc(name string, f ValidatorFunc) {
 	validator := NewValidator(name, f)
 	b.RegisterFunction(NewFunctionWithoutArgs(name, func() Validator {
@@ -193,15 +199,23 @@ func (b *Builder) RegisterValidatorFunc(name string, f ValidatorFunc) {
 	}))
 }
 
-// RegisterBoolValidatorFunc is a convenient method to treat the bool
-// validation function with the name as a builder function to be registered.
-func (b *Builder) RegisterBoolValidatorFunc(name string, f func(interface{}) bool, err error) {
+// RegisterValidatorFuncBool is a convenient method to treat the bool
+// validation function with the name as a builder function to be registered,
+// which is equal to
+//
+//   b.RegisterValidatorFunc(name, BoolValidatorFunc(f, err))
+//
+func (b *Builder) RegisterValidatorFuncBool(name string, f func(interface{}) bool, err error) {
 	b.RegisterValidatorFunc(name, BoolValidatorFunc(f, err))
 }
 
-// RegisterStringBoolValidatorFunc is a convenient method to treat the string
-// bool validation function with the name as a builder function to be registered.
-func (b *Builder) RegisterStringBoolValidatorFunc(name string, f func(string) bool, err error) {
+// RegisterValidatorFuncBoolString is a convenient method to treat the string
+// bool validation function with the name as a builder function to be registered,
+// which is equal to
+//
+//   b.RegisterValidatorFunc(name, StringBoolValidatorFunc(f, err))
+//
+func (b *Builder) RegisterValidatorFuncBoolString(name string, f func(string) bool, err error) {
 	b.RegisterValidatorFunc(name, StringBoolValidatorFunc(f, err))
 }
 
