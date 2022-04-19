@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
 )
 
@@ -34,24 +33,16 @@ func IsTimeout(err error) bool {
 	return errors.As(err, &timeoutErr) && timeoutErr.Timeout()
 }
 
-// NormalizeMac normalizes the mac.
+// NormalizeMac normalizes the mac, which is the convenient function
+// of net.ParseMAC, but only supports the 48-bit format and outputs
+// the string like "xx:xx:xx:xx:xx:xx".
 //
 // Return "" if the mac is an invalid mac.
 func NormalizeMac(mac string) string {
-	macs := strings.Split(mac, ":")
-	if len(macs) != 6 {
-		return ""
+	if ha, err := net.ParseMAC(mac); err == nil || len(ha) == 6 {
+		return ha.String()
 	}
-
-	for i, m := range macs {
-		v, err := strconv.ParseUint(m, 16, 8)
-		if err != nil {
-			return ""
-		}
-		macs[i] = fmt.Sprintf("%02x", v)
-	}
-
-	return strings.Join(macs, ":")
+	return ""
 }
 
 // IPIsOnInterface reports whether the ip is on the given network interface

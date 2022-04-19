@@ -35,7 +35,18 @@ var (
 	errInvalidStringCidr = errors.New("the string is not a valid cidr")
 )
 
-// Mac returns a new Validator to chech whether the string value is a valid MAC.
+// Mac returns a new Validator to chech whether a string is a valid 48-bit MAC.
+//
+// Support the mac format:
+//   - xx:xx:xx:xx:xx:xx
+//   - XX:XX:XX:XX:XX:XX
+//   - Xx:Xx:Xx:Xx:Xx:Xx
+//   - xx-xx-xx-xx-xx-xx
+//   - XX-XX-XX-XX-XX-XX
+//   - Xx-Xx-Xx-Xx-Xx-Xx
+//   - xxxx.xxxx.xxxx
+//   - XXXX.XXXX.XXXX
+//   - XxXx.XxXx.XxXx
 func Mac() validation.Validator {
 	return validation.NewValidator("mac", func(i interface{}) error {
 		switch v := helper.Indirect(i).(type) {

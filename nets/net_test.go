@@ -16,6 +16,29 @@ package nets
 
 import "fmt"
 
+func ExampleNormalizeMac() {
+	fmt.Println(NormalizeMac("00:aa:bb:cc:dd:ee"))
+	fmt.Println(NormalizeMac("00:AA:BB:CC:DD:EE"))
+	fmt.Println(NormalizeMac("00:Aa:Bb:Cc:Dd:Ee"))
+	fmt.Println(NormalizeMac("00-aa-bb-cc-dd-ee"))
+	fmt.Println(NormalizeMac("00-AA-BB-CC-DD-EE"))
+	fmt.Println(NormalizeMac("00-Aa-Bb-Cc-Dd-Ee"))
+	fmt.Println(NormalizeMac("00aa.bbcc.ddee"))
+	fmt.Println(NormalizeMac("00AA.BBCC.DDEE"))
+	fmt.Println(NormalizeMac("00Aa.BbCc.DdEe"))
+
+	// Output:
+	// 00:aa:bb:cc:dd:ee
+	// 00:aa:bb:cc:dd:ee
+	// 00:aa:bb:cc:dd:ee
+	// 00:aa:bb:cc:dd:ee
+	// 00:aa:bb:cc:dd:ee
+	// 00:aa:bb:cc:dd:ee
+	// 00:aa:bb:cc:dd:ee
+	// 00:aa:bb:cc:dd:ee
+	// 00:aa:bb:cc:dd:ee
+}
+
 func ExampleSplitHostPort() {
 	var host, port string
 
