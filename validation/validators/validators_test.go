@@ -14,7 +14,9 @@
 
 package validators
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestValidatorString(t *testing.T) {
 	testString(t, Cidr().String(), `cidr`)
