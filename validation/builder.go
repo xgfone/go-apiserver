@@ -26,54 +26,6 @@ import (
 	"github.com/xgfone/predicate"
 )
 
-// Context is a builder context to manage the built validators.
-type Context struct {
-	validators []Validator
-}
-
-// NewContext returns a new builder context.
-func NewContext() *Context { return &Context{} }
-
-// New implements the interface predicate.BuidlerContext.
-func (c *Context) New() predicate.BuilderContext { return NewContext() }
-
-// Not implements the interface predicate.BuidlerContext.
-func (c *Context) Not(predicate.BuilderContext) {
-	panic("unsupport the NOT validation rule")
-}
-
-// And implements the interface predicate.BuidlerContext.
-func (c *Context) And(bc predicate.BuilderContext) {
-	if validators := bc.(*Context).Validators(); len(validators) > 0 {
-		c.AppendValidators(And(validators...))
-	}
-}
-
-// Or implements the interface predicate.BuidlerContext.
-func (c *Context) Or(bc predicate.BuilderContext) {
-	c.AppendValidators(Or(bc.(*Context).Validators()...))
-}
-
-// AppendValidators appends the new validators into the context.
-//
-// The method is used by the validator building function.
-func (c *Context) AppendValidators(validators ...Validator) {
-	c.validators = append(c.validators, validators...)
-}
-
-// Validators returns all the inner validators.
-func (c *Context) Validators() []Validator { return c.validators }
-
-// Validator returns the inner validators as And Validator.
-func (c *Context) Validator() Validator { return And(c.validators...) }
-
-// BuilderFunction is a function used to build the validation rule into Context.
-type BuilderFunction func(c *Context, args ...interface{}) error
-
-func (f BuilderFunction) fn(c predicate.BuilderContext, args ...interface{}) error {
-	return f(c.(*Context), args...)
-}
-
 // DefaultBuilder is the global default validation rule builder.
 var DefaultBuilder = NewBuilder()
 
@@ -87,9 +39,9 @@ func RegisterSymbols(maps map[string]interface{}) {
 	DefaultBuilder.RegisterSymbols(maps)
 }
 
-// RegisterFunc is eqaul to DefaultBuilder.RegisterFunc(name, f).
-func RegisterFunc(name string, f BuilderFunction) {
-	DefaultBuilder.RegisterFunc(name, f)
+// RegisterFunction is eqaul to DefaultBuilder.RegisterFunction(function).
+func RegisterFunction(function Function) {
+	DefaultBuilder.RegisterFunction(function)
 }
 
 // Build is equal to DefaultBuilder.Build(c, rule).
@@ -127,13 +79,13 @@ func LookupStructFieldNameByTags(tags ...string) func(reflect.StructField) strin
 	}
 }
 
-var lookupStructFieldName = LookupStructFieldNameByTags("json")
+var lookupStructFieldName = LookupStructFieldNameByTags("json", "query")
 
 // Builder is used to build the validator based on the rule.
 type Builder struct {
 	// LookupStructFieldName is used to lookup the name of the struct field.
 	//
-	// If nil, use LookupStructFieldNameByTags("json") instead.
+	// If nil, use LookupStructFieldNameByTags("json", "query") instead.
 	LookupStructFieldName func(reflect.StructField) string
 
 	// Symbols is used to define the global symbols,
@@ -207,11 +159,11 @@ func (b *Builder) RegisterSymbols(maps map[string]interface{}) {
 	}
 }
 
-// RegisterFunc registers the builder function with the name.
+// RegisterFunction registers the builder function with the name.
 //
 // If the function name has existed, reset it to the new function.
-func (b *Builder) RegisterFunc(name string, f BuilderFunction) {
-	b.Builder.RegisterFunc(name, f.fn)
+func (b *Builder) RegisterFunction(function Function) {
+	b.Builder.RegisterFunc(function.Name(), toBuilderFunction(function))
 }
 
 // Build parses and builds the validation rule into the context.

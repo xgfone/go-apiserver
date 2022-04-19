@@ -18,7 +18,6 @@ package defaults
 
 import (
 	"github.com/xgfone/go-apiserver/validation"
-	"github.com/xgfone/go-apiserver/validation/helper"
 	"github.com/xgfone/go-apiserver/validation/validators"
 )
 
@@ -26,20 +25,24 @@ func init() { RegisterDefaults(validation.DefaultBuilder) }
 
 // RegisterDefaults registers the default validator building functions
 // into the builder.
+//
+// When importing the package, it will register the default validator function
+// into the default validation builder, that's validation.DefaultBuilder.
 func RegisterDefaults(b *validation.Builder) {
-	helper.RegisterFuncNoArg(validation.DefaultBuilder, "zero", validators.Zero)
-	helper.RegisterFuncNoArg(validation.DefaultBuilder, "required", validators.Required)
+	validation.RegisterFunction(validation.NewFunctionWithoutArgs("zero", validators.Zero))
+	validation.RegisterFunction(validation.NewFunctionWithoutArgs("required", validators.Required))
 
-	helper.RegisterFuncNoArg(validation.DefaultBuilder, "ip", validators.IP)
-	helper.RegisterFuncNoArg(validation.DefaultBuilder, "mac", validators.Mac)
-	helper.RegisterFuncNoArg(validation.DefaultBuilder, "cidr", validators.Cidr)
-	helper.RegisterFuncNoArg(validation.DefaultBuilder, "addr", validators.Addr)
+	validation.RegisterFunction(validation.NewFunctionWithoutArgs("ip", validators.IP))
+	validation.RegisterFunction(validation.NewFunctionWithoutArgs("mac", validators.Mac))
+	validation.RegisterFunction(validation.NewFunctionWithoutArgs("cidr", validators.Cidr))
+	validation.RegisterFunction(validation.NewFunctionWithoutArgs("addr", validators.Addr))
 
-	helper.RegisterFuncOneFloat(validation.DefaultBuilder, "min", validators.Min)
-	helper.RegisterFuncOneFloat(validation.DefaultBuilder, "max", validators.Max)
-	helper.RegisterFuncStrings(validation.DefaultBuilder, "oneof", validators.OneOf)
-	helper.RegisterFuncValidators(validation.DefaultBuilder, "array", validation.Array)
-	helper.RegisterFuncValidators(validation.DefaultBuilder, "mapk", validation.MapK)
-	helper.RegisterFuncValidators(validation.DefaultBuilder, "mapv", validation.MapV)
-	helper.RegisterFuncValidators(validation.DefaultBuilder, "mapkv", validation.MapKV)
+	validation.RegisterFunction(validation.NewFunctionWithOneFloat("min", validators.Min))
+	validation.RegisterFunction(validation.NewFunctionWithOneFloat("max", validators.Max))
+
+	validation.RegisterFunction(validation.NewFunctionWithStrings("oneof", validators.OneOf))
+	validation.RegisterFunction(validation.NewFunctionWithValidators("array", validation.Array))
+	validation.RegisterFunction(validation.NewFunctionWithValidators("mapk", validation.MapK))
+	validation.RegisterFunction(validation.NewFunctionWithValidators("mapv", validation.MapV))
+	validation.RegisterFunction(validation.NewFunctionWithValidators("mapkv", validation.MapKV))
 }

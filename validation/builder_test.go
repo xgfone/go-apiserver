@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/xgfone/go-apiserver/validation"
-	"github.com/xgfone/go-apiserver/validation/helper"
 	"github.com/xgfone/go-apiserver/validation/validators"
 	"github.com/xgfone/go-apiserver/validation/validators/defaults"
 )
@@ -71,14 +70,14 @@ func TestBuilderValidateStruct(t *testing.T) {
 
 func ExampleBuilder() {
 	// Register the builder functions.
-	helper.RegisterFuncNoArg(validation.DefaultBuilder, "zero", validators.Zero)
-	helper.RegisterFuncOneFloat(validation.DefaultBuilder, "min", validators.Min)
-	helper.RegisterFuncOneFloat(validation.DefaultBuilder, "max", validators.Max)
-	helper.RegisterFuncStrings(validation.DefaultBuilder, "oneof", validators.OneOf)
-	helper.RegisterFuncValidators(validation.DefaultBuilder, "array", validation.Array)
-	helper.RegisterFuncValidators(validation.DefaultBuilder, "mapk", validation.MapK)
-	helper.RegisterFuncValidators(validation.DefaultBuilder, "mapv", validation.MapV)
-	helper.RegisterFuncValidators(validation.DefaultBuilder, "mapkv", validation.MapKV)
+	validation.RegisterFunction(validation.NewFunctionWithoutArgs("zero", validators.Zero))
+	validation.RegisterFunction(validation.NewFunctionWithOneFloat("min", validators.Min))
+	validation.RegisterFunction(validation.NewFunctionWithOneFloat("max", validators.Max))
+	validation.RegisterFunction(validation.NewFunctionWithStrings("oneof", validators.OneOf))
+	validation.RegisterFunction(validation.NewFunctionWithValidators("array", validation.Array))
+	validation.RegisterFunction(validation.NewFunctionWithValidators("mapk", validation.MapK))
+	validation.RegisterFunction(validation.NewFunctionWithValidators("mapv", validation.MapV))
+	validation.RegisterFunction(validation.NewFunctionWithValidators("mapkv", validation.MapKV))
 
 	// Add the global symbols.
 	validation.RegisterSymbol("v1", "a")
