@@ -16,6 +16,7 @@ package validation_test
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/xgfone/go-apiserver/validation"
@@ -69,8 +70,7 @@ func TestBuilderValidateStruct(t *testing.T) {
 }
 
 func ExampleBuilder() {
-	// Register the builder functions.
-	validation.RegisterFunction(validation.NewFunctionWithoutArgs("zero", validators.Zero))
+	// Register the validator building functions.
 	validation.RegisterFunction(validation.NewFunctionWithOneFloat("min", validators.Min))
 	validation.RegisterFunction(validation.NewFunctionWithOneFloat("max", validators.Max))
 	validation.RegisterFunction(validation.NewFunctionWithStrings("oneof", validators.OneOf))
@@ -78,6 +78,10 @@ func ExampleBuilder() {
 	validation.RegisterFunction(validation.NewFunctionWithValidators("mapk", validation.MapK))
 	validation.RegisterFunction(validation.NewFunctionWithValidators("mapv", validation.MapV))
 	validation.RegisterFunction(validation.NewFunctionWithValidators("mapkv", validation.MapKV))
+
+	// Register the validator building function based on the bool validation.
+	isZero := func(i interface{}) bool { return reflect.ValueOf(i).IsZero() }
+	validation.RegisterBoolValidatorFunc("zero", isZero, fmt.Errorf("the value is expected to be zero"))
 
 	// Add the global symbols.
 	validation.RegisterSymbol("v1", "a")

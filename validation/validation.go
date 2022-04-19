@@ -69,14 +69,14 @@ func BoolValidatorFunc(validate func(interface{}) bool, err error) ValidatorFunc
 	}
 }
 
-// BoolStringValidatorFunc converts a bool validation function to ValidatorFunc,
+// StringBoolValidatorFunc converts a bool validation function to ValidatorFunc,
 // which returns err if validate returns false, or nil if true.
-func BoolStringValidatorFunc(validate func(string) bool, err error) ValidatorFunc {
+func StringBoolValidatorFunc(validate func(string) bool, err error) ValidatorFunc {
 	if err == nil {
-		panic("BoolStringValidatorFunc: the error must not be nil")
+		panic("StringBoolValidatorFunc: the error must not be nil")
 	}
 	if validate == nil {
-		panic("BoolStringValidatorFunc: the validation function must not be nil")
+		panic("StringBoolValidatorFunc: the validation function must not be nil")
 	}
 
 	return func(i interface{}) error {

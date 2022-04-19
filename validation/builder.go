@@ -44,6 +44,24 @@ func RegisterFunction(function Function) {
 	DefaultBuilder.RegisterFunction(function)
 }
 
+// RegisterValidatorFunc is equal to
+// DefaultBuilder.RegisterValidatorFunc(name, f).
+func RegisterValidatorFunc(name string, f ValidatorFunc) {
+	DefaultBuilder.RegisterValidatorFunc(name, f)
+}
+
+// RegisterBoolValidatorFunc is equal to
+// DefaultBuilder.RegisterBoolValidatorFunc(name, f, err).
+func RegisterBoolValidatorFunc(name string, f func(interface{}) bool, err error) {
+	DefaultBuilder.RegisterBoolValidatorFunc(name, f, err)
+}
+
+// RegisterStringBoolValidatorFunc is equal to
+// DefaultBuilder.RegisterStringBoolValidatorFunc(name, f, err).
+func RegisterStringBoolValidatorFunc(name string, f func(string) bool, err error) {
+	DefaultBuilder.RegisterStringBoolValidatorFunc(name, f, err)
+}
+
 // Build is equal to DefaultBuilder.Build(c, rule).
 func Build(c *Context, rule string) error {
 	return DefaultBuilder.Build(c, rule)
@@ -159,11 +177,32 @@ func (b *Builder) RegisterSymbols(maps map[string]interface{}) {
 	}
 }
 
-// RegisterFunction registers the builder function with the name.
+// RegisterFunction registers the builder function.
 //
-// If the function name has existed, reset it to the new function.
+// If the function has existed, reset it to the new function.
 func (b *Builder) RegisterFunction(function Function) {
 	b.Builder.RegisterFunc(function.Name(), toBuilderFunction(function))
+}
+
+// RegisterValidatorFunc is a convenient method to treat the validation
+// function with the name as a builder function to be registered.
+func (b *Builder) RegisterValidatorFunc(name string, f ValidatorFunc) {
+	validator := NewValidator(name, f)
+	b.RegisterFunction(NewFunctionWithoutArgs(name, func() Validator {
+		return validator
+	}))
+}
+
+// RegisterBoolValidatorFunc is a convenient method to treat the bool
+// validation function with the name as a builder function to be registered.
+func (b *Builder) RegisterBoolValidatorFunc(name string, f func(interface{}) bool, err error) {
+	b.RegisterValidatorFunc(name, BoolValidatorFunc(f, err))
+}
+
+// RegisterStringBoolValidatorFunc is a convenient method to treat the string
+// bool validation function with the name as a builder function to be registered.
+func (b *Builder) RegisterStringBoolValidatorFunc(name string, f func(string) bool, err error) {
+	b.RegisterValidatorFunc(name, StringBoolValidatorFunc(f, err))
 }
 
 // Build parses and builds the validation rule into the context.
