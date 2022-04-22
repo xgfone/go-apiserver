@@ -97,7 +97,7 @@ func Min(i float64) validation.Validator {
 			}
 
 		case string:
-			if len(t) < int(i) {
+			if CountString(t) < int(i) {
 				return errString
 			}
 
@@ -187,7 +187,7 @@ func Max(i float64) validation.Validator {
 			}
 
 		case string:
-			if len(t) > int(i) {
+			if CountString(t) > int(i) {
 				return errString
 			}
 
@@ -279,7 +279,7 @@ func Range(smallest, biggest float64) validation.Validator {
 			}
 
 		case string:
-			if inRange(float64(len(t)), smallest, biggest) {
+			if inRange(float64(CountString(t)), smallest, biggest) {
 				return errString
 			}
 

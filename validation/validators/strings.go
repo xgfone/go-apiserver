@@ -17,10 +17,14 @@ package validators
 import (
 	"encoding/json"
 	"fmt"
+	"unicode/utf8"
 
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/validation"
 )
+
+// CountString is used to count the number of the characters in the string.
+var CountString func(string) int = utf8.RuneCountInString
 
 // OneOf returns a new Validator to chech whether the string value is one
 // of the given strings.
