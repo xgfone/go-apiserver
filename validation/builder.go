@@ -26,6 +26,11 @@ import (
 	"github.com/xgfone/predicate"
 )
 
+// StructFieldTag is the tag name to get the validation rule.
+//
+// If empty, use "validate" instead.
+var StructFieldTag = "validate"
+
 // DefaultBuilder is the global default validation rule builder.
 var DefaultBuilder = NewBuilder()
 
@@ -114,6 +119,11 @@ type Builder struct {
 	// Symbols is used to define the global symbols,
 	// which is used by the default of GetIdentifier.
 	Symbols map[string]interface{}
+
+	// StructFieldTag is the tag name to get the validation rule.
+	//
+	// If empty, use the global variable StructFieldTag instead.
+	StructFieldTag string
 
 	*predicate.Builder
 	validators atomic.Value
@@ -321,6 +331,13 @@ func (b *Builder) ValidateStruct(s interface{}) error {
 var validatorImpl = reflect.TypeOf((*ValueValidator)(nil)).Elem()
 
 func (b *Builder) validateStruct(prefix string, v reflect.Value, errs NamedErrors) NamedErrors {
+	tag := b.StructFieldTag
+	if len(tag) == 0 {
+		if tag = StructFieldTag; len(tag) == 0 {
+			tag = "validate"
+		}
+	}
+
 	t := v.Type()
 	for i, _len := 0, v.NumField(); i < _len; i++ {
 		ft := t.Field(i)
@@ -339,7 +356,7 @@ func (b *Builder) validateStruct(prefix string, v reflect.Value, errs NamedError
 			continue
 		}
 
-		rule := ft.Tag.Get("validate")
+		rule := ft.Tag.Get(tag)
 		if rule == "" {
 			continue
 		}
