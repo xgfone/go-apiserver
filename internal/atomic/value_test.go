@@ -31,4 +31,12 @@ func TestValue(t *testing.T) {
 	if i, ok := v.Load().(int); !ok || i != 222 {
 		t.Errorf("expect int '%d', but got %T '%v'", 222, i, i)
 	}
+
+	if v.CompareAndSwap(111, 333) {
+		t.Error("unexpected CompareAndSwap from 111 to 333")
+	} else if !v.CompareAndSwap(222, 333) {
+		t.Error("fail to CompareAndSwap from 222 to 333")
+	} else if current := v.Load().(int); current != 333 {
+		t.Errorf("expect int '%d', but got '%d'", 333, current)
+	}
 }

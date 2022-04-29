@@ -17,13 +17,32 @@
 
 package atomic
 
-import "sync/atomic"
+import (
+	"reflect"
+	"sync"
+	"sync/atomic"
+)
 
 // Value is used to update the value atomically.
-type Value struct{ atomic.Value }
+type Value struct {
+	atomic.Value
+	sync.Mutex // We only guarantee the Swap and CompareAndSwap methods.
+}
+
+func (v *Value) CompareAndSwap(old, new interface{}) (swapped bool) {
+	v.Lock()
+	current := v.Value.Load()
+	if swapped = reflect.DeepEqual(old, current); swapped {
+		v.Value.Store(new)
+	}
+	v.Unlock()
+	return
+}
 
 func (v *Value) Swap(new interface{}) (old interface{}) {
+	v.Lock()
 	old = v.Value.Load()
 	v.Value.Store(new)
+	v.Unlock()
 	return
 }
