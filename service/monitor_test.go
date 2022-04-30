@@ -16,9 +16,38 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 )
+
+func ExampleMonitor() {
+	vip := "127.0.0.1"
+	checker := NewVipChecker(vip, "")
+
+	service := newTestService("test")
+	monitor := NewMonitor(service, checker, nil)
+
+	// The service is not activated before activating the monitor.
+	fmt.Println(service.IsActivated()) // false
+
+	// Activate the monitor.
+	monitor.Activate()
+
+	time.Sleep(time.Millisecond * 10)  // Wait that the monitor to check the vip.
+	fmt.Println(service.IsActivated()) // The service is activated.
+
+	// Deactivate the monitor.
+	monitor.Deactivate()
+
+	// The service is deactivated after the monitor is deactivated.
+	fmt.Println(service.IsActivated())
+
+	// Output:
+	// false
+	// true
+	// false
+}
 
 func TestMonitorCheckerExist(t *testing.T) {
 	service := newTestService("test")
