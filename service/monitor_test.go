@@ -17,31 +17,35 @@ package service
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
 func ExampleMonitor() {
+	var activated int32
+	isActivated := func() bool { return atomic.LoadInt32(&activated) == 1 }
+	activate := func(v int32) { atomic.StoreInt32(&activated, v) }
+	service := NewService(func() { activate(1) }, func() { activate(0) })
+
 	vip := "127.0.0.1"
 	checker := NewVipChecker(vip, "")
-
-	service := newTestService("test")
 	monitor := NewMonitor(service, checker, nil)
 
 	// The service is not activated before activating the monitor.
-	fmt.Println(service.IsActivated()) // false
+	fmt.Println(isActivated()) // false
 
 	// Activate the monitor.
 	monitor.Activate()
 
-	time.Sleep(time.Millisecond * 10)  // Wait that the monitor to check the vip.
-	fmt.Println(service.IsActivated()) // The service is activated.
+	time.Sleep(time.Millisecond * 10) // Wait that the monitor to check the vip.
+	fmt.Println(isActivated())        // The service is activated.
 
 	// Deactivate the monitor.
 	monitor.Deactivate()
 
 	// The service is deactivated after the monitor is deactivated.
-	fmt.Println(service.IsActivated())
+	fmt.Println(isActivated())
 
 	// Output:
 	// false

@@ -14,6 +14,19 @@
 
 package service
 
+type serviceImpl struct {
+	activate   func()
+	deactivate func()
+}
+
+func (s serviceImpl) Activate()   { s.activate() }
+func (s serviceImpl) Deactivate() { s.deactivate() }
+
+// NewService converts the activate and deactivate functions to the service.
+func NewService(activate, deactivate func()) Service {
+	return serviceImpl{activate: activate, deactivate: deactivate}
+}
+
 // Service represents a non-blocking service interface.
 type Service interface {
 	// Activate is used to activate the service to work in the background,
