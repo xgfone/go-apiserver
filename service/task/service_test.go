@@ -16,6 +16,7 @@ package task
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -44,39 +45,39 @@ func TestService(t *testing.T) {
 		t.Errorf("the task service is not activated")
 	}
 
-	var run bool
-	Run("id", "name", func(ctx context.Context) { run = true })
+	var run atomic.Value
+	Run("id", "name", func(ctx context.Context) { run.Store(true) })
 	time.Sleep(time.Millisecond * 10)
-	if !run {
+	if v := run.Load(); v == nil || !v.(bool) {
 		t.Errorf("the task is not run")
 	}
 
-	var err error
+	var err atomic.Value
 	Run("id", "name", func(ctx context.Context) {
 		<-ctx.Done()
-		err = ctx.Err()
+		err.Store(ctx.Err())
 	})
 
 	DefaultService.Deactivate()
 	time.Sleep(time.Millisecond * 10)
-	if err != context.Canceled {
-		t.Errorf("expect the error context.Canceled, but got '%s'", err.Error())
+	if v := err.Load(); v == nil || v != context.Canceled {
+		t.Errorf("expect the error context.Canceled, but got '%v'", v)
 	}
 
-	err = nil
+	err = atomic.Value{}
 	DefaultService.Activate()
 	Run("id", "name", func(ctx context.Context) {
 		<-ctx.Done()
-		err = ctx.Err()
+		err.Store(ctx.Err())
 	})
 
 	pcancel()
 	time.Sleep(time.Millisecond * 10)
-	if err != context.Canceled {
-		t.Errorf("expect the error context.Canceled, but got '%s'", err.Error())
+	if v := err.Load(); v == nil || v != context.Canceled {
+		t.Errorf("expect the error context.Canceled, but got '%s'", v)
 	}
 
-	if err = Context().Err(); err != context.Canceled {
-		t.Errorf("expect the error context.Canceled, but got '%s'", err.Error())
+	if err := Context().Err(); err != context.Canceled {
+		t.Errorf("expect the error context.Canceled, but got '%s'", err)
 	}
 }
