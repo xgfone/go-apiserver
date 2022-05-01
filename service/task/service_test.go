@@ -32,7 +32,7 @@ func TestService(t *testing.T) {
 	if IsActivated() {
 		t.Errorf("unexpect the task service is activated")
 	}
-	Run("id", "name", func(ctx context.Context) {
+	RunTask("id", "name", func(ctx context.Context) {
 		t.Errorf("unexpect the task is run")
 	})
 
@@ -46,14 +46,14 @@ func TestService(t *testing.T) {
 	}
 
 	var run atomic.Value
-	Run("id", "name", func(ctx context.Context) { run.Store(true) })
+	RunTask("id", "name", func(ctx context.Context) { run.Store(true) })
 	time.Sleep(time.Millisecond * 10)
 	if v := run.Load(); v == nil || !v.(bool) {
 		t.Errorf("the task is not run")
 	}
 
 	var err atomic.Value
-	Run("id", "name", func(ctx context.Context) {
+	RunTask("id", "name", func(ctx context.Context) {
 		<-ctx.Done()
 		err.Store(ctx.Err())
 	})
@@ -66,7 +66,7 @@ func TestService(t *testing.T) {
 
 	err = atomic.Value{}
 	DefaultService.Activate()
-	Run("id", "name", func(ctx context.Context) {
+	RunTask("id", "name", func(ctx context.Context) {
 		<-ctx.Done()
 		err.Store(ctx.Err())
 	})

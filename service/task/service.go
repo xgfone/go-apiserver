@@ -32,8 +32,11 @@ func IsActivated() bool { return DefaultService.IsActivated() }
 // Context is equal to DefaultService.Context().
 func Context() context.Context { return DefaultService.Context() }
 
-// Run is equal to DefaultService.RunTask(taskID, taskName, taskFunc).
-func Run(taskID, taskName string, taskFunc func(context.Context)) {
+// RunFunc is eqaul to DefaultService.RunFunc(f).
+func RunFunc(f func(context.Context)) { DefaultService.RunFunc(f) }
+
+// RunTask is equal to DefaultService.RunTask(taskID, taskName, taskFunc).
+func RunTask(taskID, taskName string, taskFunc func(context.Context)) {
 	DefaultService.RunTask(taskID, taskName, taskFunc)
 }
 
@@ -101,9 +104,20 @@ func (m *Service) Deactivate() {
 	}
 }
 
+// RunFunc runs the function f only if the task service is activated.
+func (m *Service) RunFunc(f func(context.Context)) {
+	if ctx := m.Context(); ctx != nil {
+		go f(ctx)
+	}
+}
+
 // RunTask registers the task by taskID and runs the task asynchronously
-// only when the task service is activated and the taskID is not registered.
+// only if the task service is activated and the taskID is not registered.
 func (m *Service) RunTask(taskID, taskName string, taskFunc func(context.Context)) {
+	if taskID == "" || taskName == "" {
+		panic("the task id or name must not be empty")
+	}
+
 	if ctx := m.Context(); ctx != nil {
 		if value, loaded := m.tasks.LoadOrStore(taskID, taskName); !loaded {
 			go m.run(ctx, taskID, taskFunc)
