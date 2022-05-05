@@ -31,8 +31,34 @@ func IsActivated() bool { return DefaultService.IsActivated() }
 // Context is equal to DefaultService.Context().
 func Context() context.Context { return DefaultService.Context() }
 
-// Run is eqaul to DefaultService.Run(f).
-func Run(f func(context.Context)) { DefaultService.Run(f) }
+// Run is eqaul to DefaultService.Run(r).
+func Run(r Runner) { DefaultService.Run(r) }
+
+// RunFunc is eqaul to DefaultService.Run(f).
+func RunFunc(f RunnerFunc) { DefaultService.Run(f) }
+
+// AsyncRunFunc is eqaul to DefaultService.Run(r).
+func AsyncRunFunc(f AsyncRunnerFunc) { DefaultService.Run(f) }
+
+// Runner is the task runner.
+type Runner interface {
+	Run(context.Context)
+}
+
+// AsyncRunner converts the task runner to an async task runner.
+func AsyncRunner(r Runner) Runner { return AsyncRunnerFunc(r.Run) }
+
+// RunnerFunc is the runner function.
+type RunnerFunc func(context.Context)
+
+// Run implements the interface Runner.
+func (r RunnerFunc) Run(c context.Context) { r(c) }
+
+// AsyncRunnerFunc is the async runner function.
+type AsyncRunnerFunc func(context.Context)
+
+// Run implements the interface Runner.
+func (r AsyncRunnerFunc) Run(c context.Context) { go r(c) }
 
 type contextInfo struct {
 	context.CancelFunc
@@ -63,43 +89,43 @@ func NewService(parent context.Context) *Service {
 // when the task service is deactivated.
 //
 // Return nil instead if the task service is not activated.
-func (m *Service) Context() context.Context {
-	return m.context.Load().(contextInfo).Context
+func (s *Service) Context() context.Context {
+	return s.context.Load().(contextInfo).Context
 }
 
 // IsActivated reports whether the task service is activated.
-func (m *Service) IsActivated() bool { return m.Context() != nil }
+func (s *Service) IsActivated() bool { return s.Context() != nil }
 
 // Activate implements the interface service.Service.
-func (m *Service) Activate() {
-	if !m.IsActivated() {
-		m.clock.Lock()
-		if !m.IsActivated() {
-			ctx, cancel := context.WithCancel(m.parent)
-			m.context.Store(contextInfo{Context: ctx, CancelFunc: cancel})
+func (s *Service) Activate() {
+	if !s.IsActivated() {
+		s.clock.Lock()
+		if !s.IsActivated() {
+			ctx, cancel := context.WithCancel(s.parent)
+			s.context.Store(contextInfo{Context: ctx, CancelFunc: cancel})
 		}
-		m.clock.Unlock()
+		s.clock.Unlock()
 	}
 }
 
 // Deactivate implements the interface service.Service.
-func (m *Service) Deactivate() {
-	if m.IsActivated() {
+func (s *Service) Deactivate() {
+	if s.IsActivated() {
 		var cancel func()
-		m.clock.Lock()
-		if m.IsActivated() {
-			cancel = m.context.Swap(contextInfo{}).(contextInfo).CancelFunc
+		s.clock.Lock()
+		if s.IsActivated() {
+			cancel = s.context.Swap(contextInfo{}).(contextInfo).CancelFunc
 		}
-		m.clock.Unlock()
+		s.clock.Unlock()
 		if cancel != nil {
 			cancel()
 		}
 	}
 }
 
-// Run runs the function f only if the task service is activated.
-func (m *Service) Run(f func(context.Context)) {
-	if ctx := m.Context(); ctx != nil {
-		f(ctx)
+// Run runs the runner r only if the task service is activated.
+func (s *Service) Run(r Runner) {
+	if ctx := s.Context(); ctx != nil {
+		r.Run(ctx)
 	}
 }

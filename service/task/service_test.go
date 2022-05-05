@@ -22,6 +22,8 @@ import (
 )
 
 func TestService(t *testing.T) {
+	runTask := func(f func(context.Context)) { Run(AsyncRunner(RunnerFunc(f))) }
+
 	parent, pcancel := context.WithCancel(context.Background())
 	DefaultService = NewService(parent)
 	defer DefaultService.Deactivate()
@@ -32,7 +34,7 @@ func TestService(t *testing.T) {
 	if IsActivated() {
 		t.Errorf("unexpect the task service is activated")
 	}
-	Run(func(ctx context.Context) {
+	runTask(func(ctx context.Context) {
 		t.Errorf("unexpect the task is run")
 	})
 
@@ -46,14 +48,14 @@ func TestService(t *testing.T) {
 	}
 
 	var run atomic.Value
-	Run(func(ctx context.Context) { run.Store(true) })
+	runTask(func(ctx context.Context) { run.Store(true) })
 	time.Sleep(time.Millisecond * 10)
 	if v := run.Load(); v == nil || !v.(bool) {
 		t.Errorf("the task is not run")
 	}
 
 	var err atomic.Value
-	Run(func(ctx context.Context) {
+	runTask(func(ctx context.Context) {
 		<-ctx.Done()
 		err.Store(ctx.Err())
 	})
@@ -66,7 +68,7 @@ func TestService(t *testing.T) {
 
 	err = atomic.Value{}
 	DefaultService.Activate()
-	Run(func(ctx context.Context) {
+	runTask(func(ctx context.Context) {
 		<-ctx.Done()
 		err.Store(ctx.Err())
 	})
