@@ -20,7 +20,6 @@ import (
 	"sync"
 
 	"github.com/xgfone/go-apiserver/internal/atomic"
-	"github.com/xgfone/go-apiserver/log"
 )
 
 // DefaultService is the default task service.
@@ -32,25 +31,19 @@ func IsActivated() bool { return DefaultService.IsActivated() }
 // Context is equal to DefaultService.Context().
 func Context() context.Context { return DefaultService.Context() }
 
-// RunFunc is eqaul to DefaultService.RunFunc(f).
-func RunFunc(f func(context.Context)) { DefaultService.RunFunc(f) }
-
-// RunTask is equal to DefaultService.RunTask(taskID, taskName, taskFunc).
-func RunTask(taskID, taskName string, taskFunc func(context.Context)) {
-	DefaultService.RunTask(taskID, taskName, taskFunc)
-}
+// Run is eqaul to DefaultService.Run(f).
+func Run(f func(context.Context)) { DefaultService.Run(f) }
 
 type contextInfo struct {
 	context.CancelFunc
 	context.Context
 }
 
-// Service is a task-based service.
+// Service is a service to run the task when it is activated.
 type Service struct {
 	parent  context.Context
 	context atomic.Value
 	clock   sync.Mutex
-	tasks   sync.Map
 }
 
 // NewService returns a new task service.
@@ -104,31 +97,9 @@ func (m *Service) Deactivate() {
 	}
 }
 
-// RunFunc runs the function f only if the task service is activated.
-func (m *Service) RunFunc(f func(context.Context)) {
+// Run runs the function f asynchronously only if the task service is activated.
+func (m *Service) Run(f func(context.Context)) {
 	if ctx := m.Context(); ctx != nil {
 		go f(ctx)
 	}
-}
-
-// RunTask registers the task by taskID and runs the task asynchronously
-// only if the task service is activated and the taskID is not registered.
-func (m *Service) RunTask(taskID, taskName string, taskFunc func(context.Context)) {
-	if taskID == "" || taskName == "" {
-		panic("the task id or name must not be empty")
-	}
-
-	if ctx := m.Context(); ctx != nil {
-		if value, loaded := m.tasks.LoadOrStore(taskID, taskName); !loaded {
-			go m.run(ctx, taskID, taskFunc)
-		} else if oldTask := value.(string); oldTask != taskName {
-			log.Warn("another task is being run", "taskid", taskID,
-				"oldtask", oldTask, "newtask", taskName)
-		}
-	}
-}
-
-func (m *Service) run(c context.Context, id string, f func(context.Context)) {
-	defer m.tasks.Delete(id)
-	f(c)
 }
