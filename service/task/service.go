@@ -97,9 +97,9 @@ func (m *Service) Deactivate() {
 	}
 }
 
-// Run runs the function f asynchronously only if the task service is activated.
+// Run runs the function f only if the task service is activated.
 func (m *Service) Run(f func(context.Context)) {
 	if ctx := m.Context(); ctx != nil {
-		go f(ctx)
+		f(ctx)
 	}
 }
