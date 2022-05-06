@@ -305,8 +305,8 @@ func inRange(v, smallest, biggest float64) bool {
 	return smallest <= v && v <= biggest
 }
 
-// Exp returns a validator to checks the integer value is one of
-// [base**startExp, base**endExp].
+// Exp returns a validator to checks the integer value is one of the base
+// exponentials of [startExp, endExp].
 //
 //   startExp starts with 0
 //   endExp must be greater than startExp
@@ -315,8 +315,6 @@ func inRange(v, smallest, biggest float64) bool {
 func Exp(base, startExp, endExp int) validation.Validator {
 	if base < 2 {
 		panic("the exp base must not be less than 2")
-	} else if base > 36 {
-		panic("the exp base must not be greater than 36")
 	} else if startExp < 0 {
 		panic("the exp start must not be less than 0")
 	} else if endExp <= startExp {
