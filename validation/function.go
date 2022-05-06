@@ -102,7 +102,7 @@ func getFloat(name string, index int, i interface{}) (f float64, err error) {
 func NewFunctionWithTwoFloats(name string, newf func(float64, float64) Validator) Function {
 	return NewFunction(name, func(c *Context, args ...interface{}) (err error) {
 		if len(args) != 2 {
-			return fmt.Errorf("%s must have and only have two argument", name)
+			return fmt.Errorf("%s must have and only have two arguments", name)
 		}
 
 		first, err := getFloat(name, 0, args[0])
@@ -158,7 +158,7 @@ func NewFunctionWithStrings(name string, newf func(...string) Validator) Functio
 func NewFunctionWithValidators(name string, newf func(...Validator) Validator) Function {
 	return NewFunction(name, func(c *Context, args ...interface{}) (err error) {
 		if len(args) == 0 {
-			return fmt.Errorf("%s validator has no argument", name)
+			return fmt.Errorf("%s validator has no arguments", name)
 		}
 
 		ac := c.New()
@@ -178,4 +178,47 @@ func NewFunctionWithValidators(name string, newf func(...Validator) Validator) F
 		c.AppendValidators(newf(ac.(*Context).Validators()...))
 		return
 	})
+}
+
+// NewFunctionWithThreeInts returns a new Function which parses and builds
+// the validator with only three int arguments.
+func NewFunctionWithThreeInts(name string, newf func(int, int, int) Validator) Function {
+	return NewFunction(name, func(c *Context, args ...interface{}) (err error) {
+		if len(args) != 3 {
+			return fmt.Errorf("%s must have and only have three arguments", name)
+		}
+
+		first, err := getInt(name, 0, args[0])
+		if err != nil {
+			return
+		}
+
+		second, err := getInt(name, 1, args[1])
+		if err != nil {
+			return
+		}
+
+		third, err := getInt(name, 2, args[2])
+		if err != nil {
+			return
+		}
+
+		c.AppendValidators(newf(first, second, third))
+		return
+	})
+}
+
+func getInt(name string, index int, i interface{}) (v int, err error) {
+	v, ok := i.(int)
+	if ok {
+		return
+	}
+
+	if index < 0 {
+		err = fmt.Errorf("%s does not support the argument type %T", name, i)
+	} else {
+		err = fmt.Errorf("%s expects %dth argument is an int, but got %T", name, index, i)
+	}
+
+	return
 }

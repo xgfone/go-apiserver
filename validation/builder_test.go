@@ -155,7 +155,7 @@ func ExampleBuilder() {
 		F1 string `validate:"zero || max(8)"`    // General Type
 		F2 *int64 `validate:"min(1) && max==10"` // Pointer Type
 
-		F3 struct { // Embedded Anonymous Struct
+		F3 struct { // Embedded Struct
 			F4 string `validate:"oneof(\"a\", \"b\")"`
 			F5 *[]int `validate:"array(min(1))"`
 		}

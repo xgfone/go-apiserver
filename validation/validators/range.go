@@ -15,7 +15,9 @@
 package validators
 
 import (
+	"bytes"
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 
@@ -301,4 +303,99 @@ func Range(smallest, biggest float64) validation.Validator {
 
 func inRange(v, smallest, biggest float64) bool {
 	return smallest <= v && v <= biggest
+}
+
+// Exp returns a validator to checks the integer value is one of
+// [base**startExp, base**endExp].
+//
+//   startExp starts with 0
+//   endExp must be greater than startExp
+//   base must be greater than or equal to 2
+//
+func Exp(base, startExp, endExp int) validation.Validator {
+	if base < 2 {
+		panic("the exp base must not be less than 2")
+	} else if base > 36 {
+		panic("the exp base must not be greater than 36")
+	} else if startExp < 0 {
+		panic("the exp start must not be less than 0")
+	} else if endExp <= startExp {
+		panic("the exp end must be greater than start")
+	}
+
+	float64Base := float64(base)
+	values := make([]int64, 0, endExp-startExp+1)
+	for i := startExp; i <= endExp; i++ {
+		values = append(values, int64(math.Pow(float64Base, float64(i))))
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, 64))
+	for i, v := range values {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		fmt.Fprintf(buf, "%d", v)
+	}
+
+	errInteger := fmt.Errorf("the integer is not in range [%s]", buf.String())
+
+	rule := fmt.Sprintf("exp(%d,%d,%d)", base, startExp, endExp)
+	return validation.NewValidator(rule, func(i interface{}) error {
+		switch v := i.(type) {
+		case int:
+			if !inRangeInt64(int64(v), values) {
+				return errInteger
+			}
+		case int8:
+			if !inRangeInt64(int64(v), values) {
+				return errInteger
+			}
+		case int16:
+			if !inRangeInt64(int64(v), values) {
+				return errInteger
+			}
+		case int32:
+			if !inRangeInt64(int64(v), values) {
+				return errInteger
+			}
+		case int64:
+			if !inRangeInt64(int64(v), values) {
+				return errInteger
+			}
+
+		case uint:
+			if !inRangeInt64(int64(v), values) {
+				return errInteger
+			}
+		case uint8:
+			if !inRangeInt64(int64(v), values) {
+				return errInteger
+			}
+		case uint16:
+			if !inRangeInt64(int64(v), values) {
+				return errInteger
+			}
+		case uint32:
+			if !inRangeInt64(int64(v), values) {
+				return errInteger
+			}
+		case uint64:
+			if !inRangeInt64(int64(v), values) {
+				return errInteger
+			}
+
+		default:
+			return fmt.Errorf("unsupported type '%T'", i)
+		}
+		return nil
+	})
+}
+
+func inRangeInt64(v int64, vs []int64) bool {
+	for i, _len := 0, len(vs); i < _len; i++ {
+		if v == vs[i] {
+			return true
+		}
+	}
+	return false
 }

@@ -39,6 +39,7 @@ func RegisterDefaults(b *validation.Builder) {
 
 	validation.RegisterFunction(validation.NewFunctionWithOneFloat("min", validators.Min))
 	validation.RegisterFunction(validation.NewFunctionWithOneFloat("max", validators.Max))
+	validation.RegisterFunction(validation.NewFunctionWithThreeInts("exp", validators.Exp))
 
 	validation.RegisterFunction(validation.NewFunctionWithStrings("oneof", validators.OneOf))
 	validation.RegisterFunction(validation.NewFunctionWithValidators("array", validation.Array))
