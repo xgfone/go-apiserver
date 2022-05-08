@@ -26,11 +26,16 @@ import (
 // CountString is used to count the number of the characters in the string.
 var CountString func(string) int = utf8.RuneCountInString
 
-// OneOf returns a new Validator to chech whether the string value is one
-// of the given strings.
+// OneOf is equal to OneOfWithName("oneof", values...).
 func OneOf(values ...string) validation.Validator {
+	return OneOfWithName("oneof", values...)
+}
+
+// OneOfWithName returns a new Validator with the validator name
+// to chech whether the string value is one of the given strings.
+func OneOfWithName(name string, values ...string) validation.Validator {
 	if len(values) == 0 {
-		panic("OneOf: the values must be empty")
+		panic(fmt.Errorf("%s: the values must be empty", name))
 	}
 
 	bs, err := json.Marshal(values)
@@ -38,7 +43,7 @@ func OneOf(values ...string) validation.Validator {
 		panic(err)
 	}
 
-	desc := fmt.Sprintf("oneof(%s)", string(bs[1:len(bs)-1]))
+	desc := fmt.Sprintf("%s(%s)", name, string(bs[1:len(bs)-1]))
 	return validation.NewValidator(desc, func(i interface{}) error {
 		switch v := helper.Indirect(i).(type) {
 		case string:
