@@ -47,24 +47,11 @@ func NewFunction(name string, call func(*Context, ...interface{}) error) Functio
 	return functionImpl{name: name, call: call}
 }
 
-// ValidatorFunction converts a validator to a Function with the name.
+// ValidatorFunction converts a validator to a Function with the name,
+// which is equal to
+//   NewFunctionWithoutArgs(name, func() Validator { return validator })
 func ValidatorFunction(name string, validator Validator) Function {
-	return validatorFunction{name: name, Validator: validator}
-}
-
-type validatorFunction struct {
-	name string
-	Validator
-}
-
-func (f validatorFunction) Name() string { return f.name }
-func (f validatorFunction) Call(c *Context, args ...interface{}) (err error) {
-	if len(args) > 0 {
-		err = fmt.Errorf("%s must not have any arguments", f.name)
-	} else {
-		c.AppendValidators(f.Validator)
-	}
-	return
+	return NewFunctionWithoutArgs(name, func() Validator { return validator })
 }
 
 // ************************************************************************* //
