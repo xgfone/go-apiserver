@@ -17,6 +17,7 @@ package validation_test
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/xgfone/go-apiserver/validation"
@@ -91,6 +92,44 @@ func TestRuleRanger(t *testing.T) {
 	} else if err.Error() != expectErrMsg {
 		t.Errorf("expect the error '%s', but got '%s'", expectErrMsg, err.Error())
 	}
+}
+
+func ExampleValidatorFunction() {
+	// New a validator "oneof".
+	ss := []string{"one", "two", "three"}
+	desc := fmt.Sprintf(`oneof("%s")`, strings.Join(ss, `", "`))
+	oneof := validation.NewValidator(desc, func(i interface{}) error {
+		if s, ok := i.(string); ok {
+			for _, _s := range ss {
+				if _s == s {
+					return nil
+				}
+			}
+			return fmt.Errorf("the string '%s' is one of %v", s, ss)
+		}
+		return fmt.Errorf("unsupported type '%T'", i)
+	})
+
+	// Register the "oneof" validator as a Function.
+	rule := "oneof"
+	builder := validation.NewBuilder()
+	builder.RegisterFunction(validation.ValidatorFunction(rule, oneof))
+
+	// Print the validator description.
+	fmt.Println(oneof.String())
+
+	// Validate the value and print the result.
+	fmt.Println(builder.Validate("one", rule))
+	fmt.Println(builder.Validate("two", rule))
+	fmt.Println(builder.Validate("three", rule))
+	fmt.Println(builder.Validate("four", rule))
+
+	// Output:
+	// oneof("one", "two", "three")
+	// <nil>
+	// <nil>
+	// <nil>
+	// the string 'four' is one of [one two three]
 }
 
 func ExampleBuilder() {
