@@ -15,12 +15,10 @@
 package validators
 
 import (
-	"encoding/json"
-	"fmt"
 	"unicode/utf8"
 
-	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/validation"
+	"github.com/xgfone/go-apiserver/validation/internal"
 )
 
 // CountString is used to count the number of the characters in the string.
@@ -34,32 +32,5 @@ func OneOf(values ...string) validation.Validator {
 // OneOfWithName returns a new Validator with the validator name
 // to chech whether the string value is one of the given strings.
 func OneOfWithName(name string, values ...string) validation.Validator {
-	if len(values) == 0 {
-		panic(fmt.Errorf("%s: the values must be empty", name))
-	}
-
-	bs, err := json.Marshal(values)
-	if err != nil {
-		panic(err)
-	}
-
-	desc := fmt.Sprintf("%s(%s)", name, string(bs[1:len(bs)-1]))
-	return validation.NewValidator(desc, func(i interface{}) error {
-		switch v := helper.Indirect(i).(type) {
-		case string:
-			if !helper.InStrings(v, values) {
-				return fmt.Errorf("the string '%s' is not one of %v", v, values)
-			}
-
-		case fmt.Stringer:
-			if s := v.String(); !helper.InStrings(s, values) {
-				return fmt.Errorf("the string '%s' is not one of %v", s, values)
-			}
-
-		default:
-			return fmt.Errorf("expect a string, but got %T", i)
-		}
-
-		return nil
-	})
+	return internal.NewOneOf(name, values...)
 }

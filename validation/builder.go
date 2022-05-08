@@ -23,6 +23,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/xgfone/go-apiserver/validation/internal"
 	"github.com/xgfone/predicate"
 )
 
@@ -70,6 +71,12 @@ func RegisterValidatorFuncBool(name string, f func(interface{}) bool, err error)
 // DefaultBuilder.RegisterValidatorFuncBoolString(name, f, err).
 func RegisterValidatorFuncBoolString(name string, f func(string) bool, err error) {
 	DefaultBuilder.RegisterValidatorFuncBoolString(name, f, err)
+}
+
+// RegisterValidatorOneof is equal to
+// DefaultBuilder.RegisterValidatorOneof(name,values...).
+func RegisterValidatorOneof(name string, values ...string) {
+	DefaultBuilder.RegisterValidatorOneof(name, values...)
 }
 
 // Build is equal to DefaultBuilder.Build(c, rule).
@@ -240,6 +247,15 @@ func (b *Builder) RegisterValidatorFuncBool(name string, f func(interface{}) boo
 //
 func (b *Builder) RegisterValidatorFuncBoolString(name string, f func(string) bool, err error) {
 	b.RegisterValidatorFunc(name, StringBoolValidatorFunc(f, err))
+}
+
+// RegisterValidatorOneof is a convenient method to register a oneof validator
+// as the builder Function, which is equal to
+//
+//   b.RegisterFunction(ValidatorFunction(name, validators.OneOfWithName(name, values...)))
+//
+func (b *Builder) RegisterValidatorOneof(name string, values ...string) {
+	b.RegisterFunction(ValidatorFunction(name, internal.NewOneOf(name, values...)))
 }
 
 // Build parses and builds the validation rule into the context.

@@ -105,7 +105,7 @@ func ExampleValidatorFunction() {
 					return nil
 				}
 			}
-			return fmt.Errorf("the string '%s' is one of %v", s, ss)
+			return fmt.Errorf("the string '%s' is not one of %v", s, ss)
 		}
 		return fmt.Errorf("unsupported type '%T'", i)
 	})
@@ -129,7 +129,25 @@ func ExampleValidatorFunction() {
 	// <nil>
 	// <nil>
 	// <nil>
-	// the string 'four' is one of [one two three]
+	// the string 'four' is not one of [one two three]
+}
+
+func ExampleBuilder_RegisterValidatorOneof() {
+	const rule = "isnumber"
+	numbers := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
+
+	builder := validation.NewBuilder()
+	builder.RegisterValidatorOneof(rule, numbers...)
+
+	// Validate the value and print the result.
+	fmt.Println(builder.Validate("0", rule))
+	fmt.Println(builder.Validate("9", rule))
+	fmt.Println(builder.Validate("a", rule))
+
+	// Output:
+	// <nil>
+	// <nil>
+	// the string 'a' is not one of [0 1 2 3 4 5 6 7 8 9]
 }
 
 func ExampleBuilder() {
