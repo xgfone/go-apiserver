@@ -69,6 +69,30 @@ func TestBuilderValidateStruct(t *testing.T) {
 	}
 }
 
+func TestRuleRanger(t *testing.T) {
+	expectErrMsg := "the integer is not in range [1, 10]"
+
+	if err := validation.Validate(0, "ranger(1,10)"); err == nil {
+		t.Errorf("expect the error, but got nil")
+	} else if err.Error() != expectErrMsg {
+		t.Errorf("expect the error '%s', but got '%s'", expectErrMsg, err.Error())
+	}
+
+	if err := validation.Validate(1, "ranger(1,10)"); err != nil {
+		t.Errorf("unexpect the error: %s", err.Error())
+	}
+
+	if err := validation.Validate(10, "ranger(1,10)"); err != nil {
+		t.Errorf("unexpect the error: %s", err.Error())
+	}
+
+	if err := validation.Validate(11, "ranger(1,10)"); err == nil {
+		t.Errorf("expect the error, but got nil")
+	} else if err.Error() != expectErrMsg {
+		t.Errorf("expect the error '%s', but got '%s'", expectErrMsg, err.Error())
+	}
+}
+
 func ExampleBuilder() {
 	// Register the validator building functions.
 	validation.RegisterFunction(validation.NewFunctionWithOneFloat("min", validators.Min))

@@ -208,17 +208,18 @@ func Max(i float64) validation.Validator {
 	})
 }
 
-// Range returns a validator to checks the value is in range [smallest, biggest],
+// Ranger returns a validator to checks the value is in range [smallest, biggest],
 // which is equal to And(Min(smallest), Max(biggest)).
 //
 // Support the types as follow:
 //   - Integer, Float: compare the value
 //   - String, Array, Slice, Map: compare the length of them
 //
-func Range(smallest, biggest float64) validation.Validator {
+// Notice: we use ranger instead of range because range is the keyword in Go.
+func Ranger(smallest, biggest float64) validation.Validator {
 	left := strconv.FormatFloat(smallest, 'f', -1, 64)
 	right := strconv.FormatFloat(biggest, 'f', -1, 64)
-	rule := fmt.Sprintf("range(%s, %s)", left, right)
+	rule := fmt.Sprintf("ranger(%s, %s)", left, right)
 
 	errFloat := fmt.Errorf("the float is not in range [%s, %s]", left, right)
 	errInteger := fmt.Errorf("the integer is not in range [%s, %s]", left, right)
@@ -230,65 +231,65 @@ func Range(smallest, biggest float64) validation.Validator {
 			return errNilPointer
 
 		case int:
-			if inRange(float64(t), smallest, biggest) {
+			if !inRange(float64(t), smallest, biggest) {
 				return errInteger
 			}
 		case int8:
-			if inRange(float64(t), smallest, biggest) {
+			if !inRange(float64(t), smallest, biggest) {
 				return errInteger
 			}
 		case int16:
-			if inRange(float64(t), smallest, biggest) {
+			if !inRange(float64(t), smallest, biggest) {
 				return errInteger
 			}
 		case int32:
-			if inRange(float64(t), smallest, biggest) {
+			if !inRange(float64(t), smallest, biggest) {
 				return errInteger
 			}
 		case int64:
-			if inRange(float64(t), smallest, biggest) {
+			if !inRange(float64(t), smallest, biggest) {
 				return errInteger
 			}
 
 		case uint:
-			if inRange(float64(t), smallest, biggest) {
+			if !inRange(float64(t), smallest, biggest) {
 				return errInteger
 			}
 		case uint8:
-			if inRange(float64(t), smallest, biggest) {
+			if !inRange(float64(t), smallest, biggest) {
 				return errInteger
 			}
 		case uint16:
-			if inRange(float64(t), smallest, biggest) {
+			if !inRange(float64(t), smallest, biggest) {
 				return errInteger
 			}
 		case uint32:
-			if inRange(float64(t), smallest, biggest) {
+			if !inRange(float64(t), smallest, biggest) {
 				return errInteger
 			}
 		case uint64:
-			if inRange(float64(t), smallest, biggest) {
+			if !inRange(float64(t), smallest, biggest) {
 				return errInteger
 			}
 
 		case float32:
-			if inRange(float64(t), smallest, biggest) {
+			if !inRange(float64(t), smallest, biggest) {
 				return errFloat
 			}
 		case float64:
-			if inRange(t, smallest, biggest) {
+			if !inRange(t, smallest, biggest) {
 				return errFloat
 			}
 
 		case string:
-			if inRange(float64(CountString(t)), smallest, biggest) {
+			if !inRange(float64(CountString(t)), smallest, biggest) {
 				return errString
 			}
 
 		default:
 			switch vf := reflect.ValueOf(t); vf.Kind() {
 			case reflect.Array, reflect.Slice, reflect.Map:
-				if inRange(float64(vf.Len()), smallest, biggest) {
+				if !inRange(float64(vf.Len()), smallest, biggest) {
 					return errContainer
 				}
 
