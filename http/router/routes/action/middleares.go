@@ -15,7 +15,9 @@
 package action
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -57,46 +59,70 @@ func Recover(priority int) mw.Middleware {
 	})
 }
 
-// Logger returns a new http handler middleware to log the http request.
+// LoggerConfig is used to configure the logger middleware.
+type LoggerConfig struct {
+	Priority   int
+	LogLevel   int
+	LogReqBody bool
+}
+
+// Logger is a convenient logger middleware, which is equal to
+//   LoggerWithConfig(LoggerConfig{Priority: priority, LogLevel: log.LvlInfo})
 func Logger(priority int) mw.Middleware {
-	return mw.NewMiddleware("logger", priority, func(h interface{}) interface{} {
+	return LoggerWithConfig(LoggerConfig{Priority: priority, LogLevel: log.LvlInfo})
+}
+
+// LoggerWithConfig returns a new http handler middleware to log the http request.
+func LoggerWithConfig(c LoggerConfig) mw.Middleware {
+	return mw.NewMiddleware("logger", c.Priority, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !log.Enabled(c.LogLevel) {
+				h.(http.Handler).ServeHTTP(w, r)
+				return
+			}
+
+			var reqbody string
+			if c.LogReqBody {
+				reqbuf := bytes.NewBuffer(nil)
+				if r.ContentLength > 0 {
+					reqbuf.Grow(int(r.ContentLength))
+					io.CopyN(reqbuf, r.Body, r.ContentLength)
+				} else {
+					io.CopyBuffer(reqbuf, r.Body, make([]byte, 2048))
+				}
+				reqbody = reqbuf.String()
+				r.Body = bufferCloser{Buffer: reqbuf, Closer: r.Body}
+			}
+
 			start := time.Now()
 			h.(http.Handler).ServeHTTP(w, r)
 			cost := time.Since(start)
 
-			c := GetContext(w, r)
-			if !c.WroteHeader() {
-				if c.Err == nil {
-					c.Success(nil)
-				} else {
-					c.Failure(c.Err)
-				}
-			}
-
-			level := log.LvlInfo
-			if c.Err != nil {
-				level = log.LvlError
-			}
-
-			if !log.Enabled(level) {
-				return
-			}
-
-			kvs := make([]interface{}, 0, 12)
+			ctx := GetContext(w, r)
+			kvs := make([]interface{}, 0, 16)
 			kvs = append(kvs,
 				"addr", r.RemoteAddr,
-				"code", c.StatusCode(),
+				"code", ctx.StatusCode(),
 				"method", r.Method,
-				"action", c.Action,
+				"action", ctx.Action,
 				"start", start.Unix(),
-				"cost", cost)
+				"cost", cost,
+			)
 
-			if c.Err != nil {
-				kvs = append(kvs, "err", c.Err)
+			if c.LogReqBody {
+				kvs = append(kvs, "reqbody", reqbody)
 			}
 
-			log.Log(level, 0, "log action request", kvs...)
+			if ctx.Err != nil {
+				kvs = append(kvs, "err", ctx.Err)
+			}
+
+			log.Log(c.LogLevel, 0, "log http request", kvs...)
 		})
 	})
+}
+
+type bufferCloser struct {
+	*bytes.Buffer
+	io.Closer
 }
