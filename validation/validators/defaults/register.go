@@ -29,25 +29,25 @@ func init() { RegisterDefaults(validation.DefaultBuilder) }
 // When importing the package, it will register the default validator function
 // into the default validation builder, that's validation.DefaultBuilder.
 func RegisterDefaults(b *validation.Builder) {
-	validation.RegisterFunction(validation.NewFunctionWithoutArgs("zero", validators.Zero))
-	validation.RegisterFunction(validation.NewFunctionWithoutArgs("required", validators.Required))
+	b.RegisterFunction(validation.NewFunctionWithoutArgs("zero", validators.Zero))
+	b.RegisterFunction(validation.NewFunctionWithoutArgs("required", validators.Required))
 
-	validation.RegisterFunction(validation.NewFunctionWithoutArgs("ip", validators.IP))
-	validation.RegisterFunction(validation.NewFunctionWithoutArgs("mac", validators.Mac))
-	validation.RegisterFunction(validation.NewFunctionWithoutArgs("cidr", validators.Cidr))
-	validation.RegisterFunction(validation.NewFunctionWithoutArgs("addr", validators.Addr))
+	b.RegisterFunction(validation.NewFunctionWithoutArgs("ip", validators.IP))
+	b.RegisterFunction(validation.NewFunctionWithoutArgs("mac", validators.Mac))
+	b.RegisterFunction(validation.NewFunctionWithoutArgs("cidr", validators.Cidr))
+	b.RegisterFunction(validation.NewFunctionWithoutArgs("addr", validators.Addr))
 
-	validation.RegisterFunction(validation.NewFunctionWithOneFloat("min", validators.Min))
-	validation.RegisterFunction(validation.NewFunctionWithOneFloat("max", validators.Max))
-	validation.RegisterFunction(validation.NewFunctionWithTwoFloats("ranger", validators.Ranger))
-	validation.RegisterFunction(validation.NewFunctionWithThreeInts("exp", validators.Exp))
+	b.RegisterFunction(validation.NewFunctionWithOneFloat("min", validators.Min))
+	b.RegisterFunction(validation.NewFunctionWithOneFloat("max", validators.Max))
+	b.RegisterFunction(validation.NewFunctionWithTwoFloats("ranger", validators.Ranger))
+	b.RegisterFunction(validation.NewFunctionWithThreeInts("exp", validators.Exp))
 
-	validation.RegisterFunction(validation.NewFunctionWithStrings("oneof", validators.OneOf))
-	validation.RegisterFunction(validation.NewFunctionWithValidators("array", validation.Array))
-	validation.RegisterFunction(validation.NewFunctionWithValidators("mapk", validation.MapK))
-	validation.RegisterFunction(validation.NewFunctionWithValidators("mapv", validation.MapV))
-	validation.RegisterFunction(validation.NewFunctionWithValidators("mapkv", validation.MapKV))
+	b.RegisterFunction(validation.NewFunctionWithStrings("oneof", validators.OneOf))
+	b.RegisterFunction(validation.NewFunctionWithValidators("array", validation.Array))
+	b.RegisterFunction(validation.NewFunctionWithValidators("mapk", validation.MapK))
+	b.RegisterFunction(validation.NewFunctionWithValidators("mapv", validation.MapV))
+	b.RegisterFunction(validation.NewFunctionWithValidators("mapkv", validation.MapKV))
 
 	// We use "structure" instead of "struct" because "struct" is the keyword in Go.
-	validation.RegisterValidatorFunc("structure", validation.ValidateStruct)
+	b.RegisterValidatorFunc("structure", b.ValidateStruct)
 }
