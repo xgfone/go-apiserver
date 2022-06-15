@@ -47,4 +47,7 @@ func RegisterDefaults(b *validation.Builder) {
 	validation.RegisterFunction(validation.NewFunctionWithValidators("mapk", validation.MapK))
 	validation.RegisterFunction(validation.NewFunctionWithValidators("mapv", validation.MapV))
 	validation.RegisterFunction(validation.NewFunctionWithValidators("mapkv", validation.MapKV))
+
+	// We use "structure" instead of "struct" because "struct" is the keyword in Go.
+	validation.RegisterValidatorFunc("structure", validation.ValidateStruct)
 }

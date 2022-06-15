@@ -163,6 +163,7 @@ func ExampleBuilder() {
 	// Register the validator building function based on the bool validation.
 	isZero := func(i interface{}) bool { return reflect.ValueOf(i).IsZero() }
 	validation.RegisterValidatorFuncBool("zero", isZero, fmt.Errorf("the value is expected to be zero"))
+	validation.RegisterValidatorFunc("structure", validation.ValidateStruct)
 
 	// Add the global symbols.
 	validation.RegisterSymbol("v1", "a")
@@ -263,6 +264,19 @@ func ExampleBuilder() {
 	(*v.F3.F5)[0] = 0
 	fmt.Println(validation.ValidateStruct(v))
 
+	type s1 struct {
+		F int `validate:"min(10)"`
+	}
+	type s2 struct {
+		Fs []s1 `validate:"array(structure)"`
+	}
+
+	v2 := s2{Fs: make([]s1, 1)}
+	fmt.Println(validation.ValidateStruct(v2))
+
+	v2.Fs[0].F = 10
+	fmt.Println(validation.ValidateStruct(v2))
+
 	// Example 7: Others
 	fmt.Println("\n--- Others ---")
 	const oneof = `oneof(v1, v2, "c")`
@@ -310,6 +324,8 @@ func ExampleBuilder() {
 	// F1: the string length is greater than 8
 	// F3.F4: the string 'c' is not one of [a b]
 	// F3.F5: 0th element is invalid: the integer is less than 1
+	// Fs: 0th element is invalid: F: the integer is less than 10
+	// <nil>
 	//
 	// --- Others ---
 	// <nil>

@@ -334,7 +334,7 @@ func (b *Builder) ValidateStruct(s interface{}) error {
 	}
 
 	if v.Kind() != reflect.Struct {
-		panic(fmt.Errorf("the value is %T, not a struct", v.Interface()))
+		return fmt.Errorf("the value is %T, not a struct", v.Interface())
 	}
 
 	errs := b.validateStruct("", v, nil)
