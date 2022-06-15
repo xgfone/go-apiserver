@@ -15,6 +15,40 @@
 // Package middleware provides the common middleware functions for the handler.
 package middleware
 
+// LoggerConfig is used to configure the logger middleware.
+type LoggerConfig struct {
+	Priority int
+
+	LogLevel   int
+	LogReqBody bool
+
+	LogLevelFunc   func() int
+	LogReqBodyFunc func() bool
+}
+
+// NewLoggerConfig returns a new LoggerConfig with the static information.
+func NewLoggerConfig(priority, logLevel int, logReqBody bool) LoggerConfig {
+	return LoggerConfig{Priority: priority, LogLevel: logLevel, LogReqBody: logReqBody}
+}
+
+// GetLogLevel returns the log level, which prefers to use LogLevelFunc
+// rather than LogLevel.
+func (c LoggerConfig) GetLogLevel() int {
+	if c.LogLevelFunc == nil {
+		return c.LogLevel
+	}
+	return c.LogLevelFunc()
+}
+
+// GetLogReqBody returns the log level, which prefers to use LogReqBodyFunc
+// rather than LogReqBody.
+func (c LoggerConfig) GetLogReqBody() bool {
+	if c.LogReqBodyFunc == nil {
+		return c.LogReqBody
+	}
+	return c.LogReqBodyFunc()
+}
+
 // Middleware is the common handler middleware.
 type Middleware interface {
 	// Name returns the name of the middleware.

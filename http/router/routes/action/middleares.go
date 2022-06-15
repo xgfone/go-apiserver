@@ -67,22 +67,24 @@ type LoggerConfig struct {
 }
 
 // Logger is a convenient logger middleware, which is equal to
-//   LoggerWithConfig(LoggerConfig{Priority: priority, LogLevel: log.LvlInfo})
+//   LoggerWithConfig(middleware.NewLoggerConfig(priority, log.LvlInfo, false))
 func Logger(priority int) mw.Middleware {
-	return LoggerWithConfig(LoggerConfig{Priority: priority, LogLevel: log.LvlInfo})
+	return LoggerWithConfig(mw.NewLoggerConfig(priority, log.LvlInfo, false))
 }
 
 // LoggerWithConfig returns a new http handler middleware to log the http request.
-func LoggerWithConfig(c LoggerConfig) mw.Middleware {
+func LoggerWithConfig(c mw.LoggerConfig) mw.Middleware {
 	return mw.NewMiddleware("logger", c.Priority, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !log.Enabled(c.LogLevel) {
+			logLevel := c.GetLogLevel()
+			if !log.Enabled(logLevel) {
 				h.(http.Handler).ServeHTTP(w, r)
 				return
 			}
 
 			var reqbody string
-			if c.LogReqBody {
+			logReqBody := c.GetLogReqBody()
+			if logReqBody {
 				reqbuf := bytes.NewBuffer(nil)
 				if r.ContentLength > 0 {
 					reqbuf.Grow(int(r.ContentLength))
@@ -109,7 +111,7 @@ func LoggerWithConfig(c LoggerConfig) mw.Middleware {
 				"cost", cost,
 			)
 
-			if c.LogReqBody {
+			if logReqBody {
 				kvs = append(kvs, "reqbody", reqbody)
 			}
 
@@ -117,7 +119,7 @@ func LoggerWithConfig(c LoggerConfig) mw.Middleware {
 				kvs = append(kvs, "err", ctx.Err)
 			}
 
-			log.Log(c.LogLevel, 0, "log http request", kvs...)
+			log.Log(logLevel, 0, "log http request", kvs...)
 		})
 	})
 }
