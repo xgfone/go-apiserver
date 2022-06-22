@@ -55,7 +55,7 @@ func (c LoggerConfig) GetLogLevel() int {
 // If the field LogReqBodyFunc is nil, use the global variable LogReqBodyFunc
 // instead. If it's also nil, use the field LogReqBody instead.
 func (c LoggerConfig) GetLogReqBody() bool {
-	if c.LogReqBodyFunc == nil {
+	if c.LogReqBodyFunc != nil {
 		return c.LogReqBodyFunc()
 	} else if LogReqBodyFunc != nil {
 		return LogReqBodyFunc()
