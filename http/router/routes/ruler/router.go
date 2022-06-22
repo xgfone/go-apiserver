@@ -19,7 +19,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
+	rpprof "runtime/pprof"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -206,4 +209,17 @@ func (m *Router) updateRoutes() {
 	}
 	sort.Stable(routes)
 	m.routes.Store(routesWrapper{Routes: routes})
+}
+
+// AddProfileRoutes adds the profile routes.
+func (m *Router) AddProfileRoutes(pathPrefix string) {
+	pathPrefix = strings.TrimRight(pathPrefix, "/")
+	m.Path(pathPrefix + "/debug/pprof/profile").HandlerFunc(pprof.Profile)
+	m.Path(pathPrefix + "/debug/pprof/cmdline").HandlerFunc(pprof.Cmdline)
+	m.Path(pathPrefix + "/debug/pprof/symbol").HandlerFunc(pprof.Symbol)
+	m.Path(pathPrefix + "/debug/pprof/trace").HandlerFunc(pprof.Trace)
+	m.PathPrefix(pathPrefix + "/debug/pprof").HandlerFunc(pprof.Index)
+	for _, p := range rpprof.Profiles() {
+		m.Path(pathPrefix + "/debug/pprof/" + p.Name()).GET(pprof.Handler(p.Name()))
+	}
 }
