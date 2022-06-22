@@ -15,6 +15,12 @@
 // Package middleware provides the common middleware functions for the handler.
 package middleware
 
+// Define the global logger option config.
+var (
+	LogLevelFunc   func() int
+	LogReqBodyFunc func() bool
+)
+
 // LoggerConfig is used to configure the logger middleware.
 type LoggerConfig struct {
 	Priority int
@@ -31,22 +37,30 @@ func NewLoggerConfig(priority, logLevel int, logReqBody bool) LoggerConfig {
 	return LoggerConfig{Priority: priority, LogLevel: logLevel, LogReqBody: logReqBody}
 }
 
-// GetLogLevel returns the log level, which prefers to use LogLevelFunc
-// rather than LogLevel.
+// GetLogLevel returns the log level.
+//
+// If the field LogLevelFunc is nil, use the global variable LogLevelFunc instead.
+// If it's also nil, use the field LogLevel instead.
 func (c LoggerConfig) GetLogLevel() int {
-	if c.LogLevelFunc == nil {
-		return c.LogLevel
+	if c.LogLevelFunc != nil {
+		return c.LogLevelFunc()
+	} else if LogLevelFunc != nil {
+		return LogLevelFunc()
 	}
-	return c.LogLevelFunc()
+	return c.LogLevel
 }
 
-// GetLogReqBody returns the log level, which prefers to use LogReqBodyFunc
-// rather than LogReqBody.
+// GetLogReqBody reports whether to log the request body or not.
+//
+// If the field LogReqBodyFunc is nil, use the global variable LogReqBodyFunc
+// instead. If it's also nil, use the field LogReqBody instead.
 func (c LoggerConfig) GetLogReqBody() bool {
 	if c.LogReqBodyFunc == nil {
-		return c.LogReqBody
+		return c.LogReqBodyFunc()
+	} else if LogReqBodyFunc != nil {
+		return LogReqBodyFunc()
 	}
-	return c.LogReqBodyFunc()
+	return c.LogReqBody
 }
 
 // Middleware is the common handler middleware.
