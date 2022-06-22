@@ -26,9 +26,9 @@ import (
 )
 
 // Logger is a convenient logger middleware, which is equal to
-//   LoggerWithConfig(middleware.NewLoggerConfig(priority, log.LvlInfo, false))
+//   LoggerWithConfig(middleware.NewLoggerConfig(priority))
 func Logger(priority int) mw.Middleware {
-	return LoggerWithConfig(mw.NewLoggerConfig(priority, log.LvlInfo, false))
+	return LoggerWithConfig(mw.NewLoggerConfig(priority))
 }
 
 // LoggerWithConfig returns a new http handler middleware to log the http request.
