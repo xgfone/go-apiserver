@@ -59,13 +59,6 @@ func Recover(priority int) mw.Middleware {
 	})
 }
 
-// LoggerConfig is used to configure the logger middleware.
-type LoggerConfig struct {
-	Priority   int
-	LogLevel   int
-	LogReqBody bool
-}
-
 // Logger is a convenient logger middleware, which is equal to
 //   LoggerWithConfig(middleware.NewLoggerConfig(priority, log.LvlInfo, false))
 func Logger(priority int) mw.Middleware {
