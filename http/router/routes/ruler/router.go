@@ -213,9 +213,9 @@ func (m *Router) updateRoutes() {
 }
 
 // AddVarsRoute adds the route to serve the published vars coming from "expvar".
-func (m *Router) AddVarsRoute(pathPrefix string) error {
+func (m *Router) AddVarsRoute(pathPrefix string) {
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
-	return m.Path(pathPrefix + "/debug/vars").GET(expvar.Handler())
+	m.Path(pathPrefix + "/debug/vars").GET(expvar.Handler())
 }
 
 // AddProfileRoutes adds the profile routes coming from "net/http/pprof".
