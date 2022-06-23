@@ -17,6 +17,7 @@ package ruler
 
 import (
 	"errors"
+	"expvar"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
@@ -211,15 +212,21 @@ func (m *Router) updateRoutes() {
 	m.routes.Store(routesWrapper{Routes: routes})
 }
 
-// AddProfileRoutes adds the profile routes.
+// AddVarsRoute adds the route to serve the published vars coming from "expvar".
+func (m *Router) AddVarsRoute(pathPrefix string) error {
+	pathPrefix = strings.TrimRight(pathPrefix, "/")
+	return m.Path(pathPrefix + "/debug/vars").GET(expvar.Handler())
+}
+
+// AddProfileRoutes adds the profile routes coming from "net/http/pprof".
 func (m *Router) AddProfileRoutes(pathPrefix string) {
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
-	m.Path(pathPrefix + "/debug/pprof/profile").HandlerFunc(pprof.Profile)
-	m.Path(pathPrefix + "/debug/pprof/cmdline").HandlerFunc(pprof.Cmdline)
-	m.Path(pathPrefix + "/debug/pprof/symbol").HandlerFunc(pprof.Symbol)
-	m.Path(pathPrefix + "/debug/pprof/trace").HandlerFunc(pprof.Trace)
-	m.Path(pathPrefix + "/debug/pprof/").HandlerFunc(pprof.Index)
-	m.Path(pathPrefix + "/debug/pprof").HandlerFunc(pprof.Index)
+	m.Path(pathPrefix + "/debug/pprof/profile").GETFunc(pprof.Profile)
+	m.Path(pathPrefix + "/debug/pprof/cmdline").GETFunc(pprof.Cmdline)
+	m.Path(pathPrefix + "/debug/pprof/symbol").GETFunc(pprof.Symbol)
+	m.Path(pathPrefix + "/debug/pprof/trace").GETFunc(pprof.Trace)
+	m.Path(pathPrefix + "/debug/pprof/").GETFunc(pprof.Index)
+	m.Path(pathPrefix + "/debug/pprof").GETFunc(pprof.Index)
 	for _, p := range rpprof.Profiles() {
 		m.Path(pathPrefix + "/debug/pprof/" + p.Name()).GET(pprof.Handler(p.Name()))
 	}
