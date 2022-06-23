@@ -157,7 +157,7 @@ func (m *Router) respond(action string, handler http.Handler,
 
 	c.handler = handler
 	c.respond = m.HandleResponse
-	m.Middlewares.ServeHTTP(ctx, r)
+	m.Middlewares.ServeHTTP(ctx, ctx.Request)
 	if !c.WroteHeader() {
 		if c.Err == nil {
 			c.Success(nil)
