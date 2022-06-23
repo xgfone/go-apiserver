@@ -218,7 +218,8 @@ func (m *Router) AddProfileRoutes(pathPrefix string) {
 	m.Path(pathPrefix + "/debug/pprof/cmdline").HandlerFunc(pprof.Cmdline)
 	m.Path(pathPrefix + "/debug/pprof/symbol").HandlerFunc(pprof.Symbol)
 	m.Path(pathPrefix + "/debug/pprof/trace").HandlerFunc(pprof.Trace)
-	m.PathPrefix(pathPrefix + "/debug/pprof").HandlerFunc(pprof.Index)
+	m.Path(pathPrefix + "/debug/pprof/").HandlerFunc(pprof.Index)
+	m.Path(pathPrefix + "/debug/pprof").HandlerFunc(pprof.Index)
 	for _, p := range rpprof.Profiles() {
 		m.Path(pathPrefix + "/debug/pprof/" + p.Name()).GET(pprof.Handler(p.Name()))
 	}
