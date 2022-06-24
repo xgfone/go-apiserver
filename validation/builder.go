@@ -425,9 +425,8 @@ func (es NamedErrors) Error() string {
 
 	var count int
 	for name, err := range es {
-		if count > 0 {
+		if count++; count > 1 {
 			b.WriteString("; ")
-			count++
 		}
 
 		b.WriteString(name)
