@@ -23,6 +23,14 @@ import (
 // Runner is a runner to run a task.
 type Runner func(context.Context) (end bool, err error)
 
+// ForeverRunner converts a function running forever to Runner.
+func ForeverRunner(runner func(context.Context)) Runner {
+	return func(ctx context.Context) (end bool, err error) {
+		runner(ctx)
+		return false, nil
+	}
+}
+
 // Loop is an interface to loop until a condition reaches.
 type Loop interface {
 	// If f returns true or an error, it terminates looping.
@@ -66,6 +74,11 @@ func NewJitterLoopWithFirstRun(firstInstant bool, firstDelay time.Duration,
 		Interval:     interval,
 		Sliding:      sliding,
 	}
+}
+
+// RunForever runs the function f forever until the context c is cancelled.
+func (l JitterLoop) RunForever(c context.Context, r func(context.Context)) error {
+	return l.Run(c, ForeverRunner(r))
 }
 
 // Run implements the interface Loop, which loops running f every interval
