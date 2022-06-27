@@ -33,6 +33,12 @@ var _ Loop = JitterLoop{}
 
 // JitterLoop loops running the task every jittered interval duration.
 type JitterLoop struct {
+	// The delay duration to run the task first.
+	FirstDelay time.Duration
+
+	// If true, immediately run the task first without waiting for the interval.
+	FirstInstant bool
+
 	// The interval duration between two runs of f.
 	Interval time.Duration
 
@@ -45,9 +51,21 @@ type JitterLoop struct {
 	JitterFactor float64
 }
 
-// NewJitterLoop returns a new JitterLoop.
+// NewJitterLoop is equal to NewJitterLoopWithFirstRun(true, 0, interval, sliding, jitterFactor).
 func NewJitterLoop(interval time.Duration, sliding bool, jitterFactor float64) JitterLoop {
-	return JitterLoop{Interval: interval, Sliding: sliding, JitterFactor: jitterFactor}
+	return NewJitterLoopWithFirstRun(true, 0, interval, sliding, jitterFactor)
+}
+
+// NewJitterLoopWithFirstRun returns a new JitterLoop.
+func NewJitterLoopWithFirstRun(firstInstant bool, firstDelay time.Duration,
+	interval time.Duration, sliding bool, jitterFactor float64) JitterLoop {
+	return JitterLoop{
+		FirstDelay:   firstDelay,
+		FirstInstant: firstInstant,
+		JitterFactor: jitterFactor,
+		Interval:     interval,
+		Sliding:      sliding,
+	}
 }
 
 // Run implements the interface Loop, which loops running f every interval
@@ -57,10 +75,23 @@ func NewJitterLoop(interval time.Duration, sliding bool, jitterFactor float64) J
 func (l JitterLoop) Run(c context.Context, r Runner) error {
 	if l.Interval < 0 {
 		panic("JitterLoop: the interval duration must not be negative")
-	} else if l.Interval == 0 {
+	}
+
+	if l.FirstDelay > 0 {
+		t := time.NewTimer(l.FirstDelay)
+		select {
+		case <-t.C:
+		case <-c.Done():
+			t.Stop()
+			return c.Err()
+		}
+	}
+
+	if l.Interval == 0 {
 		return l.r0(c, r)
 	}
 
+	var run bool
 	var t *time.Timer
 	for {
 		select {
@@ -72,6 +103,19 @@ func (l JitterLoop) Run(c context.Context, r Runner) error {
 		interval := l.Interval
 		if l.JitterFactor > 0.0 {
 			interval = Jitter(interval, l.JitterFactor)
+		}
+
+		if !run {
+			run = true
+			if !l.FirstInstant {
+				t = time.NewTimer(interval)
+				select {
+				case <-t.C:
+				case <-c.Done():
+					t.Stop()
+					return c.Err()
+				}
+			}
 		}
 
 		if !l.Sliding {
