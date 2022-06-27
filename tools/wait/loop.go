@@ -26,7 +26,7 @@ type Runner func(context.Context) (end bool, err error)
 // Loop is an interface to loop until a condition reaches.
 type Loop interface {
 	// If f returns true or an error, it terminates looping.
-	Run(c context.Context, f func(context.Context) (end bool, err error)) error
+	Run(context.Context, Runner) error
 }
 
 var _ Loop = JitterLoop{}
@@ -54,11 +54,11 @@ func NewJitterLoop(interval time.Duration, sliding bool, jitterFactor float64) J
 // duration until the context is done or f returns true or an error.
 //
 // Notice: f may not be invoked if context is already expired.
-func (l JitterLoop) Run(c context.Context, f func(context.Context) (bool, error)) error {
+func (l JitterLoop) Run(c context.Context, r Runner) error {
 	if l.Interval < 0 {
 		panic("JitterLoop: the interval duration must not be negative")
 	} else if l.Interval == 0 {
-		return l.r0(c, f)
+		return l.r0(c, r)
 	}
 
 	var t *time.Timer
@@ -82,7 +82,7 @@ func (l JitterLoop) Run(c context.Context, f func(context.Context) (bool, error)
 			}
 		}
 
-		if ok, err := safeRun(c, f); ok || err != nil {
+		if ok, err := safeRun(c, r); ok || err != nil {
 			return err
 		}
 
@@ -103,13 +103,13 @@ func (l JitterLoop) Run(c context.Context, f func(context.Context) (bool, error)
 	}
 }
 
-func (l JitterLoop) r0(c context.Context, f func(context.Context) (bool, error)) error {
+func (l JitterLoop) r0(c context.Context, r Runner) error {
 	for {
 		select {
 		case <-c.Done():
 			return c.Err()
 		default:
-			if ok, err := safeRun(c, f); ok || err != nil {
+			if ok, err := safeRun(c, r); ok || err != nil {
 				return err
 			}
 		}
