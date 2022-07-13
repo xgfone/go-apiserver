@@ -202,7 +202,7 @@ const (
 	prioQuery        = 2
 	prioClientIP     = 3
 	prioMethod       = 4
-	prioPathRegexp   = 5
+	prioPathPrefix   = 5
 	prioPath         = 6
 	prioHostRegexp   = 7
 	prioHost         = 8
@@ -373,7 +373,12 @@ func newPathMatcher(desc, path string, isPrefix bool) (Matcher, error) {
 		p.plen = len(p.paths)
 	}
 
-	return New(prioPath, desc, p.Match), nil
+	prio := prioPath
+	if isPrefix {
+		prio = prioPathPrefix
+	}
+
+	return New(prio, desc, p.Match), nil
 }
 
 func pathMatcher(path string) (Matcher, error) {
