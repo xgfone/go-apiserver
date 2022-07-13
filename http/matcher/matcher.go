@@ -79,7 +79,7 @@ func New(priority int, description string, match MatchFunc) Matcher {
 
 type notMatcher struct{ Matcher }
 
-func (m notMatcher) String() string { return fmt.Sprintf("Not(%s)", m.Matcher.String()) }
+func (m notMatcher) String() string { return "!" + m.Matcher.String() }
 func (m notMatcher) Match(w http.ResponseWriter, r *http.Request) bool {
 	return !m.Matcher.Match(w, r)
 }
@@ -90,12 +90,7 @@ func Not(matcher Matcher) Matcher { return notMatcher{matcher} }
 type andMatcher Matchers
 
 func (m andMatcher) String() string {
-	ms := Matchers(m)
-	ss := make([]string, len(ms))
-	for i, matcher := range ms {
-		ss[i] = matcher.String()
-	}
-	return fmt.Sprintf("And(%s)", strings.Join(ss, ", "))
+	return formatMatchers(" && ", Matchers(m))
 }
 
 func (m andMatcher) Priority() int { return Matchers(m).Priority() }
@@ -133,12 +128,7 @@ func And(matchers ...Matcher) Matcher {
 type orMatcher Matchers
 
 func (m orMatcher) String() string {
-	ms := Matchers(m)
-	ss := make([]string, len(ms))
-	for i, matcher := range ms {
-		ss[i] = matcher.String()
-	}
-	return fmt.Sprintf("Or(%s)", strings.Join(ss, ", "))
+	return formatMatchers(" || ", Matchers(m))
 }
 
 func (m orMatcher) Priority() int { return Matchers(m).Priority() }
@@ -171,6 +161,29 @@ func Or(matchers ...Matcher) Matcher {
 	}
 	sort.Stable(ms)
 	return orMatcher(ms)
+}
+
+func formatMatchers(sep string, matchers []Matcher) string {
+	switch len(matchers) {
+	case 0:
+		return ""
+	case 1:
+		return matchers[0].String()
+	}
+
+	var b strings.Builder
+	b.Grow(32)
+
+	b.WriteByte('(')
+	for i, matcher := range matchers {
+		if i > 0 {
+			b.WriteString(sep)
+		}
+		b.WriteString(matcher.String())
+	}
+	b.WriteByte(')')
+
+	return b.String()
 }
 
 // Must returns the matcher when err is equal to nil. Or, panic with err.
