@@ -196,16 +196,17 @@ var GetHost = func(r *http.Request) (host string) {
 	return
 }
 
+// Pre-define some matcher priorities.
 const (
-	prioHeaderRegexp = 1
-	prioHeader       = 2
-	prioQuery        = 2
-	prioClientIP     = 3
-	prioMethod       = 4
-	prioPathPrefix   = 5
-	prioPath         = 6
-	prioHostRegexp   = 7
-	prioHost         = 8
+	PriorityHeaderRegexp = 1
+	PriorityHeader       = 2
+	PriorityQuery        = 2
+	PriorityClientIP     = 3
+	PriorityMethod       = 4
+	PriorityPathPrefix   = 5
+	PriorityPath         = 6
+	PriorityHostRegexp   = 7
+	PriorityHost         = 8
 )
 
 var (
@@ -373,9 +374,9 @@ func newPathMatcher(desc, path string, isPrefix bool) (Matcher, error) {
 		p.plen = len(p.paths)
 	}
 
-	prio := prioPath
+	prio := PriorityPath
 	if isPrefix {
-		prio = prioPathPrefix
+		prio = PriorityPathPrefix
 	}
 
 	return New(prio, desc, p.Match), nil
@@ -413,7 +414,7 @@ func methodMatcher(method string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("Method(%s)", method)
-	return New(prioPath, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityMethod, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		return r.Method == method
 	}), nil
 }
@@ -425,7 +426,7 @@ func clientIPMatcher(clientIP string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("ClientIP(%s)", clientIP)
-	return New(prioPath, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityClientIP, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		remoteIP, _ := nets.SplitHostPort(r.RemoteAddr)
 		return ipChecker.CheckIPString(remoteIP)
 	}), nil
@@ -437,7 +438,7 @@ func queryMatcher(key, value string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("Query(%s=%s)", key, value)
-	return New(prioPath, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityQuery, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		var queries url.Values
 		if c := reqresp.GetContext(w, r); c != nil {
 			queries = c.GetQueries()
@@ -461,7 +462,7 @@ func headerMatcher(key, value string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("Header(%s=%s)", key, value)
-	return New(prioPath, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityHeader, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		var ok bool
 		if value == "" {
 			_, ok = r.Header[textproto.CanonicalMIMEHeaderKey(key)]
@@ -479,14 +480,14 @@ func headerRegexpMatcher(key, regexpValue string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("HeaderRegexp(%s)", regexpValue)
-	return New(prioPath, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityHeaderRegexp, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		return regexp.MatchString(r.Header.Get(key))
 	}), nil
 }
 
 func hostMatcher(host string) (Matcher, error) {
 	desc := fmt.Sprintf("Host(%s)", host)
-	return New(prioPath, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityHost, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		return GetHost(r) == host
 	}), nil
 }
@@ -498,7 +499,7 @@ func hostRegexpMatcher(regexpHost string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("HostRegexp(%s)", regexpHost)
-	return New(prioHostRegexp, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityHostRegexp, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		return regexp.MatchString(GetHost(r))
 	}), nil
 }
