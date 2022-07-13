@@ -36,63 +36,63 @@ func TestMatcherRuleBuilder(t *testing.T) {
 	req.RemoteAddr = "1.2.3.4"
 
 	rule = "Method(`GET`, `POST`) && Path(`/path`)"
-	expect = "And(Or(Method(GET), Method(POST)), Path(/path))"
+	expect = "And(Or(Method(`GET`), Method(`POST`)), Path(`/path`))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) && Method(`GET`) && Path(`/path`)"
-	expect = "And(Host(www.example.com), Path(/path), Method(GET))"
+	expect = "And(Host(`www.example.com`), Path(`/path`), Method(`GET`))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Method(`GET`, `POST`) || Path(`/path`)"
-	expect = "Or(Path(/path), Method(GET), Method(POST))"
+	expect = "Or(Path(`/path`), Method(`GET`), Method(`POST`))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) || Method(`GET`) || Path(`/path`)"
-	expect = "Or(Host(www.example.com), Path(/path), Method(GET))"
+	expect = "Or(Host(`www.example.com`), Path(`/path`), Method(`GET`))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) && Method(`GET`) || Path(`/path`)"
-	expect = "Or(And(Host(www.example.com), Method(GET)), Path(/path))"
+	expect = "Or(And(Host(`www.example.com`), Method(`GET`)), Path(`/path`))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) || Method(`GET`) && Path(`/path`)"
-	expect = "Or(And(Path(/path), Method(GET)), Host(www.example.com))"
+	expect = "Or(And(Path(`/path`), Method(`GET`)), Host(`www.example.com`))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) && (Method(`GET`) || Path(`/path`))"
-	expect = "And(Or(Path(/path), Method(GET)), Host(www.example.com))"
+	expect = "And(Or(Path(`/path`), Method(`GET`)), Host(`www.example.com`))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "(Host(`www.example.com`) && ClientIP(`1.2.3.4`)) || (Method(`GET`) && Path(`/path`))"
-	expect = "Or(And(Host(www.example.com), ClientIP(1.2.3.4)), And(Path(/path), Method(GET)))"
+	expect = "Or(And(Host(`www.example.com`), ClientIP(`1.2.3.4`)), And(Path(`/path`), Method(`GET`)))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "(Host(`www.example.com`) || ClientIP(`1.2.3.4`)) && (Method(`GET`) || Path(`/path`))"
-	expect = "And(Or(Host(www.example.com), ClientIP(1.2.3.4)), Or(Path(/path), Method(GET)))"
+	expect = "And(Or(Host(`www.example.com`), ClientIP(`1.2.3.4`)), Or(Path(`/path`), Method(`GET`)))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "!Method(`GET`)"
-	expect = "Not(Method(GET))"
+	expect = "Not(Method(`GET`))"
 	testBuilder(t, rule, expect, req, false)
 
 	rule = "!Method(`GET`) && !Path(`/path`)"
-	expect = "And(Not(Path(/path)), Not(Method(GET)))"
+	expect = "And(Not(Path(`/path`)), Not(Method(`GET`)))"
 	testBuilder(t, rule, expect, req, false)
 
 	rule = "!Method(`GET`) || !Path(`/path`)"
-	expect = "Or(Not(Path(/path)), Not(Method(GET)))"
+	expect = "Or(Not(Path(`/path`)), Not(Method(`GET`)))"
 	testBuilder(t, rule, expect, req, false)
 
 	rule = "!(Method(`GET`) && Path(`/path`))"
-	expect = "Or(Not(Path(/path)), Not(Method(GET)))"
+	expect = "Or(Not(Path(`/path`)), Not(Method(`GET`)))"
 	testBuilder(t, rule, expect, req, false)
 
 	rule = "!(Method(`GET`) || Path(`/path`))"
-	expect = "And(Not(Path(/path)), Not(Method(GET)))"
+	expect = "And(Not(Path(`/path`)), Not(Method(`GET`)))"
 	testBuilder(t, rule, expect, req, false)
 
 	rule = "!Method(`GET`) || Path(`/path`)"
-	expect = "Or(Path(/path), Not(Method(GET)))"
+	expect = "Or(Path(`/path`), Not(Method(`GET`)))"
 	testBuilder(t, rule, expect, req, true)
 }
 

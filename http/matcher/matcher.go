@@ -389,7 +389,7 @@ func pathMatcher(path string) (Matcher, error) {
 		return nil, fmt.Errorf("the url path does not start with '/'")
 	}
 
-	desc := fmt.Sprintf("Path(%s)", path)
+	desc := fmt.Sprintf("Path(`%s`)", path)
 	return newPathMatcher(desc, path, false)
 }
 
@@ -400,7 +400,7 @@ func pathPrefixMatcher(pathPrefix string) (Matcher, error) {
 		return nil, fmt.Errorf("the url path prefix does not start with '/'")
 	}
 
-	desc := fmt.Sprintf("PathPrefix(%s)", pathPrefix)
+	desc := fmt.Sprintf("PathPrefix(`%s`)", pathPrefix)
 	return newPathMatcher(desc, pathPrefix, true)
 }
 
@@ -413,7 +413,7 @@ func methodMatcher(method string) (Matcher, error) {
 		return nil, fmt.Errorf("unknown http method '%s'", method)
 	}
 
-	desc := fmt.Sprintf("Method(%s)", method)
+	desc := fmt.Sprintf("Method(`%s`)", method)
 	return New(PriorityMethod, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		return r.Method == method
 	}), nil
@@ -425,7 +425,7 @@ func clientIPMatcher(clientIP string) (Matcher, error) {
 		return nil, err
 	}
 
-	desc := fmt.Sprintf("ClientIP(%s)", clientIP)
+	desc := fmt.Sprintf("ClientIP(`%s`)", clientIP)
 	return New(PriorityClientIP, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		remoteIP, _ := nets.SplitHostPort(r.RemoteAddr)
 		return ipChecker.CheckIPString(remoteIP)
@@ -437,7 +437,13 @@ func queryMatcher(key, value string) (Matcher, error) {
 		return nil, fmt.Errorf("the query key is empty")
 	}
 
-	desc := fmt.Sprintf("Query(%s=%s)", key, value)
+	var desc string
+	if value == "" {
+		desc = fmt.Sprintf("Query(`%s`)", key)
+	} else {
+		desc = fmt.Sprintf("Query(`%s`, `%s`)", key, value)
+	}
+
 	return New(PriorityQuery, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		var queries url.Values
 		if c := reqresp.GetContext(w, r); c != nil {
@@ -461,7 +467,13 @@ func headerMatcher(key, value string) (Matcher, error) {
 		return nil, fmt.Errorf("the header key is empty")
 	}
 
-	desc := fmt.Sprintf("Header(%s=%s)", key, value)
+	var desc string
+	if value == "" {
+		desc = fmt.Sprintf("Header(`%s`)", key)
+	} else {
+		desc = fmt.Sprintf("Header(`%s`, `%s`)", key, value)
+	}
+
 	return New(PriorityHeader, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		var ok bool
 		if value == "" {
@@ -479,14 +491,14 @@ func headerRegexpMatcher(key, regexpValue string) (Matcher, error) {
 		return nil, err
 	}
 
-	desc := fmt.Sprintf("HeaderRegexp(%s)", regexpValue)
+	desc := fmt.Sprintf("HeaderRegexp(`%s`)", regexpValue)
 	return New(PriorityHeaderRegexp, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		return regexp.MatchString(r.Header.Get(key))
 	}), nil
 }
 
 func hostMatcher(host string) (Matcher, error) {
-	desc := fmt.Sprintf("Host(%s)", host)
+	desc := fmt.Sprintf("Host(`%s`)", host)
 	return New(PriorityHost, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		return GetHost(r) == host
 	}), nil
@@ -498,7 +510,7 @@ func hostRegexpMatcher(regexpHost string) (Matcher, error) {
 		return nil, err
 	}
 
-	desc := fmt.Sprintf("HostRegexp(%s)", regexpHost)
+	desc := fmt.Sprintf("HostRegexp(`%s`)", regexpHost)
 	return New(PriorityHostRegexp, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		return regexp.MatchString(GetHost(r))
 	}), nil

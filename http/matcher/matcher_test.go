@@ -37,13 +37,13 @@ func TestAndOrMatchers(t *testing.T) {
 	m5 := Must(Path("/p5"))
 	m6 := Must(Path("/p6"))
 
-	expect1 := "And(Or(Path(/p1), Path(/p2)), Path(/p3), Path(/p4), Path(/p5), Path(/p6))"
+	expect1 := "And(Or(Path(`/p1`), Path(`/p2`)), Path(`/p3`), Path(`/p4`), Path(`/p5`), Path(`/p6`))"
 	s1 := And(Or(m1, m2), m3, And(m4, m5), m6).String()
 	if s1 != expect1 {
 		t.Errorf("expect '%s', but got '%s'", expect1, s1)
 	}
 
-	expect2 := "Or(And(Path(/p1), Path(/p2)), Path(/p3), Path(/p4), Path(/p5), Path(/p6))"
+	expect2 := "Or(And(Path(`/p1`), Path(`/p2`)), Path(`/p3`), Path(`/p4`), Path(`/p5`), Path(`/p6`))"
 	s2 := Or(And(m1, m2), m3, Or(m4, m5), m6).String()
 	if s2 != expect2 {
 		t.Errorf("expect '%s', but got '%s'", expect2, s2)
