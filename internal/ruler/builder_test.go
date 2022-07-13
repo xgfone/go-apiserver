@@ -40,15 +40,15 @@ func TestMatcherRuleBuilder(t *testing.T) {
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) && Method(`GET`) && Path(`/path`)"
-	expect = "And(Host(www.example.com), Method(GET), Path(/path))"
+	expect = "And(Host(www.example.com), Path(/path), Method(GET))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Method(`GET`, `POST`) || Path(`/path`)"
-	expect = "Or(Method(GET), Method(POST), Path(/path))"
+	expect = "Or(Path(/path), Method(GET), Method(POST))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) || Method(`GET`) || Path(`/path`)"
-	expect = "Or(Host(www.example.com), Method(GET), Path(/path))"
+	expect = "Or(Host(www.example.com), Path(/path), Method(GET))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) && Method(`GET`) || Path(`/path`)"
@@ -56,19 +56,19 @@ func TestMatcherRuleBuilder(t *testing.T) {
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) || Method(`GET`) && Path(`/path`)"
-	expect = "Or(And(Method(GET), Path(/path)), Host(www.example.com))"
+	expect = "Or(And(Path(/path), Method(GET)), Host(www.example.com))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) && (Method(`GET`) || Path(`/path`))"
-	expect = "And(Or(Method(GET), Path(/path)), Host(www.example.com))"
+	expect = "And(Or(Path(/path), Method(GET)), Host(www.example.com))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "(Host(`www.example.com`) && ClientIP(`1.2.3.4`)) || (Method(`GET`) && Path(`/path`))"
-	expect = "Or(And(Host(www.example.com), ClientIP(1.2.3.4)), And(Method(GET), Path(/path)))"
+	expect = "Or(And(Host(www.example.com), ClientIP(1.2.3.4)), And(Path(/path), Method(GET)))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "(Host(`www.example.com`) || ClientIP(`1.2.3.4`)) && (Method(`GET`) || Path(`/path`))"
-	expect = "And(Or(Host(www.example.com), ClientIP(1.2.3.4)), Or(Method(GET), Path(/path)))"
+	expect = "And(Or(Host(www.example.com), ClientIP(1.2.3.4)), Or(Path(/path), Method(GET)))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "!Method(`GET`)"
@@ -76,23 +76,23 @@ func TestMatcherRuleBuilder(t *testing.T) {
 	testBuilder(t, rule, expect, req, false)
 
 	rule = "!Method(`GET`) && !Path(`/path`)"
-	expect = "And(Not(Method(GET)), Not(Path(/path)))"
+	expect = "And(Not(Path(/path)), Not(Method(GET)))"
 	testBuilder(t, rule, expect, req, false)
 
 	rule = "!Method(`GET`) || !Path(`/path`)"
-	expect = "Or(Not(Method(GET)), Not(Path(/path)))"
+	expect = "Or(Not(Path(/path)), Not(Method(GET)))"
 	testBuilder(t, rule, expect, req, false)
 
 	rule = "!(Method(`GET`) && Path(`/path`))"
-	expect = "Or(Not(Method(GET)), Not(Path(/path)))"
+	expect = "Or(Not(Path(/path)), Not(Method(GET)))"
 	testBuilder(t, rule, expect, req, false)
 
 	rule = "!(Method(`GET`) || Path(`/path`))"
-	expect = "And(Not(Method(GET)), Not(Path(/path)))"
+	expect = "And(Not(Path(/path)), Not(Method(GET)))"
 	testBuilder(t, rule, expect, req, false)
 
 	rule = "!Method(`GET`) || Path(`/path`)"
-	expect = "Or(Not(Method(GET)), Path(/path))"
+	expect = "Or(Path(/path), Not(Method(GET)))"
 	testBuilder(t, rule, expect, req, true)
 }
 
