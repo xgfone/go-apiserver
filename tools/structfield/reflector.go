@@ -177,8 +177,8 @@ func (r *Reflector) reflectStruct(c interface{}, v reflect.Value) (err error) {
 }
 
 func (r *Reflector) reflectField(c interface{}, t reflect.StructField, v reflect.Value) (err error) {
-	propagate, err := r.walkTag(c, t, v, string(t.Tag))
-	if err == nil && propagate {
+	notpropagate, err := r.walkTag(c, t, v, string(t.Tag))
+	if err == nil && !notpropagate {
 		switch v.Kind() {
 		case reflect.Struct:
 			err = r.reflectStruct(c, v)
@@ -239,11 +239,13 @@ func (r *Reflector) getTagArg(handler Handler, name, qvalue string) tagValue {
 }
 
 func (r *Reflector) do(c interface{}, t reflect.StructField, v reflect.Value,
-	name, value string, propagate *bool) (err error) {
+	name, value string, notpropagate *bool) (err error) {
 	if name == "propagate" {
-		var v bool
-		if v, err = strconv.ParseBool(value); err == nil && !v {
-			*propagate = false
+		if value, err = strconv.Unquote(value); err == nil {
+			var v bool
+			if v, err = strconv.ParseBool(value); err == nil && !v {
+				*notpropagate = true
+			}
 		}
 		return
 	}
@@ -257,7 +259,7 @@ func (r *Reflector) do(c interface{}, t reflect.StructField, v reflect.Value,
 
 // copy and modify from https://github.com/golang/go/blob/go1.18.4/src/reflect/type.go
 func (r *Reflector) walkTag(c interface{}, t reflect.StructField, v reflect.Value,
-	tag string) (propagate bool, err error) {
+	tag string) (notpropagate bool, err error) {
 	for tag != "" {
 		// Skip leading space.
 		i := 0
@@ -298,7 +300,7 @@ func (r *Reflector) walkTag(c interface{}, t reflect.StructField, v reflect.Valu
 		tag = tag[i+1:]
 
 		// (xgfone): Poll the key-value tag.
-		if err = r.do(c, t, v, name, qvalue, &propagate); err != nil {
+		if err = r.do(c, t, v, name, qvalue, &notpropagate); err != nil {
 			break
 		}
 	}
