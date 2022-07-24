@@ -51,7 +51,8 @@ func Indirect(value interface{}) interface{} {
 
 // Set does the best to set the value of dst to src.
 //
-// Notice: dst must be a pointer to a certain variable.
+// Notice: dst must be a pointer to a variable. For the current implementation,
+// it only supports time.Time, time.Duration and the built-in types.
 func Set(dst, src interface{}) (err error) {
 	src = Indirect(src)
 	switch d := dst.(type) {

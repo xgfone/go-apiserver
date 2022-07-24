@@ -189,6 +189,15 @@ func (r *Reflector) reflectField(c interface{}, t reflect.StructField, v reflect
 					err = r.reflectStruct(c, v)
 				}
 			}
+
+		case reflect.Array, reflect.Slice:
+			for i, _len := 0, v.Len(); i < _len; i++ {
+				if vf := v.Index(i); vf.Kind() == reflect.Struct {
+					if err = r.reflectStruct(c, vf); err != nil {
+						break
+					}
+				}
+			}
 		}
 	}
 

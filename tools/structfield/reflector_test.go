@@ -89,16 +89,21 @@ func ExampleReflector() {
 	}
 
 	/// Example 2: Mask the response result data
-	type Response struct {
+	type Person struct {
 		Username string `datamask:"username"`
 		Password string `datamask:"password"`
 	}
-	response := Response{Username: "谢谢", Password: "123456789"}
+	type Response struct {
+		Persons []Person
+	}
+	response := Response{Persons: []Person{
+		{Username: "谢谢", Password: "123456789"},
+	}}
 	if err := sf.Reflect(nil, &response); err != nil {
 		fmt.Printf("reflect failed: %v\n", err)
 	} else {
-		fmt.Printf("Response.Username: %s\n", response.Username)
-		fmt.Printf("Response.Password: %s\n", response.Password)
+		fmt.Printf("Response.Username: %s\n", response.Persons[0].Username)
+		fmt.Printf("Response.Password: %s\n", response.Persons[0].Password)
 	}
 
 	// Output:
