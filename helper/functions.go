@@ -210,7 +210,6 @@ func convertToBool(i interface{}) (dst bool, err error) {
 		dst = src != 0
 	case uint64:
 		dst = src != 0
-		dst = src != 0
 	case fmt.Stringer:
 		dst, err = strconv.ParseBool(src.String())
 	default:
