@@ -40,8 +40,8 @@ var (
 		return BindURLValues(dst, url.Values(r.Header), "header")
 	})
 
-	DefaultValidateFunc = func(v interface{}) error {
-		return structfield.Reflect(nil, v)
+	DefaultValidateFunc = func(v interface{}, r *http.Request) error {
+		return structfield.Reflect(r, v)
 	}
 
 	BodyBinder   Binder = WrapBinder(DefaultMuxBinder, DefaultValidateFunc)
@@ -155,10 +155,10 @@ func (mb *MuxBinder) Bind(dst interface{}, req *http.Request) error {
 
 // WrapBinder wraps the binder and returns a new one that goes to handle
 // the result after binding the request.
-func WrapBinder(binder Binder, nextHandler func(interface{}) error) Binder {
+func WrapBinder(binder Binder, nextHandler func(interface{}, *http.Request) error) Binder {
 	return BinderFunc(func(dst interface{}, req *http.Request) (err error) {
 		if err = binder.Bind(dst, req); err == nil {
-			err = nextHandler(dst)
+			err = nextHandler(dst, req)
 		}
 		return
 	})
