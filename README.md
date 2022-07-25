@@ -302,30 +302,22 @@ func initAdminManageAPI(router *ruler.Router) {
 		ClientIP(*manageCIDR). // Only allow the specific clients to add the route.
 		ContextHandler(func(ctx *reqresp.Context) {
 			var req struct {
-				Rule     string `json:"rule"`
+				Rule     string `json:"rule" validate:"required"`
 				Upstream struct {
-					ForwardPolicy string       `json:"forwardPolicy"`
+					ForwardPolicy string       `json:"forwardPolicy" default:"weight_random"`
 					ForwardURL    upstream.URL `json:"forwardUrl"`
 
 					Servers []struct {
-						IP     string `json:"ip"`
-						Port   uint16 `json:"port"`
-						Weight int    `json:"weight"`
-					} `json:"servers" yaml:"servers"`
+						IP     string `json:"ip" validate:"ip"`
+						Port   uint16 `json:"port" validate:"ranger(1,65535)"`
+						Weight int    `json:"weight" default:"1" validate:"min(1)"`
+					} `json:"servers"`
 				} `json:"upstream"`
 			}
 
 			if err := ctx.BindBody(&req); err != nil {
-				ctx.Text(400, "invalid request route paramenter: %s", err.Error())
+				ctx.Text(400, "invalid request route paramenter: %w", err.Error())
 				return
-			}
-
-			if req.Rule == "" {
-				ctx.Text(400, "the route rule is empty")
-				return
-			}
-			if req.Upstream.ForwardPolicy == "" {
-				req.Upstream.ForwardPolicy = "weight_random"
 			}
 
 			// Build the upstream servers.
@@ -379,8 +371,8 @@ $ curl -XPOST http://127.0.0.1/admin/route -H 'Content-Type: application/json' -
 }'
 
 # Access the backend servers by the mini API-Gateway:
-# 1/3 requests -> 192.168.1.11
-# 2/3 requests -> 192.168.1.12
+# 2/6(33.3%) requests -> 192.168.1.11
+# 4/6(66.7%) requests -> 192.168.1.12
 $ curl http://192.168.1.10/path
 192.168.1.11/backend/path
 
