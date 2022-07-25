@@ -22,46 +22,37 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
-	"github.com/xgfone/go-apiserver/validation"
+	"github.com/xgfone/go-apiserver/tools/structfield"
 	_ "github.com/xgfone/go-apiserver/validation/validators/defaults"
 )
 
 // Predefine some binder to bind the body, query and header of the request.
 var (
-	BodyBinder   Binder
-	QueryBinder  Binder
-	HeaderBinder Binder
+	DefaultMuxBinder = NewMuxBinder()
+
+	DefaultQueryBinder Binder = BinderFunc(func(dst interface{}, r *http.Request) error {
+		return BindURLValues(dst, r.URL.Query(), "query")
+	})
+
+	DefaultHeaderBinder Binder = BinderFunc(func(dst interface{}, r *http.Request) error {
+		return BindURLValues(dst, url.Values(r.Header), "header")
+	})
+
+	DefaultValidateFunc = func(v interface{}) error {
+		return structfield.Reflect(nil, v)
+	}
+
+	BodyBinder   Binder = WrapBinder(DefaultMuxBinder, DefaultValidateFunc)
+	QueryBinder  Binder = WrapBinder(DefaultQueryBinder, DefaultValidateFunc)
+	HeaderBinder Binder = WrapBinder(DefaultHeaderBinder, DefaultValidateFunc)
 )
 
 func init() {
-	mb := NewMuxBinder()
-	mb.Add(header.MIMEApplicationXML, XMLBinder())
-	mb.Add(header.MIMEApplicationJSON, JSONBinder())
-	mb.Add(header.MIMEApplicationForm, FormBinder(10<<20))
-	BodyBinder = &DefaultValidateBinder{
-		SetDefault: helper.SetStructFieldToDefault,
-		Validate:   validation.ValidateStruct,
-		Binder:     mb,
-	}
-
-	QueryBinder = &DefaultValidateBinder{
-		SetDefault: helper.SetStructFieldToDefault,
-		Validate:   validation.ValidateStruct,
-		Binder: BinderFunc(func(dst interface{}, req *http.Request) error {
-			return BindURLValues(dst, req.URL.Query(), "query")
-		}),
-	}
-
-	HeaderBinder = &DefaultValidateBinder{
-		SetDefault: helper.SetStructFieldToDefault,
-		Validate:   validation.ValidateStruct,
-		Binder: BinderFunc(func(dst interface{}, req *http.Request) error {
-			return BindURLValues(dst, url.Values(req.Header), "header")
-		}),
-	}
+	DefaultMuxBinder.Add(header.MIMEApplicationXML, XMLBinder())
+	DefaultMuxBinder.Add(header.MIMEApplicationJSON, JSONBinder())
+	DefaultMuxBinder.Add(header.MIMEApplicationForm, FormBinder(10<<20))
 }
 
 // Binder is used to bind the data to the http request.
@@ -78,11 +69,6 @@ type BinderFunc func(dst interface{}, req *http.Request) error
 // Bind implements the interface Binder.
 func (f BinderFunc) Bind(dst interface{}, req *http.Request) error {
 	return f(dst, req)
-}
-
-// BindQuery binds the data to the url query, which supports the struct tag "query".
-func BindQuery(data interface{}, query url.Values) error {
-	return BindURLValues(data, query, "query")
 }
 
 // JSONBinder returns a binder to bind the data to the request body as JSON.
@@ -167,39 +153,13 @@ func (mb *MuxBinder) Bind(dst interface{}, req *http.Request) error {
 	return herrors.ErrUnsupportedMediaType.Newf("not support Content-Type '%s'", ct)
 }
 
-// DefaultValidateBinder is a binder with the validator and the default value setter.
-type DefaultValidateBinder struct {
-	Binder
-
-	// SetDefault is used to set the data to the default if it is ZERO.
-	//
-	// If data is a struct, set the fields of the struct to the default if ZERO.
-	//
-	// Default: nil
-	SetDefault func(data interface{}) error
-
-	// Validate is used to validate whether data is valid.
-	//
-	// Default: nil
-	Validate func(data interface{}) error
-}
-
-// Bind implements the interface Binder, and set the default value
-// and validate whether the value is valid.
-func (b DefaultValidateBinder) Bind(v interface{}, r *http.Request) (err error) {
-	if err = b.Binder.Bind(v, r); err != nil {
-		return
-	}
-
-	if b.SetDefault != nil {
-		if err = b.SetDefault(v); err != nil {
-			return
+// WrapBinder wraps the binder and returns a new one that goes to handle
+// the result after binding the request.
+func WrapBinder(binder Binder, nextHandler func(interface{}) error) Binder {
+	return BinderFunc(func(dst interface{}, req *http.Request) (err error) {
+		if err = binder.Bind(dst, req); err == nil {
+			err = nextHandler(dst)
 		}
-	}
-
-	if b.Validate != nil {
-		err = b.Validate(v)
-	}
-
-	return
+		return
+	})
 }
