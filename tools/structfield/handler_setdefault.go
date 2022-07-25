@@ -31,11 +31,6 @@ func init() {
 // with the tag name "default" by default.
 func NewSetDefaultHandler() Handler { return setdefault{} }
 
-// DefaultSetter is an interface to set the default value to _default.
-type DefaultSetter interface {
-	SetDefault(_default interface{}) error
-}
-
 type setdefault struct{}
 
 func (h setdefault) Parse(s string) (interface{}, error) { return s, nil }
@@ -72,7 +67,7 @@ func (h setdefault) Run(c interface{}, t reflect.StructField, v reflect.Value, a
 		if _, ok := v.Interface().(time.Time); ok {
 			return helper.Set(p.Interface(), s)
 		}
-		if i, ok := p.Interface().(DefaultSetter); ok {
+		if i, ok := p.Interface().(helper.DefaultSetter); ok {
 			return i.SetDefault(s)
 		}
 		return fmt.Errorf("%s: unsupported type %T", t.Name, v.Interface())

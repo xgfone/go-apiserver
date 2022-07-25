@@ -52,7 +52,7 @@ func ExampleNewSetDefaultHandler() {
 		Struct  Struct
 		Structs []Struct
 
-		Setter      defaultSetter `default:"xyz"`
+		Setter      defaultSetter `default:"xyz"` // The type implementing helper.DefaultSetter
 		DurationStr time.Duration `default:"2s"`
 		TimeStr     time.Time     `default:"2022-07-24T22:56:28Z"`
 

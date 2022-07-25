@@ -27,6 +27,11 @@ var (
 	errNotPointerToStruct = errors.New("the argument must be a pointer to struct")
 )
 
+// DefaultSetter is an interface to set the default value to d.
+type DefaultSetter interface {
+	SetDefault(d interface{}) error
+}
+
 // SetStructFieldToDefault sets the default value of the fields of the pointer
 // to struct v to the value of the tag "default" of the fields when the field
 // value is ZERO.
@@ -47,7 +52,7 @@ var (
 //   uint64
 //   struct
 //   struct slice
-//   interface{ SetDefault(_default interface{}) error }
+//   DefaultSetter
 //   time.Time      // Format: A. Integer(UTC); B. String(RFC3339)
 //   time.Duration  // Format: A. Integer(ms);  B. String(time.ParseDuration)
 //   pointer to the types above
@@ -125,7 +130,7 @@ func setDefault(vf reflect.Value) (err error) {
 			err = setFieldDuration(vf, fieldv, v, tag)
 		case time.Time:
 			err = setFieldTime(vf, fieldv, v, tag)
-		case interface{ SetDefault(_default string) error }:
+		case DefaultSetter:
 			if tag != "" {
 				err = v.SetDefault(tag)
 			}
