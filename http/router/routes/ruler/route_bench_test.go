@@ -38,7 +38,7 @@ func benchmarkRouteWithPath(b *testing.B, path string) {
 		panic("notfound")
 	})
 
-	handler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		rw.WriteHeader(200)
 		io.WriteString(rw, "OK")
 	})

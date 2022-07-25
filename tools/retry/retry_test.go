@@ -56,7 +56,7 @@ func TestNewPeriodicLoopRetry(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	retry.Run(ctx, func(ctx context.Context) (bool, error) {
+	retry.Run(ctx, func(context.Context) (bool, error) {
 		t.Fatal("should not be called")
 		return true, nil
 	})
@@ -69,7 +69,7 @@ func TestNewPeriodicLoopRetry(t *testing.T) {
 	}
 
 	ctx, cancel = context.WithTimeout(context.Background(), time.Millisecond*500)
-	err = retry.Run(ctx, func(ctx context.Context) (bool, error) {
+	err = retry.Run(ctx, func(_ context.Context) (bool, error) {
 		time.Sleep(time.Second)
 		return false, errors.New("error")
 	})

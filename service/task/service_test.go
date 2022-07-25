@@ -34,7 +34,7 @@ func TestService(t *testing.T) {
 	if IsActivated() {
 		t.Errorf("unexpect the task service is activated")
 	}
-	runTask(func(ctx context.Context) {
+	runTask(func(context.Context) {
 		t.Errorf("unexpect the task is run")
 	})
 
@@ -48,7 +48,7 @@ func TestService(t *testing.T) {
 	}
 
 	var run atomic.Value
-	runTask(func(ctx context.Context) { run.Store(true) })
+	runTask(func(context.Context) { run.Store(true) })
 	time.Sleep(time.Millisecond * 10)
 	if v := run.Load(); v == nil || !v.(bool) {
 		t.Errorf("the task is not run")

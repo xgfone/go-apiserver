@@ -28,7 +28,7 @@ import (
 func TestURLProvider(t *testing.T) {
 	httpserver := http.Server{
 		Addr: "127.0.0.1:8888",
-		Handler: http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		Handler: http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 			rw.WriteHeader(200)
 			json.NewEncoder(rw).Encode(urlCert{
 				KeyPEM:  test.Key,

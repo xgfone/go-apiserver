@@ -439,7 +439,7 @@ func clientIPMatcher(clientIP string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("ClientIP(`%s`)", clientIP)
-	return New(PriorityClientIP, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityClientIP, desc, func(_ http.ResponseWriter, r *http.Request) bool {
 		remoteIP, _ := nets.SplitHostPort(r.RemoteAddr)
 		return ipChecker.CheckIPString(remoteIP)
 	}), nil
@@ -487,7 +487,7 @@ func headerMatcher(key, value string) (Matcher, error) {
 		desc = fmt.Sprintf("Header(`%s`, `%s`)", key, value)
 	}
 
-	return New(PriorityHeader, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityHeader, desc, func(_ http.ResponseWriter, r *http.Request) bool {
 		var ok bool
 		if value == "" {
 			_, ok = r.Header[textproto.CanonicalMIMEHeaderKey(key)]

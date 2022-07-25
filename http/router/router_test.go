@@ -55,7 +55,7 @@ func TestRouter(t *testing.T) {
 	}))
 
 	router.Middlewares.Use(logMiddleware(buf, "log1", 1), logMiddleware(buf, "log2", 2))
-	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(204)
 		fmt.Fprintln(buf, "notfound")
 	})

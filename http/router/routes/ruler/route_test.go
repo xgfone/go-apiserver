@@ -31,13 +31,13 @@ func TestRoute(t *testing.T) {
 	router := NewRouter()
 
 	router.Name("route1").Matcher(hostMatcher).
-		HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 			rw.WriteHeader(201)
 			rw.Write([]byte(`route1`))
 		})
 
 	router.Matcher(matcher.And(hostMatcher, getMatcher)).Name("route2").
-		HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 			rw.WriteHeader(202)
 			rw.Write([]byte(`route2`))
 		})

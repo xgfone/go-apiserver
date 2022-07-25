@@ -47,7 +47,7 @@ func httpMiddleware(name string, priority int, buf *bytes.Buffer) Middleware {
 
 func TestMiddlewareManagerHTTP(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	httpHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(201)
 		buf.WriteString("handler\n")
 	})

@@ -28,7 +28,7 @@ import (
 )
 
 func testHandler(key string) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(rw, key)
 	})
 }

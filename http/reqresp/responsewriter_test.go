@@ -28,7 +28,7 @@ func wrapHandler(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func TestResponseWriter(t *testing.T) {
-	handler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		if code := rw.(ResponseWriter).StatusCode(); code != 200 {
 			t.Errorf("unexpected status code %d", code)
 		}
@@ -59,7 +59,7 @@ func TestResponseWriter(t *testing.T) {
 
 func BenchmarkResponseWriter(b *testing.B) {
 	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:8001", nil)
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if _, ok := w.(http.Flusher); !ok {
 			panic("not http.Flusher")
 		}

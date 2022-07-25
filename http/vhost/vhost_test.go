@@ -22,7 +22,7 @@ import (
 )
 
 func httpHandler(statusCode int) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		rw.WriteHeader(statusCode)
 	})
 }
@@ -122,7 +122,7 @@ func TestManager(t *testing.T) {
 
 	rec4 = httptest.NewRecorder()
 	m.SetDefaultVHost(nil)
-	m.HandleHTTP = func(w http.ResponseWriter, r *http.Request, h http.Handler) {
+	m.HandleHTTP = func(w http.ResponseWriter, _ *http.Request, _ http.Handler) {
 		w.WriteHeader(205)
 	}
 	m.ServeHTTP(rec4, req4)
@@ -133,7 +133,7 @@ func TestManager(t *testing.T) {
 
 func ExampleManager() {
 	httpHandler := func(body string) http.HandlerFunc {
-		return func(rw http.ResponseWriter, r *http.Request) {
+		return func(rw http.ResponseWriter, _ *http.Request) {
 			fmt.Fprintln(rw, body)
 		}
 	}

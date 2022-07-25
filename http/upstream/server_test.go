@@ -79,7 +79,7 @@ func TestURL_Request(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	handler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		rw.WriteHeader(201)
 	})
 

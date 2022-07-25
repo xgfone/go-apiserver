@@ -27,7 +27,7 @@ func ExampleMuxRenderer() {
 	mr := NewMuxRenderer()
 
 	// JSON
-	mr.Add("json", RendererFunc(func(w http.ResponseWriter, code int, name string, data interface{}) error {
+	mr.Add("json", RendererFunc(func(w http.ResponseWriter, code int, _ string, data interface{}) error {
 		buf := bytes.NewBuffer(nil)
 		if err := json.NewEncoder(buf).Encode(data); err != nil {
 			return err
@@ -39,7 +39,7 @@ func ExampleMuxRenderer() {
 	}))
 
 	// XML
-	mr.Add("xml", RendererFunc(func(w http.ResponseWriter, code int, name string, data interface{}) error {
+	mr.Add("xml", RendererFunc(func(w http.ResponseWriter, code int, _ string, data interface{}) error {
 		buf := bytes.NewBuffer(nil)
 		if err := xml.NewEncoder(buf).Encode(data); err != nil {
 			return err
