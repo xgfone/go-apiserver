@@ -12,23 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validators
+package validator
 
-import "fmt"
+import "testing"
 
-func ExampleExp() {
-	valiator := Exp(2, 1, 4) // one of "2", "4", "8", "16"
-	fmt.Println(valiator.String())
+func TestValidatorString(t *testing.T) {
+	testString(t, Cidr().String(), `cidr`)
+	testString(t, IP().String(), `ip`)
+	testString(t, Mac().String(), `mac`)
+	testString(t, Max(123).String(), `max(123)`)
+	testString(t, Min(123).String(), `min(123)`)
+	testString(t, OneOf("a", "b").String(), `oneof("a","b")`)
+	testString(t, Required().String(), `required`)
+	testString(t, Zero().String(), `zero`)
+}
 
-	fmt.Println(valiator.Validate(1))
-	fmt.Println(valiator.Validate(2))
-	fmt.Println(valiator.Validate(16))
-	fmt.Println(valiator.Validate(32))
-
-	// Output:
-	// exp(2,1,4)
-	// the integer is not in range [2, 4, 8, 16]
-	// <nil>
-	// <nil>
-	// the integer is not in range [2, 4, 8, 16]
+func testString(t *testing.T, result, expect string) {
+	if result != expect {
+		t.Errorf("expect validator '%s', but got '%s'", expect, result)
+	}
 }

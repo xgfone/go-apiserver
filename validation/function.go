@@ -17,6 +17,7 @@ package validation
 import (
 	"fmt"
 
+	"github.com/xgfone/go-apiserver/validation/validator"
 	"github.com/xgfone/predicate"
 )
 
@@ -49,16 +50,16 @@ func NewFunction(name string, call func(*Context, ...interface{}) error) Functio
 
 // ValidatorFunction converts a validator to a Function with the name,
 // which is equal to
-//   NewFunctionWithoutArgs(name, func() Validator { return validator })
-func ValidatorFunction(name string, validator Validator) Function {
-	return NewFunctionWithoutArgs(name, func() Validator { return validator })
+//   NewFunctionWithoutArgs(name, func() validator.Validator { return v })
+func ValidatorFunction(name string, v validator.Validator) Function {
+	return NewFunctionWithoutArgs(name, func() validator.Validator { return v })
 }
 
 // ************************************************************************* //
 
 // NewFunctionWithoutArgs returns a new Function which parses and builds
 // the validator without any arguments.
-func NewFunctionWithoutArgs(name string, newf func() Validator) Function {
+func NewFunctionWithoutArgs(name string, newf func() validator.Validator) Function {
 	return NewFunction(name, func(c *Context, args ...interface{}) (err error) {
 		if len(args) > 0 {
 			err = fmt.Errorf("%s must not have any arguments", name)
@@ -71,7 +72,7 @@ func NewFunctionWithoutArgs(name string, newf func() Validator) Function {
 
 // NewFunctionWithOneFloat returns a new Function which parses and builds
 // the validator with only one float64 argument.
-func NewFunctionWithOneFloat(name string, newf func(float64) Validator) Function {
+func NewFunctionWithOneFloat(name string, newf func(float64) validator.Validator) Function {
 	return NewFunction(name, func(c *Context, args ...interface{}) (err error) {
 		if len(args) != 1 {
 			return fmt.Errorf("%s must have and only have one argument", name)
@@ -106,7 +107,7 @@ func getFloat(name string, index int, i interface{}) (f float64, err error) {
 
 // NewFunctionWithTwoFloats returns a new Function which parses and builds
 // the validator with only two float64 arguments.
-func NewFunctionWithTwoFloats(name string, newf func(float64, float64) Validator) Function {
+func NewFunctionWithTwoFloats(name string, newf func(float64, float64) validator.Validator) Function {
 	return NewFunction(name, func(c *Context, args ...interface{}) (err error) {
 		if len(args) != 2 {
 			return fmt.Errorf("%s must have and only have two arguments", name)
@@ -129,7 +130,7 @@ func NewFunctionWithTwoFloats(name string, newf func(float64, float64) Validator
 
 // NewFunctionWithFloats returns a new Function which parses and builds
 // the validator with any float64 arguments.
-func NewFunctionWithFloats(name string, newf func(...float64) Validator) Function {
+func NewFunctionWithFloats(name string, newf func(...float64) validator.Validator) Function {
 	return NewFunction(name, func(c *Context, args ...interface{}) (err error) {
 		vs := make([]float64, len(args))
 		for i, v := range args {
@@ -144,7 +145,7 @@ func NewFunctionWithFloats(name string, newf func(...float64) Validator) Functio
 
 // NewFunctionWithStrings returns a new Function which parses and builds
 // the validator with any string arguments.
-func NewFunctionWithStrings(name string, newf func(...string) Validator) Function {
+func NewFunctionWithStrings(name string, newf func(...string) validator.Validator) Function {
 	return NewFunction(name, func(c *Context, args ...interface{}) (err error) {
 		var ok bool
 		vs := make([]string, len(args))
@@ -162,7 +163,7 @@ func NewFunctionWithStrings(name string, newf func(...string) Validator) Functio
 // the validator with any Validator arguments but at least one.
 //
 // Notice: the parsed validators is composed to a new Valiator by And.
-func NewFunctionWithValidators(name string, newf func(...Validator) Validator) Function {
+func NewFunctionWithValidators(name string, newf func(...validator.Validator) validator.Validator) Function {
 	return NewFunction(name, func(c *Context, args ...interface{}) (err error) {
 		if len(args) == 0 {
 			return fmt.Errorf("%s validator has no arguments", name)
@@ -189,7 +190,7 @@ func NewFunctionWithValidators(name string, newf func(...Validator) Validator) F
 
 // NewFunctionWithThreeInts returns a new Function which parses and builds
 // the validator with only three int arguments.
-func NewFunctionWithThreeInts(name string, newf func(int, int, int) Validator) Function {
+func NewFunctionWithThreeInts(name string, newf func(int, int, int) validator.Validator) Function {
 	return NewFunction(name, func(c *Context, args ...interface{}) (err error) {
 		if len(args) != 3 {
 			return fmt.Errorf("%s must have and only have three arguments", name)

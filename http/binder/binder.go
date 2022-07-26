@@ -25,7 +25,6 @@ import (
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
 	"github.com/xgfone/go-apiserver/tools/structfield"
-	_ "github.com/xgfone/go-apiserver/validation/validators/defaults"
 )
 
 // Predefine some binder to bind the body, query and header of the request.

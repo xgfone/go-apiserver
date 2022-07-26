@@ -12,25 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validators
+package validator
 
 import (
-	"testing"
+	"unicode/utf8"
+
+	"github.com/xgfone/go-apiserver/validation/internal"
 )
 
-func TestValidatorString(t *testing.T) {
-	testString(t, Cidr().String(), `cidr`)
-	testString(t, IP().String(), `ip`)
-	testString(t, Mac().String(), `mac`)
-	testString(t, Max(123).String(), `max(123)`)
-	testString(t, Min(123).String(), `min(123)`)
-	testString(t, OneOf("a", "b").String(), `oneof("a","b")`)
-	testString(t, Required().String(), `required`)
-	testString(t, Zero().String(), `zero`)
+// CountString is used to count the number of the characters in the string.
+var CountString func(string) int = utf8.RuneCountInString
+
+// OneOf is equal to OneOfWithName("oneof", values...).
+func OneOf(values ...string) Validator {
+	return OneOfWithName("oneof", values...)
 }
 
-func testString(t *testing.T, result, expect string) {
-	if result != expect {
-		t.Errorf("expect validator '%s', but got '%s'", expect, result)
-	}
+// OneOfWithName returns a new Validator with the validator name
+// to chech whether the string value is one of the given strings.
+func OneOfWithName(name string, values ...string) Validator {
+	return internal.NewOneOf(name, values...)
 }

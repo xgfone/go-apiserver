@@ -14,11 +14,14 @@
 
 package validation
 
-import "github.com/xgfone/predicate"
+import (
+	"github.com/xgfone/go-apiserver/validation/validator"
+	"github.com/xgfone/predicate"
+)
 
 // Context is a builder context to manage the built validators.
 type Context struct {
-	validators []Validator
+	validators []validator.Validator
 }
 
 // NewContext returns a new builder context.
@@ -35,24 +38,24 @@ func (c *Context) Not(predicate.BuilderContext) {
 // And implements the interface predicate.BuidlerContext.
 func (c *Context) And(bc predicate.BuilderContext) {
 	if validators := bc.(*Context).Validators(); len(validators) > 0 {
-		c.AppendValidators(And(validators...))
+		c.AppendValidators(validator.And(validators...))
 	}
 }
 
 // Or implements the interface predicate.BuidlerContext.
 func (c *Context) Or(bc predicate.BuilderContext) {
-	c.AppendValidators(Or(bc.(*Context).Validators()...))
+	c.AppendValidators(validator.Or(bc.(*Context).Validators()...))
 }
 
 // AppendValidators appends the new validators into the context.
 //
 // The method is used by the validator building function.
-func (c *Context) AppendValidators(validators ...Validator) {
+func (c *Context) AppendValidators(validators ...validator.Validator) {
 	c.validators = append(c.validators, validators...)
 }
 
 // Validators returns all the inner validators.
-func (c *Context) Validators() []Validator { return c.validators }
+func (c *Context) Validators() []validator.Validator { return c.validators }
 
 // Validator returns the inner validators as And Validator.
-func (c *Context) Validator() Validator { return And(c.validators...) }
+func (c *Context) Validator() validator.Validator { return validator.And(c.validators...) }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validators
+package validator
 
 import (
 	"bytes"
@@ -22,7 +22,6 @@ import (
 	"strconv"
 
 	"github.com/xgfone/go-apiserver/helper"
-	"github.com/xgfone/go-apiserver/validation"
 )
 
 var errNilPointer = fmt.Errorf("unexpected empty pointer")
@@ -34,7 +33,7 @@ var errNilPointer = fmt.Errorf("unexpected empty pointer")
 //   - String, Array, Slice, Map: compare the length of them
 //   - Pointer to types above
 //
-func Min(i float64) validation.Validator {
+func Min(i float64) Validator {
 	s := strconv.FormatFloat(i, 'f', -1, 64)
 	rule := fmt.Sprintf("min(%s)", s)
 
@@ -42,7 +41,7 @@ func Min(i float64) validation.Validator {
 	errInteger := fmt.Errorf("the integer is less than %s", s)
 	errString := fmt.Errorf("the string length is less than %s", s)
 	errContainer := fmt.Errorf("the length is less than %s", s)
-	return validation.NewValidator(rule, func(v interface{}) error {
+	return NewValidator(rule, func(v interface{}) error {
 		switch t := helper.Indirect(v).(type) {
 		case nil:
 			return errNilPointer
@@ -124,7 +123,7 @@ func Min(i float64) validation.Validator {
 //   - Integer, Float: compare the value
 //   - String, Array, Slice, Map: compare the length of them
 //
-func Max(i float64) validation.Validator {
+func Max(i float64) Validator {
 	s := strconv.FormatFloat(i, 'f', -1, 64)
 	rule := fmt.Sprintf("max(%s)", s)
 
@@ -132,7 +131,7 @@ func Max(i float64) validation.Validator {
 	errInteger := fmt.Errorf("the integer is greater than %s", s)
 	errString := fmt.Errorf("the string length is greater than %s", s)
 	errContainer := fmt.Errorf("the length is greater than %s", s)
-	return validation.NewValidator(rule, func(v interface{}) error {
+	return NewValidator(rule, func(v interface{}) error {
 		switch t := helper.Indirect(v).(type) {
 		case nil:
 			return errNilPointer
@@ -216,7 +215,7 @@ func Max(i float64) validation.Validator {
 //   - String, Array, Slice, Map: compare the length of them
 //
 // Notice: we use ranger instead of range because range is the keyword in Go.
-func Ranger(smallest, biggest float64) validation.Validator {
+func Ranger(smallest, biggest float64) Validator {
 	left := strconv.FormatFloat(smallest, 'f', -1, 64)
 	right := strconv.FormatFloat(biggest, 'f', -1, 64)
 	rule := fmt.Sprintf("ranger(%s, %s)", left, right)
@@ -225,7 +224,7 @@ func Ranger(smallest, biggest float64) validation.Validator {
 	errInteger := fmt.Errorf("the integer is not in range [%s, %s]", left, right)
 	errString := fmt.Errorf("the string length is not in range [%s, %s]", left, right)
 	errContainer := fmt.Errorf("the length is not in range [%s, %s]", left, right)
-	return validation.NewValidator(rule, func(v interface{}) error {
+	return NewValidator(rule, func(v interface{}) error {
 		switch t := helper.Indirect(v).(type) {
 		case nil:
 			return errNilPointer
@@ -313,7 +312,7 @@ func inRange(v, smallest, biggest float64) bool {
 //   endExp must be greater than startExp
 //   base must be greater than or equal to 2
 //
-func Exp(base, startExp, endExp int) validation.Validator {
+func Exp(base, startExp, endExp int) Validator {
 	if base < 2 {
 		panic("the exp base must not be less than 2")
 	} else if startExp < 0 {
@@ -339,7 +338,7 @@ func Exp(base, startExp, endExp int) validation.Validator {
 	errInteger := fmt.Errorf("the integer is not in range [%s]", buf.String())
 
 	rule := fmt.Sprintf("exp(%d,%d,%d)", base, startExp, endExp)
-	return validation.NewValidator(rule, func(i interface{}) error {
+	return NewValidator(rule, func(i interface{}) error {
 		switch v := i.(type) {
 		case int:
 			if !inRangeInt64(int64(v), values) {

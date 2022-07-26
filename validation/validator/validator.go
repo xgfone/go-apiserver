@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validation
+// Package validator provides a validator interface and some implementations.
+package validator
 
 import (
 	"fmt"

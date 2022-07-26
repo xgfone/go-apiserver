@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validators
+package validator
 
 import (
 	"errors"
@@ -21,7 +21,6 @@ import (
 
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/nets"
-	"github.com/xgfone/go-apiserver/validation"
 )
 
 var (
@@ -47,8 +46,8 @@ var (
 //   - xxxx.xxxx.xxxx
 //   - XXXX.XXXX.XXXX
 //   - XxXx.XxXx.XxXx
-func Mac() validation.Validator {
-	return validation.NewValidator("mac", func(i interface{}) error {
+func Mac() Validator {
+	return NewValidator("mac", func(i interface{}) error {
 		switch v := helper.Indirect(i).(type) {
 		case string:
 			if nets.NormalizeMac(v) == "" {
@@ -71,8 +70,8 @@ func Mac() validation.Validator {
 // IP returns a new Validator to chech whether the value is a valid IP.
 //
 // Support the types: string or net.IP.
-func IP() validation.Validator {
-	return validation.NewValidator("ip", func(i interface{}) error {
+func IP() Validator {
+	return NewValidator("ip", func(i interface{}) error {
 		switch v := helper.Indirect(i).(type) {
 		case string:
 			if net.ParseIP(v) == nil {
@@ -102,8 +101,8 @@ func IP() validation.Validator {
 // Cidr returns a new Validator to chech whether the value is a valid cidr.
 //
 // Support the types: string or net.IPNet.
-func Cidr() validation.Validator {
-	return validation.NewValidator("cidr", func(i interface{}) error {
+func Cidr() Validator {
+	return NewValidator("cidr", func(i interface{}) error {
 		switch v := i.(type) {
 		case string:
 			if _, _, err := net.ParseCIDR(v); err != nil {
@@ -131,8 +130,8 @@ func Cidr() validation.Validator {
 // Addr returns a new Validator to chech whether the value is a valid HOST:PORT.
 //
 // Support the types: string.
-func Addr() validation.Validator {
-	return validation.NewValidator("addr", func(i interface{}) error {
+func Addr() Validator {
+	return NewValidator("addr", func(i interface{}) error {
 		switch v := helper.Indirect(i).(type) {
 		case string:
 			if h, p := nets.SplitHostPort(v); len(h) == 0 || len(p) == 0 {

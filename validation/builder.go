@@ -24,6 +24,7 @@ import (
 	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/validation/internal"
+	"github.com/xgfone/go-apiserver/validation/validator"
 	"github.com/xgfone/predicate"
 )
 
@@ -32,7 +33,8 @@ import (
 // If empty, use "validate" instead.
 var StructFieldTag = "validate"
 
-// DefaultBuilder is the global default validation rule builder.
+// DefaultBuilder is the global default validation rule builder,
+// which will register some default validator building functions.
 var DefaultBuilder = NewBuilder()
 
 // RegisterSymbol is equal to DefaultBuilder.RegisterSymbol(name, value).
@@ -57,7 +59,7 @@ func RegisterFunction(function Function) {
 
 // RegisterValidatorFunc is equal to
 // DefaultBuilder.RegisterValidatorFunc(name, f).
-func RegisterValidatorFunc(name string, f ValidatorFunc) {
+func RegisterValidatorFunc(name string, f validator.ValidatorFunc) {
 	DefaultBuilder.RegisterValidatorFunc(name, f)
 }
 
@@ -85,7 +87,7 @@ func Build(c *Context, rule string) error {
 }
 
 // BuildValidator is equal to DefaultBuilder.BuildValidator(rule).
-func BuildValidator(rule string) (Validator, error) {
+func BuildValidator(rule string) (validator.Validator, error) {
 	return DefaultBuilder.BuildValidator(rule)
 }
 
@@ -135,13 +137,13 @@ type Builder struct {
 	*predicate.Builder
 	validators atomic.Value
 	vcacheLock sync.Mutex
-	vcacheMap  map[string]Validator
+	vcacheMap  map[string]validator.Validator
 }
 
 // NewBuilder returns a new validation rule builder.
 func NewBuilder() *Builder {
 	builder := &Builder{
-		vcacheMap: make(map[string]Validator),
+		vcacheMap: make(map[string]validator.Validator),
 		Symbols:   make(map[string]interface{}),
 	}
 
@@ -218,14 +220,14 @@ func (b *Builder) RegisterFunction(function Function) {
 // function with the name as a builder function to be registered, which
 // is equal to
 //
-//   b.RegisterFunction(NewFunctionWithoutArgs(name, func() Validator {
+//   b.RegisterFunction(NewFunctionWithoutArgs(name, func() validator.Validator {
 //       return NewValidator(name, f)
 //   }))
 //
-func (b *Builder) RegisterValidatorFunc(name string, f ValidatorFunc) {
-	validator := NewValidator(name, f)
-	b.RegisterFunction(NewFunctionWithoutArgs(name, func() Validator {
-		return validator
+func (b *Builder) RegisterValidatorFunc(name string, f validator.ValidatorFunc) {
+	v := validator.NewValidator(name, f)
+	b.RegisterFunction(NewFunctionWithoutArgs(name, func() validator.Validator {
+		return v
 	}))
 }
 
@@ -236,7 +238,7 @@ func (b *Builder) RegisterValidatorFunc(name string, f ValidatorFunc) {
 //   b.RegisterValidatorFunc(name, BoolValidatorFunc(f, err))
 //
 func (b *Builder) RegisterValidatorFuncBool(name string, f func(interface{}) bool, err error) {
-	b.RegisterValidatorFunc(name, BoolValidatorFunc(f, err))
+	b.RegisterValidatorFunc(name, validator.BoolValidatorFunc(f, err))
 }
 
 // RegisterValidatorFuncBoolString is a convenient method to treat the string
@@ -246,7 +248,7 @@ func (b *Builder) RegisterValidatorFuncBool(name string, f func(interface{}) boo
 //   b.RegisterValidatorFunc(name, StringBoolValidatorFunc(f, err))
 //
 func (b *Builder) RegisterValidatorFuncBoolString(name string, f func(string) bool, err error) {
-	b.RegisterValidatorFunc(name, StringBoolValidatorFunc(f, err))
+	b.RegisterValidatorFunc(name, validator.StringBoolValidatorFunc(f, err))
 }
 
 // RegisterValidatorOneof is a convenient method to register a oneof validator
@@ -266,7 +268,7 @@ func (b *Builder) Build(c *Context, rule string) error {
 // BuildValidator builds a validator from the validation rule.
 //
 // If the rule has been built, returns it from the caches.
-func (b *Builder) BuildValidator(rule string) (Validator, error) {
+func (b *Builder) BuildValidator(rule string) (validator.Validator, error) {
 	if rule == "" {
 		return nil, errors.New("the validation rule must not be empty")
 	}
@@ -294,20 +296,20 @@ func (b *Builder) BuildValidator(rule string) (Validator, error) {
 	return validator, nil
 }
 
-func (b *Builder) loadValidator(rule string) (v Validator, ok bool) {
-	v, ok = b.validators.Load().(map[string]Validator)[rule]
+func (b *Builder) loadValidator(rule string) (v validator.Validator, ok bool) {
+	v, ok = b.validators.Load().(map[string]validator.Validator)[rule]
 	return
 }
 
 func (b *Builder) updateValidators() {
-	validators := make(map[string]Validator, len(b.vcacheMap))
+	validators := make(map[string]validator.Validator, len(b.vcacheMap))
 	for rule, validator := range b.vcacheMap {
 		validators[rule] = validator
 	}
 	b.validators.Store(validators)
 }
 
-type validatorWrapper struct{ Validator }
+type validatorWrapper struct{ validator.Validator }
 
 // Validate validates whether the value v is valid by the rule.
 //
@@ -344,7 +346,7 @@ func (b *Builder) ValidateStruct(s interface{}) error {
 	return nil
 }
 
-var validatorImpl = reflect.TypeOf((*ValueValidator)(nil)).Elem()
+var validatorImpl = reflect.TypeOf((*validator.ValueValidator)(nil)).Elem()
 
 func (b *Builder) validateStruct(prefix string, v reflect.Value, errs NamedErrors) NamedErrors {
 	tag := b.StructFieldTag
@@ -365,7 +367,7 @@ func (b *Builder) validateStruct(prefix string, v reflect.Value, errs NamedError
 			errs = b.validateStruct(name, fv, errs)
 			if errs == nil {
 				if ft.Type.Implements(validatorImpl) {
-					err := fv.Interface().(ValueValidator).Validate()
+					err := fv.Interface().(validator.ValueValidator).Validate()
 					errs = addError(errs, name, err)
 				}
 			}

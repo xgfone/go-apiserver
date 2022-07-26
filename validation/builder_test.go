@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validation_test
+package validation
 
 import (
 	"fmt"
@@ -20,9 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/validation"
-	"github.com/xgfone/go-apiserver/validation/validators"
-	"github.com/xgfone/go-apiserver/validation/validators/defaults"
+	"github.com/xgfone/go-apiserver/validation/validator"
 )
 
 type testT2 struct {
@@ -38,26 +36,24 @@ func (t testT2) Validate() error {
 }
 
 func TestBuilderValidateStruct(t *testing.T) {
-	defaults.RegisterDefaults(validation.DefaultBuilder)
-
 	var s struct {
 		F testT2
 	}
 
 	s.F.F1 = "abc"
-	if err := validation.ValidateStruct(s); err != nil {
+	if err := ValidateStruct(s); err != nil {
 		t.Error(err)
 	}
 
 	s.F.F2 = 3
-	if err := validation.ValidateStruct(s); err == nil {
+	if err := ValidateStruct(s); err == nil {
 		t.Errorf("expect an error, but got nil")
 	} else if s := "F.F2: the integer is less than 5"; err.Error() != s {
 		t.Errorf("expect the error '%s', but got '%s'", s, err.Error())
 	}
 
 	s.F.F2 = 5
-	if err := validation.ValidateStruct(s); err == nil {
+	if err := ValidateStruct(s); err == nil {
 		t.Errorf("expect an error, but got nil")
 	} else if s := "F: F2 is not equal to the length of F1"; err.Error() != s {
 		t.Errorf("expect the error '%s', but got '%s'", s, err.Error())
@@ -65,7 +61,7 @@ func TestBuilderValidateStruct(t *testing.T) {
 
 	s.F.F1 = "abcde"
 	s.F.F2 = len(s.F.F1)
-	if err := validation.ValidateStruct(s); err != nil {
+	if err := ValidateStruct(s); err != nil {
 		t.Errorf("unexpected error '%s'", err.Error())
 	}
 }
@@ -73,21 +69,21 @@ func TestBuilderValidateStruct(t *testing.T) {
 func TestRuleRanger(t *testing.T) {
 	expectErrMsg := "the integer is not in range [1, 10]"
 
-	if err := validation.Validate(0, "ranger(1,10)"); err == nil {
+	if err := Validate(0, "ranger(1,10)"); err == nil {
 		t.Errorf("expect the error, but got nil")
 	} else if err.Error() != expectErrMsg {
 		t.Errorf("expect the error '%s', but got '%s'", expectErrMsg, err.Error())
 	}
 
-	if err := validation.Validate(1, "ranger(1,10)"); err != nil {
+	if err := Validate(1, "ranger(1,10)"); err != nil {
 		t.Errorf("unexpect the error: %s", err.Error())
 	}
 
-	if err := validation.Validate(10, "ranger(1,10)"); err != nil {
+	if err := Validate(10, "ranger(1,10)"); err != nil {
 		t.Errorf("unexpect the error: %s", err.Error())
 	}
 
-	if err := validation.Validate(11, "ranger(1,10)"); err == nil {
+	if err := Validate(11, "ranger(1,10)"); err == nil {
 		t.Errorf("expect the error, but got nil")
 	} else if err.Error() != expectErrMsg {
 		t.Errorf("expect the error '%s', but got '%s'", expectErrMsg, err.Error())
@@ -98,7 +94,7 @@ func ExampleValidatorFunction() {
 	// New a validator "oneof".
 	ss := []string{"one", "two", "three"}
 	desc := fmt.Sprintf(`oneof("%s")`, strings.Join(ss, `", "`))
-	oneof := validation.NewValidator(desc, func(i interface{}) error {
+	oneof := validator.NewValidator(desc, func(i interface{}) error {
 		if s, ok := i.(string); ok {
 			for _, _s := range ss {
 				if _s == s {
@@ -112,8 +108,8 @@ func ExampleValidatorFunction() {
 
 	// Register the "oneof" validator as a Function.
 	rule := "oneof"
-	builder := validation.NewBuilder()
-	builder.RegisterFunction(validation.ValidatorFunction(rule, oneof))
+	builder := NewBuilder()
+	builder.RegisterFunction(ValidatorFunction(rule, oneof))
 
 	// Print the validator description.
 	fmt.Println(oneof.String())
@@ -136,7 +132,7 @@ func ExampleBuilder_RegisterValidatorOneof() {
 	const rule = "isnumber"
 	numbers := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
 
-	builder := validation.NewBuilder()
+	builder := NewBuilder()
 	builder.RegisterValidatorOneof(rule, numbers...)
 
 	// Validate the value and print the result.
@@ -152,28 +148,28 @@ func ExampleBuilder_RegisterValidatorOneof() {
 
 func ExampleBuilder() {
 	// Register the validator building functions.
-	validation.RegisterFunction(validation.NewFunctionWithOneFloat("min", validators.Min))
-	validation.RegisterFunction(validation.NewFunctionWithOneFloat("max", validators.Max))
-	validation.RegisterFunction(validation.NewFunctionWithStrings("oneof", validators.OneOf))
-	validation.RegisterFunction(validation.NewFunctionWithValidators("array", validation.Array))
-	validation.RegisterFunction(validation.NewFunctionWithValidators("mapk", validation.MapK))
-	validation.RegisterFunction(validation.NewFunctionWithValidators("mapv", validation.MapV))
-	validation.RegisterFunction(validation.NewFunctionWithValidators("mapkv", validation.MapKV))
+	RegisterFunction(NewFunctionWithOneFloat("min", validator.Min))
+	RegisterFunction(NewFunctionWithOneFloat("max", validator.Max))
+	RegisterFunction(NewFunctionWithStrings("oneof", validator.OneOf))
+	RegisterFunction(NewFunctionWithValidators("array", validator.Array))
+	RegisterFunction(NewFunctionWithValidators("mapk", validator.MapK))
+	RegisterFunction(NewFunctionWithValidators("mapv", validator.MapV))
+	RegisterFunction(NewFunctionWithValidators("mapkv", validator.MapKV))
 
 	// Register the validator building function based on the bool validation.
 	isZero := func(i interface{}) bool { return reflect.ValueOf(i).IsZero() }
-	validation.RegisterValidatorFuncBool("zero", isZero, fmt.Errorf("the value is expected to be zero"))
-	validation.RegisterValidatorFunc("structure", validation.ValidateStruct)
+	RegisterValidatorFuncBool("zero", isZero, fmt.Errorf("the value is expected to be zero"))
+	RegisterValidatorFunc("structure", ValidateStruct)
 
 	// Add the global symbols.
-	validation.RegisterSymbol("v1", "a")
-	validation.RegisterSymbol("v2", "b")
+	RegisterSymbol("v1", "a")
+	RegisterSymbol("v2", "b")
 
 	// Example 1: function mode
 	fmt.Println("\n--- Function Mode ---")
 
-	c := validation.NewContext()
-	err := validation.Build(c, "min(1) && max(10)")
+	c := NewContext()
+	err := Build(c, "min(1) && max(10)")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -190,8 +186,8 @@ func ExampleBuilder() {
 	// Example 2: Identifier+operator mode
 	fmt.Println("\n--- Identifier+Operator Mode ---")
 
-	c = validation.NewContext()
-	err = validation.Build(c, "zero || (min==3 && max==10)")
+	c = NewContext()
+	err = Build(c, "zero || (min==3 && max==10)")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -206,30 +202,30 @@ func ExampleBuilder() {
 
 	// Example 3: The simpler validation way
 	const rule1 = "zero || (min==3 && max==10)"
-	fmt.Println(validation.Validate("", rule1))
-	fmt.Println(validation.Validate("a", rule1))
-	fmt.Println(validation.Validate("abc", rule1))
-	fmt.Println(validation.Validate("abcdefghijklmn", rule1))
+	fmt.Println(Validate("", rule1))
+	fmt.Println(Validate("a", rule1))
+	fmt.Println(Validate("abc", rule1))
+	fmt.Println(Validate("abcdefghijklmn", rule1))
 
 	// Example 4: Validate the array
 	fmt.Println("\n--- Array ---")
 	const rule2 = "zero || array(min(1), max(10))"
-	fmt.Println(validation.Validate([]int{1, 2, 3}, rule2))
-	fmt.Println(validation.Validate([]string{"a", "bc", "def"}, rule2))
-	fmt.Println(validation.Validate([]int{}, rule2))
-	fmt.Println(validation.Validate([]int{0, 1, 2}, rule2))
-	fmt.Println(validation.Validate([]string{"a", "bc", ""}, rule2))
+	fmt.Println(Validate([]int{1, 2, 3}, rule2))
+	fmt.Println(Validate([]string{"a", "bc", "def"}, rule2))
+	fmt.Println(Validate([]int{}, rule2))
+	fmt.Println(Validate([]int{0, 1, 2}, rule2))
+	fmt.Println(Validate([]string{"a", "bc", ""}, rule2))
 
 	// Example 5: Valiate the map
 	fmt.Println("\n--- Map ---")
 	const rule3 = `mapk(min(1) && max(3))`
-	fmt.Println(validation.Validate(map[string]int{"a": 123}, rule3))
-	fmt.Println(validation.Validate(map[string]int8{"abcd": 123}, rule3))
+	fmt.Println(Validate(map[string]int{"a": 123}, rule3))
+	fmt.Println(Validate(map[string]int8{"abcd": 123}, rule3))
 
 	const rule4 = `mapv(min==10 && max==100)`
-	fmt.Println(validation.BuildValidator(rule4))
-	fmt.Println(validation.Validate(map[string]int16{"a": 10}, rule4))
-	fmt.Println(validation.Validate(map[string]int32{"abcd": 123}, rule4))
+	fmt.Println(BuildValidator(rule4))
+	fmt.Println(Validate(map[string]int16{"a": 10}, rule4))
+	fmt.Println(Validate(map[string]int32{"abcd": 123}, rule4))
 
 	// Exampe 6: Validate the struct
 	fmt.Println("\n--- Struct ---")
@@ -248,21 +244,21 @@ func ExampleBuilder() {
 	v.F3.F4 = "a"
 
 	*v.F2 = 1
-	fmt.Println(validation.ValidateStruct(v))
+	fmt.Println(ValidateStruct(v))
 
 	v.F1 = "abc"
-	fmt.Println(validation.ValidateStruct(v))
+	fmt.Println(ValidateStruct(v))
 
 	v.F1 = "abcdefgxyz"
-	fmt.Println(validation.ValidateStruct(v))
+	fmt.Println(ValidateStruct(v))
 
 	v.F1 = ""
 	v.F3.F4 = "c"
-	fmt.Println(validation.ValidateStruct(v))
+	fmt.Println(ValidateStruct(v))
 
 	v.F3.F4 = "a"
 	(*v.F3.F5)[0] = 0
-	fmt.Println(validation.ValidateStruct(v))
+	fmt.Println(ValidateStruct(v))
 
 	type s1 struct {
 		F int `validate:"min(10)"`
@@ -272,16 +268,16 @@ func ExampleBuilder() {
 	}
 
 	v2 := s2{Fs: make([]s1, 1)}
-	fmt.Println(validation.ValidateStruct(v2))
+	fmt.Println(ValidateStruct(v2))
 
 	v2.Fs[0].F = 10
-	fmt.Println(validation.ValidateStruct(v2))
+	fmt.Println(ValidateStruct(v2))
 
 	// Example 7: Others
 	fmt.Println("\n--- Others ---")
 	const oneof = `oneof(v1, v2, "c")`
-	fmt.Println(validation.Validate("a", oneof))
-	fmt.Println(validation.Validate("x", oneof))
+	fmt.Println(Validate("a", oneof))
+	fmt.Println(Validate("x", oneof))
 
 	// Output:
 	//

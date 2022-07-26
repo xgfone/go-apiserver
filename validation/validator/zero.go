@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validators
+package validator
 
 import (
 	"errors"
 	"reflect"
-
-	"github.com/xgfone/go-apiserver/validation"
 )
 
 var (
@@ -28,8 +26,8 @@ var (
 
 // Zero returns a new Validator to chech whether the value is ZERO,
 // which returns an error if the value is not ZERO.
-func Zero() validation.Validator {
-	return validation.NewValidator("zero", func(i interface{}) error {
+func Zero() Validator {
+	return NewValidator("zero", func(i interface{}) error {
 		if reflect.ValueOf(i).IsZero() {
 			return nil
 		}
@@ -39,8 +37,8 @@ func Zero() validation.Validator {
 
 // Required returns a new Validator to chech whether a value is ZERO,
 // which returns an error if the value is ZERO.
-func Required() validation.Validator {
-	return validation.NewValidator("required", func(i interface{}) error {
+func Required() Validator {
+	return NewValidator("required", func(i interface{}) error {
 		if reflect.ValueOf(i).IsZero() {
 			return errCannotEmpty
 		}
