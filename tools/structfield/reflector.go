@@ -22,18 +22,25 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+
+	"github.com/xgfone/go-apiserver/tools/structfield/handler"
 )
+
+func init() {
+	DefaultReflector.Register("validate", handler.NewValidatorHandler(nil))
+	DefaultReflector.Register("default", handler.NewSetDefaultHandler())
+}
 
 // DefaultReflector is the default global struct field reflector.
 var DefaultReflector = NewReflector()
 
 // Register is equal to DefaultReflector.Register(name, handler).
-func Register(name string, handler Handler) {
+func Register(name string, handler handler.Handler) {
 	DefaultReflector.Register(name, handler)
 }
 
 // RegisterFunc is equal to DefaultReflector.RegisterFunc(name, handler).
-func RegisterFunc(name string, handler HandlerFunc) {
+func RegisterFunc(name string, handler handler.HandlerFunc) {
 	DefaultReflector.RegisterFunc(name, handler)
 }
 
@@ -65,7 +72,7 @@ type tagValue struct {
 // Reflector is used to reflect the tags of the fields of the struct
 // and call the field handler by the tag name with the tag value.
 type Reflector struct {
-	handlers map[string]Handler
+	handlers map[string]handler.Handler
 
 	tagCache  atomic.Value
 	cacheMap  map[tagKey]tagValue
@@ -75,7 +82,7 @@ type Reflector struct {
 // NewReflector returns a new Reflector.
 func NewReflector() *Reflector {
 	r := &Reflector{
-		handlers: make(map[string]Handler, 8),
+		handlers: make(map[string]handler.Handler, 8),
 		cacheMap: make(map[tagKey]tagValue, 32),
 	}
 	r.updateTags()
@@ -83,12 +90,12 @@ func NewReflector() *Reflector {
 }
 
 // Register registers the field handler with the tag name.
-func (r *Reflector) Register(name string, handler Handler) {
+func (r *Reflector) Register(name string, handler handler.Handler) {
 	r.handlers[name] = handler
 }
 
 // RegisterFunc is equal to r.Register(name, handler).
-func (r *Reflector) RegisterFunc(name string, handler HandlerFunc) {
+func (r *Reflector) RegisterFunc(name string, handler handler.HandlerFunc) {
 	r.Register(name, handler)
 }
 
@@ -184,7 +191,7 @@ func (r *Reflector) loadTags(key tagKey) (value tagValue, ok bool) {
 	return
 }
 
-func (r *Reflector) getTagArg(handler Handler, name, qvalue string) tagValue {
+func (r *Reflector) getTagArg(handler handler.Handler, name, qvalue string) tagValue {
 	key := tagKey{Name: name, Value: qvalue}
 	if tvalue, ok := r.loadTags(key); ok {
 		return tvalue

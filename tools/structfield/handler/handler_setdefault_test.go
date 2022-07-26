@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package structfield
+package handler_test
 
 import (
 	"fmt"
 	"time"
+
+	"github.com/xgfone/go-apiserver/tools/structfield"
 )
 
 type defaultSetter string
@@ -63,7 +65,7 @@ func ExampleNewSetDefaultHandler() {
 
 	i := 123
 	s := S{String3: "aaa", Structs: make([]Struct, 2), IntPtr: &i}
-	err := Reflect(nil, &s) // NewSetDefaultHandler is registered into DefaultReflector.
+	err := structfield.Reflect(nil, &s) // NewSetDefaultHandler is registered into DefaultReflector.
 	if err != nil {
 		fmt.Println(err)
 		return

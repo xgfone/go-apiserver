@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package structfield
+package handler_test
 
 import (
 	"fmt"
 
-	_ "github.com/xgfone/go-apiserver/validation/validators/defaults"
+	"github.com/xgfone/go-apiserver/tools/structfield"
 )
 
 func ExampleNewValidatorHandler() {
@@ -36,25 +36,25 @@ func ExampleNewValidatorHandler() {
 	v.F2 = new(int64)
 	*v.F2 = 5
 	v.F3 = []S0{{F4: "a", F5: &[]int{1, 2}}}
-	fmt.Println(Reflect(nil, &v))
+	fmt.Println(structfield.Reflect(nil, &v))
 
 	v.F1 = "abc"
-	fmt.Println(Reflect(nil, &v))
+	fmt.Println(structfield.Reflect(nil, &v))
 
 	v.F1 = "abcdefgxyz"
-	fmt.Println(Reflect(nil, &v))
+	fmt.Println(structfield.Reflect(nil, &v))
 
 	v.F1 = ""
 	*v.F2 = 100
-	fmt.Println(Reflect(nil, &v))
+	fmt.Println(structfield.Reflect(nil, &v))
 
 	*v.F2 = 1
 	v.F3[0].F4 = "c"
-	fmt.Println(Reflect(nil, &v))
+	fmt.Println(structfield.Reflect(nil, &v))
 
 	v.F3[0].F4 = "b"
 	(*v.F3[0].F5)[0] = 0
-	fmt.Println(Reflect(nil, &v))
+	fmt.Println(structfield.Reflect(nil, &v))
 
 	// Output:
 	// <nil>

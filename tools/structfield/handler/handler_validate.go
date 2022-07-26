@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package structfield
+package handler
 
 import (
 	"fmt"
@@ -20,10 +20,6 @@ import (
 
 	"github.com/xgfone/go-apiserver/validation"
 )
-
-func init() {
-	DefaultReflector.Register("validate", NewValidatorHandler(nil))
-}
 
 // NewValidatorHandler returns a handler to validate whether the field value
 // is valid, which is registered into DefaultReflector

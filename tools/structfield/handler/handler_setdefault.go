@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package structfield
+package handler
 
 import (
 	"fmt"
@@ -21,10 +21,6 @@ import (
 
 	"github.com/xgfone/go-apiserver/helper"
 )
-
-func init() {
-	DefaultReflector.Register("default", NewSetDefaultHandler())
-}
 
 // NewSetDefaultHandler returns a handler to set the default value
 // of the struct field, which is registered into DefaultReflector

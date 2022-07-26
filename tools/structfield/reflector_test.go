@@ -19,11 +19,13 @@ import (
 	"reflect"
 	"strconv"
 	"unicode/utf8"
+
+	"github.com/xgfone/go-apiserver/tools/structfield/handler"
 )
 
 func ExampleReflector() {
 	parseInt := func(s string) (interface{}, error) { return strconv.ParseInt(s, 10, 64) }
-	compareInt := func(isMin bool) HandlerFunc {
+	compareInt := func(isMin bool) handler.HandlerFunc {
 		return func(_ interface{}, t reflect.StructField, v reflect.Value, a interface{}) error {
 			value := v.Interface().(int64)
 			if isMin {
@@ -40,8 +42,8 @@ func ExampleReflector() {
 	}
 
 	sf := NewReflector()
-	sf.Register("min", NewHandler(parseInt, compareInt(true)))
-	sf.Register("max", NewHandler(parseInt, compareInt(false)))
+	sf.Register("min", handler.NewHandler(parseInt, compareInt(true)))
+	sf.Register("max", handler.NewHandler(parseInt, compareInt(false)))
 	sf.RegisterSimpleFunc("default", func(v reflect.Value, s interface{}) error {
 		if !v.IsZero() {
 			return nil

@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package structfield
+// Package handler provides a handler interface and some implementations.
+package handler
 
 import "reflect"
 
