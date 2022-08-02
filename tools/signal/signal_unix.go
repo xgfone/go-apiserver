@@ -12,18 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build aix || darwin || dragonfly || freebsd || linux || netbsd || openbsd || solaris || windows
-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris windows
+//go:build aix || darwin || dragonfly || freebsd || linux || netbsd || openbsd || solaris
+// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
 
 package signal
 
 import "syscall"
 
 func init() {
-	DefaultSignals = append(DefaultSignals,
+	ExitSignals = append(ExitSignals,
 		syscall.SIGTERM,
 		syscall.SIGQUIT,
 		syscall.SIGABRT,
 		syscall.SIGINT,
 	)
+}
+
+// Kill sends a system signal to the process by pid.
+func Kill(pid int, sig syscall.Signal) error {
+	return syscall.Kill(pid, sig)
 }

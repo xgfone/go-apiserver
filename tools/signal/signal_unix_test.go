@@ -27,10 +27,10 @@ import (
 
 func TestSignal(t *testing.T) {
 	var i int32
-	go Signal(func() { atomic.StoreInt32(&i, 1) }, syscall.SIGHUP)
+	go Signal(Callback(func() { atomic.StoreInt32(&i, 1) }), syscall.SIGHUP)
 
 	time.Sleep(time.Millisecond * 50)
-	syscall.Kill(os.Getpid(), syscall.SIGHUP)
+	Kill(os.Getpid(), syscall.SIGHUP)
 	time.Sleep(time.Millisecond * 50)
 
 	if v := atomic.LoadInt32(&i); v != 1 {

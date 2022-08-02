@@ -12,38 +12,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package signal provides a signal handler.
+// Package signal provides a set of the signal handling functions.
 package signal
 
 import (
+	"context"
 	"os"
 	"os/signal"
 )
 
-// DefaultSignals is the set of the default signals.
+// ExitSignals is the set of the signals to let the program exit.
 //
 // For Unix/Linux or Windows, it contains the signals as follow:
 //   syscall.SIGTERM
 //   syscall.SIGQUIT
 //   syscall.SIGABRT
 //   syscall.SIGINT
-var DefaultSignals = []os.Signal{os.Interrupt}
+var ExitSignals = []os.Signal{os.Interrupt}
 
-// Signal monitors the given signals and calls the callback function
-// when any signal occurs.
-//
-// If no signals are given, use DefaultSignals instead.
-func Signal(callback func(), signals ...os.Signal) {
-	if len(signals) == 0 {
-		if len(DefaultSignals) == 0 {
-			panic("no signals to be monitored")
-		}
-		signals = DefaultSignals
-	}
+// WaitExit monitors the exit signals and call the callback function
+// to let the program exit.
+func WaitExit(callback func()) { Signal(Callback(callback), ExitSignals...) }
 
+// Callback converts the function without arguments to the callback function.
+func Callback(f func()) func(os.Signal) { return func(os.Signal) { f() } }
+
+// Signal monitors the given signals, calls the callback function once
+// when any signal occurs and returns from the signal function.
+func Signal(callback func(os.Signal), signals ...os.Signal) {
 	ch := make(chan os.Signal, 1)
+	defer signal.Stop(ch)
 	signal.Notify(ch, signals...)
+	callback(<-ch)
+}
 
-	<-ch
-	callback()
+// SignalContext monitors the given signals, calls the callback function
+// when any signal occurs unitl the context is done.
+func SignalContext(c context.Context, cb func(os.Signal), sigs ...os.Signal) {
+	ch := make(chan os.Signal, 1)
+	defer signal.Stop(ch)
+	signal.Notify(ch, sigs...)
+	for {
+		select {
+		case <-c.Done():
+			return
+		case sig := <-ch:
+			cb(sig)
+		}
+	}
 }
