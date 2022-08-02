@@ -27,7 +27,7 @@ import (
 
 func TestSignal(t *testing.T) {
 	var i int32
-	go Signal(Callback(func() { atomic.StoreInt32(&i, 1) }), syscall.SIGHUP)
+	go Single(Callback(func() { atomic.StoreInt32(&i, 1) }), syscall.SIGHUP)
 
 	time.Sleep(time.Millisecond * 50)
 	Kill(os.Getpid(), syscall.SIGHUP)
