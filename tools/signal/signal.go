@@ -32,14 +32,14 @@ var ExitSignals = []os.Signal{os.Interrupt}
 
 // WaitExit monitors the exit signals and call the callback function
 // to let the program exit.
-func WaitExit(callback func()) { Single(Callback(callback), ExitSignals...) }
+func WaitExit(callback func()) { Once(Callback(callback), ExitSignals...) }
 
 // Callback converts the function without arguments to the callback function.
 func Callback(f func()) func(os.Signal) { return func(os.Signal) { f() } }
 
-// Single monitors the given signals once and calls the callback function
+// Once monitors the given signals once and calls the callback function
 // when any signal occurs.
-func Single(callback func(os.Signal), signals ...os.Signal) {
+func Once(callback func(os.Signal), signals ...os.Signal) {
 	ch := make(chan os.Signal, 1)
 	defer signal.Stop(ch)
 	signal.Notify(ch, signals...)
