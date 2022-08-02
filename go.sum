@@ -1,2 +1,4 @@
+github.com/xgfone/go-atexit v0.4.2 h1:+WmrEGAtb0mqce7FcIIMASr9NG6z42U3VY8YR5I1NX8=
+github.com/xgfone/go-atexit v0.4.2/go.mod h1:yN4Hf2wE06X4kJLL2qxBNKuJHTRdDRoifivfFoKdC8o=
 github.com/xgfone/predicate v1.2.2 h1:lidnvdIyYEaTq6qcokFcA/Ak7yLITKUEdQmbSKx5F2k=
 github.com/xgfone/predicate v1.2.2/go.mod h1:YWL+KK1KRUpxFkQybVQlyONTkYdNI6IpBYOmx/kF4l0=

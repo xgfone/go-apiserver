@@ -20,7 +20,6 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/router"
-	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
 	"github.com/xgfone/go-apiserver/tcp"
 )
 
@@ -56,7 +55,7 @@ type HTTPServer struct {
 // NewHTTPServer returns a new HTTP entrypoint Server.
 func NewHTTPServer(ln net.Listener, handler http.Handler) (server HTTPServer) {
 	if handler == nil {
-		handler = router.NewRouter(ruler.NewRouter())
+		handler = router.DefaultRouter
 	}
 
 	server.HTTPHandler = handler

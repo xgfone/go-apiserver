@@ -18,6 +18,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+
+	"github.com/xgfone/go-apiserver/log"
+	"github.com/xgfone/go-atexit"
 )
 
 // TLSConfig is used to configure the TLS config.
@@ -83,4 +86,23 @@ func BuildServer(protocol, addr string, handler interface{}) (Server, error) {
 		return builder(addr, handler)
 	}
 	return nil, fmt.Errorf("no the server builder protocol '%s'", protocol)
+}
+
+// StartTLS is used to rapidly start the entrypoint server with TLS.
+func StartTLS(name, addr string, handler interface{}, tlsconfig *tls.Config, forceTLS bool) {
+	ep, err := NewEntryPoint(name, addr, handler)
+	if err != nil {
+		log.Fatal("fail to start the server", "name", name, "addr", addr, "err", err)
+	}
+
+	atexit.Register(ep.Stop)
+	ep.OnShutdown(atexit.Execute)
+	ep.SetTLSConfig(tlsconfig)
+	ep.SetTLSForce(forceTLS)
+	ep.Start()
+}
+
+// Start is used to rapidly start the entrypoint server.
+func Start(addr string, handler interface{}) {
+	StartTLS("", addr, handler, nil, false)
 }
