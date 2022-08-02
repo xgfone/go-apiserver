@@ -35,6 +35,7 @@ var StructFieldTag = "validate"
 
 // DefaultBuilder is the global default validation rule builder,
 // which will register some default validator building functions.
+// See RegisterDefaults.
 var DefaultBuilder = NewBuilder()
 
 // RegisterSymbol is equal to DefaultBuilder.RegisterSymbol(name, value).

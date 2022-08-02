@@ -20,6 +20,26 @@ func init() { RegisterDefaults(DefaultBuilder) }
 
 // RegisterDefaults registers the default validator building functions
 // into the builder.
+//
+// The Signature of Validator Functions as follow:
+//
+//   ip() or ip
+//   mac() or mac
+//   addr() or addr
+//   cidr() or cidr
+//   zero() or zero
+//   required() or required
+//   structure() or structure
+//   exp(base, startExp, endExp int)
+//   min(float64)
+//   max(float64)
+//   ranger(min, max float64)
+//   oneof(...string)
+//   array(...Validator)
+//   mapkv(...Validator)
+//   mapk(...Validator)
+//   mapv(...Validator)
+//
 func RegisterDefaults(b *Builder) {
 	b.RegisterFunction(NewFunctionWithoutArgs("zero", validator.Zero))
 	b.RegisterFunction(NewFunctionWithoutArgs("required", validator.Required))
