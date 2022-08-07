@@ -90,6 +90,33 @@ func TestRuleRanger(t *testing.T) {
 	}
 }
 
+func TestRuleTimeDuration(t *testing.T) {
+	if err := Validate("1a", `duration`); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
+
+	if err := Validate("1s", `duration`); err != nil {
+		t.Errorf("expect nil, but got '%s'", err.Error())
+	}
+
+	if err := Validate("2022-08-07", `timeformat`); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
+
+	if err := Validate("2022-08-07", `dateformat`); err != nil {
+		t.Errorf("expect nil, but got '%s'", err.Error())
+	}
+
+	if err := Validate("01:02:03", `timeformat`); err != nil {
+		t.Errorf("expect nil, but got '%s'", err.Error())
+	}
+
+	if err := Validate("2022-08-07 01:02:03", `datetimeformat`); err != nil {
+		t.Errorf("expect nil, but got '%s'", err.Error())
+	}
+
+}
+
 func ExampleValidatorFunction() {
 	// New a validator "oneof".
 	ss := []string{"one", "two", "three"}

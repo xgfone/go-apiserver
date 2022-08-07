@@ -18,29 +18,47 @@ import "github.com/xgfone/go-apiserver/validation/validator"
 
 func init() { RegisterDefaults(DefaultBuilder) }
 
-// RegisterDefaults registers the default validator building functions
-// into the builder.
+// RegisterDefaults registers the default symbols and validators
+// building functions into the builder.
 //
-// The Signature of Validator Functions as follow:
+// The registered default symbols:
+//
+//   timelayout: 15:04:05
+//   datelayout: 2006-01-02
+//   datetimelayout: 2006-01-02 15:04:05
+//
+// The Signature of the registered validator functions as follow:
 //
 //   ip() or ip
 //   mac() or mac
 //   addr() or addr
 //   cidr() or cidr
 //   zero() or zero
+//   duration() or duration
 //   required() or required
 //   structure() or structure
 //   exp(base, startExp, endExp int)
 //   min(float64)
 //   max(float64)
 //   ranger(min, max float64)
+//   time(formatLayout string)
 //   oneof(...string)
 //   array(...Validator)
 //   mapkv(...Validator)
 //   mapk(...Validator)
 //   mapv(...Validator)
+//   timeformat() or timeformat => time(timelayout)
+//   dateformat() or dateformat => time(datelayout)
+//   datetimeformat() or datetimeformat => time(datetimelayout)
 //
 func RegisterDefaults(b *Builder) {
+	b.RegisterSymbol("timelayout", "15:04:05")
+	b.RegisterSymbol("datelayout", "2006-01-02")
+	b.RegisterSymbol("datetimelayout", "2006-01-02 15:04:05")
+	registerTimeValidator(b, "timeformat", "15:04:05")
+	registerTimeValidator(b, "dateformat", "2006-01-02")
+	registerTimeValidator(b, "datetimeformat", "2006-01-02 15:04:05")
+
 	b.RegisterFunction(NewFunctionWithoutArgs("zero", validator.Zero))
 	b.RegisterFunction(NewFunctionWithoutArgs("required", validator.Required))
 
@@ -54,6 +72,9 @@ func RegisterDefaults(b *Builder) {
 	b.RegisterFunction(NewFunctionWithTwoFloats("ranger", validator.Ranger))
 	b.RegisterFunction(NewFunctionWithThreeInts("exp", validator.Exp))
 
+	b.RegisterFunction(NewFunctionWithOneString("time", validator.Time))
+	b.RegisterFunction(NewFunctionWithoutArgs("duration", validator.Duration))
+
 	b.RegisterFunction(NewFunctionWithStrings("oneof", validator.OneOf))
 	b.RegisterFunction(NewFunctionWithValidators("array", validator.Array))
 	b.RegisterFunction(NewFunctionWithValidators("mapk", validator.MapK))
@@ -62,4 +83,10 @@ func RegisterDefaults(b *Builder) {
 
 	// We use "structure" instead of "struct" because "struct" is the keyword in Go.
 	b.RegisterValidatorFunc("structure", b.ValidateStruct)
+}
+
+func registerTimeValidator(b *Builder, name, layout string) {
+	b.RegisterFunction(NewFunctionWithoutArgs(name, func() validator.Validator {
+		return validator.Time(layout)
+	}))
 }

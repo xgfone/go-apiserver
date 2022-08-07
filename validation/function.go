@@ -143,6 +143,24 @@ func NewFunctionWithFloats(name string, newf func(...float64) validator.Validato
 	})
 }
 
+// NewFunctionWithOneString returns a new Function which parses and builds
+// the validator with only one string argument.
+func NewFunctionWithOneString(name string, newf func(string) validator.Validator) Function {
+	return NewFunction(name, func(c *Context, args ...interface{}) (err error) {
+		if len(args) != 1 {
+			return fmt.Errorf("%s must have and only have one argument", name)
+		}
+
+		if s, ok := args[0].(string); ok {
+			c.AppendValidators(newf(s))
+		} else {
+			err = fmt.Errorf("%s expects a string, but got %T", name, args[0])
+		}
+
+		return
+	})
+}
+
 // NewFunctionWithStrings returns a new Function which parses and builds
 // the validator with any string arguments.
 func NewFunctionWithStrings(name string, newf func(...string) validator.Validator) Function {
