@@ -30,7 +30,7 @@ func NewSetDefaultHandler() Handler { return setdefault{} }
 type setdefault struct{}
 
 func (h setdefault) Parse(s string) (interface{}, error) { return s, nil }
-func (h setdefault) Run(c interface{}, t reflect.StructField, v reflect.Value, a interface{}) error {
+func (h setdefault) Run(c interface{}, r, v reflect.Value, t reflect.StructField, a interface{}) error {
 	if !v.CanSet() {
 		return fmt.Errorf("the field '%s' cannnot be set", t.Name)
 	}

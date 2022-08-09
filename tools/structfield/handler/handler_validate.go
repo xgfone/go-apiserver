@@ -38,7 +38,7 @@ type validator struct {
 }
 
 func (h validator) Parse(s string) (interface{}, error) { return s, nil }
-func (h validator) Run(c interface{}, t reflect.StructField, v reflect.Value, a interface{}) error {
+func (h validator) Run(c interface{}, r, v reflect.Value, t reflect.StructField, a interface{}) error {
 	builder := h.Builder
 	if builder == nil {
 		builder = validation.DefaultBuilder
