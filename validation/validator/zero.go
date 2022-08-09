@@ -27,7 +27,7 @@ var (
 // Zero returns a new Validator to chech whether the value is ZERO,
 // which returns an error if the value is not ZERO.
 func Zero() Validator {
-	return NewValidator("zero", func(i interface{}) error {
+	return NewValidator("zero", func(_, i interface{}) error {
 		if reflect.ValueOf(i).IsZero() {
 			return nil
 		}
@@ -38,7 +38,7 @@ func Zero() Validator {
 // Required returns a new Validator to chech whether a value is ZERO,
 // which returns an error if the value is ZERO.
 func Required() Validator {
-	return NewValidator("required", func(i interface{}) error {
+	return NewValidator("required", func(_, i interface{}) error {
 		if reflect.ValueOf(i).IsZero() {
 			return errCannotEmpty
 		}

@@ -47,7 +47,7 @@ var (
 //   - XXXX.XXXX.XXXX
 //   - XxXx.XxXx.XxXx
 func Mac() Validator {
-	return NewValidator("mac", func(i interface{}) error {
+	return NewValidator("mac", func(_, i interface{}) error {
 		switch v := helper.Indirect(i).(type) {
 		case string:
 			if nets.NormalizeMac(v) == "" {
@@ -71,7 +71,7 @@ func Mac() Validator {
 //
 // Support the types: string or net.IP.
 func IP() Validator {
-	return NewValidator("ip", func(i interface{}) error {
+	return NewValidator("ip", func(_, i interface{}) error {
 		switch v := helper.Indirect(i).(type) {
 		case string:
 			if net.ParseIP(v) == nil {
@@ -102,7 +102,7 @@ func IP() Validator {
 //
 // Support the types: string or net.IPNet.
 func Cidr() Validator {
-	return NewValidator("cidr", func(i interface{}) error {
+	return NewValidator("cidr", func(_, i interface{}) error {
 		switch v := i.(type) {
 		case string:
 			if _, _, err := net.ParseCIDR(v); err != nil {
@@ -131,7 +131,7 @@ func Cidr() Validator {
 //
 // Support the types: string.
 func Addr() Validator {
-	return NewValidator("addr", func(i interface{}) error {
+	return NewValidator("addr", func(_, i interface{}) error {
 		switch v := helper.Indirect(i).(type) {
 		case string:
 			if h, p := nets.SplitHostPort(v); len(h) == 0 || len(p) == 0 {

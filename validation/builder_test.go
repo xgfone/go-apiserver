@@ -41,19 +41,19 @@ func TestBuilderValidateStruct(t *testing.T) {
 	}
 
 	s.F.F1 = "abc"
-	if err := ValidateStruct(s); err != nil {
+	if err := ValidateStruct(nil, s); err != nil {
 		t.Error(err)
 	}
 
 	s.F.F2 = 3
-	if err := ValidateStruct(s); err == nil {
+	if err := ValidateStruct(nil, s); err == nil {
 		t.Errorf("expect an error, but got nil")
 	} else if s := "F.F2: the integer is less than 5"; err.Error() != s {
 		t.Errorf("expect the error '%s', but got '%s'", s, err.Error())
 	}
 
 	s.F.F2 = 5
-	if err := ValidateStruct(s); err == nil {
+	if err := ValidateStruct(nil, s); err == nil {
 		t.Errorf("expect an error, but got nil")
 	} else if s := "F: F2 is not equal to the length of F1"; err.Error() != s {
 		t.Errorf("expect the error '%s', but got '%s'", s, err.Error())
@@ -61,7 +61,7 @@ func TestBuilderValidateStruct(t *testing.T) {
 
 	s.F.F1 = "abcde"
 	s.F.F2 = len(s.F.F1)
-	if err := ValidateStruct(s); err != nil {
+	if err := ValidateStruct(nil, s); err != nil {
 		t.Errorf("unexpected error '%s'", err.Error())
 	}
 }
@@ -69,21 +69,21 @@ func TestBuilderValidateStruct(t *testing.T) {
 func TestRuleRanger(t *testing.T) {
 	expectErrMsg := "the integer is not in range [1, 10]"
 
-	if err := Validate(0, "ranger(1,10)"); err == nil {
+	if err := Validate(nil, 0, "ranger(1,10)"); err == nil {
 		t.Errorf("expect the error, but got nil")
 	} else if err.Error() != expectErrMsg {
 		t.Errorf("expect the error '%s', but got '%s'", expectErrMsg, err.Error())
 	}
 
-	if err := Validate(1, "ranger(1,10)"); err != nil {
+	if err := Validate(nil, 1, "ranger(1,10)"); err != nil {
 		t.Errorf("unexpect the error: %s", err.Error())
 	}
 
-	if err := Validate(10, "ranger(1,10)"); err != nil {
+	if err := Validate(nil, 10, "ranger(1,10)"); err != nil {
 		t.Errorf("unexpect the error: %s", err.Error())
 	}
 
-	if err := Validate(11, "ranger(1,10)"); err == nil {
+	if err := Validate(nil, 11, "ranger(1,10)"); err == nil {
 		t.Errorf("expect the error, but got nil")
 	} else if err.Error() != expectErrMsg {
 		t.Errorf("expect the error '%s', but got '%s'", expectErrMsg, err.Error())
@@ -91,27 +91,27 @@ func TestRuleRanger(t *testing.T) {
 }
 
 func TestRuleTimeDuration(t *testing.T) {
-	if err := Validate("1a", `duration`); err == nil {
+	if err := Validate(nil, "1a", `duration`); err == nil {
 		t.Errorf("expect an error, but got nil")
 	}
 
-	if err := Validate("1s", `duration`); err != nil {
+	if err := Validate(nil, "1s", `duration`); err != nil {
 		t.Errorf("expect nil, but got '%s'", err.Error())
 	}
 
-	if err := Validate("2022-08-07", `timeformat`); err == nil {
+	if err := Validate(nil, "2022-08-07", `timeformat`); err == nil {
 		t.Errorf("expect an error, but got nil")
 	}
 
-	if err := Validate("2022-08-07", `dateformat`); err != nil {
+	if err := Validate(nil, "2022-08-07", `dateformat`); err != nil {
 		t.Errorf("expect nil, but got '%s'", err.Error())
 	}
 
-	if err := Validate("01:02:03", `timeformat`); err != nil {
+	if err := Validate(nil, "01:02:03", `timeformat`); err != nil {
 		t.Errorf("expect nil, but got '%s'", err.Error())
 	}
 
-	if err := Validate("2022-08-07 01:02:03", `datetimeformat`); err != nil {
+	if err := Validate(nil, "2022-08-07 01:02:03", `datetimeformat`); err != nil {
 		t.Errorf("expect nil, but got '%s'", err.Error())
 	}
 
@@ -121,7 +121,7 @@ func ExampleValidatorFunction() {
 	// New a validator "oneof".
 	ss := []string{"one", "two", "three"}
 	desc := fmt.Sprintf(`oneof("%s")`, strings.Join(ss, `", "`))
-	oneof := validator.NewValidator(desc, func(i interface{}) error {
+	oneof := validator.NewValidator(desc, func(_, i interface{}) error {
 		if s, ok := i.(string); ok {
 			for _, _s := range ss {
 				if _s == s {
@@ -142,10 +142,10 @@ func ExampleValidatorFunction() {
 	fmt.Println(oneof.String())
 
 	// Validate the value and print the result.
-	fmt.Println(builder.Validate("one", rule))
-	fmt.Println(builder.Validate("two", rule))
-	fmt.Println(builder.Validate("three", rule))
-	fmt.Println(builder.Validate("four", rule))
+	fmt.Println(builder.Validate(nil, "one", rule))
+	fmt.Println(builder.Validate(nil, "two", rule))
+	fmt.Println(builder.Validate(nil, "three", rule))
+	fmt.Println(builder.Validate(nil, "four", rule))
 
 	// Output:
 	// oneof("one", "two", "three")
@@ -163,9 +163,9 @@ func ExampleBuilder_RegisterValidatorOneof() {
 	builder.RegisterValidatorOneof(rule, numbers...)
 
 	// Validate the value and print the result.
-	fmt.Println(builder.Validate("0", rule))
-	fmt.Println(builder.Validate("9", rule))
-	fmt.Println(builder.Validate("a", rule))
+	fmt.Println(builder.Validate(nil, "0", rule))
+	fmt.Println(builder.Validate(nil, "9", rule))
+	fmt.Println(builder.Validate(nil, "a", rule))
 
 	// Output:
 	// <nil>
@@ -204,11 +204,11 @@ func ExampleBuilder() {
 
 	validator := c.Validator()
 	fmt.Printf("Rule: %s\n", validator.String())
-	fmt.Println(validator.Validate(0))
-	fmt.Println(validator.Validate(1))
-	fmt.Println(validator.Validate(5))
-	fmt.Println(validator.Validate(10))
-	fmt.Println(validator.Validate(11))
+	fmt.Println(validator.Validate(nil, 0))
+	fmt.Println(validator.Validate(nil, 1))
+	fmt.Println(validator.Validate(nil, 5))
+	fmt.Println(validator.Validate(nil, 10))
+	fmt.Println(validator.Validate(nil, 11))
 
 	// Example 2: Identifier+operator mode
 	fmt.Println("\n--- Identifier+Operator Mode ---")
@@ -222,37 +222,37 @@ func ExampleBuilder() {
 
 	validator = c.Validator()
 	fmt.Printf("Rule: %s\n", validator.String())
-	fmt.Println(validator.Validate(""))
-	fmt.Println(validator.Validate("a"))
-	fmt.Println(validator.Validate("abc"))
-	fmt.Println(validator.Validate("abcdefghijklmn"))
+	fmt.Println(validator.Validate(nil, ""))
+	fmt.Println(validator.Validate(nil, "a"))
+	fmt.Println(validator.Validate(nil, "abc"))
+	fmt.Println(validator.Validate(nil, "abcdefghijklmn"))
 
 	// Example 3: The simpler validation way
 	const rule1 = "zero || (min==3 && max==10)"
-	fmt.Println(Validate("", rule1))
-	fmt.Println(Validate("a", rule1))
-	fmt.Println(Validate("abc", rule1))
-	fmt.Println(Validate("abcdefghijklmn", rule1))
+	fmt.Println(Validate(nil, "", rule1))
+	fmt.Println(Validate(nil, "a", rule1))
+	fmt.Println(Validate(nil, "abc", rule1))
+	fmt.Println(Validate(nil, "abcdefghijklmn", rule1))
 
 	// Example 4: Validate the array
 	fmt.Println("\n--- Array ---")
 	const rule2 = "zero || array(min(1), max(10))"
-	fmt.Println(Validate([]int{1, 2, 3}, rule2))
-	fmt.Println(Validate([]string{"a", "bc", "def"}, rule2))
-	fmt.Println(Validate([]int{}, rule2))
-	fmt.Println(Validate([]int{0, 1, 2}, rule2))
-	fmt.Println(Validate([]string{"a", "bc", ""}, rule2))
+	fmt.Println(Validate(nil, []int{1, 2, 3}, rule2))
+	fmt.Println(Validate(nil, []string{"a", "bc", "def"}, rule2))
+	fmt.Println(Validate(nil, []int{}, rule2))
+	fmt.Println(Validate(nil, []int{0, 1, 2}, rule2))
+	fmt.Println(Validate(nil, []string{"a", "bc", ""}, rule2))
 
 	// Example 5: Valiate the map
 	fmt.Println("\n--- Map ---")
 	const rule3 = `mapk(min(1) && max(3))`
-	fmt.Println(Validate(map[string]int{"a": 123}, rule3))
-	fmt.Println(Validate(map[string]int8{"abcd": 123}, rule3))
+	fmt.Println(Validate(nil, map[string]int{"a": 123}, rule3))
+	fmt.Println(Validate(nil, map[string]int8{"abcd": 123}, rule3))
 
 	const rule4 = `mapv(min==10 && max==100)`
 	fmt.Println(BuildValidator(rule4))
-	fmt.Println(Validate(map[string]int16{"a": 10}, rule4))
-	fmt.Println(Validate(map[string]int32{"abcd": 123}, rule4))
+	fmt.Println(Validate(nil, map[string]int16{"a": 10}, rule4))
+	fmt.Println(Validate(nil, map[string]int32{"abcd": 123}, rule4))
 
 	// Exampe 6: Validate the struct
 	fmt.Println("\n--- Struct ---")
@@ -271,21 +271,21 @@ func ExampleBuilder() {
 	v.F3.F4 = "a"
 
 	*v.F2 = 1
-	fmt.Println(ValidateStruct(v))
+	fmt.Println(ValidateStruct(nil, v))
 
 	v.F1 = "abc"
-	fmt.Println(ValidateStruct(v))
+	fmt.Println(ValidateStruct(nil, v))
 
 	v.F1 = "abcdefgxyz"
-	fmt.Println(ValidateStruct(v))
+	fmt.Println(ValidateStruct(nil, v))
 
 	v.F1 = ""
 	v.F3.F4 = "c"
-	fmt.Println(ValidateStruct(v))
+	fmt.Println(ValidateStruct(nil, v))
 
 	v.F3.F4 = "a"
 	(*v.F3.F5)[0] = 0
-	fmt.Println(ValidateStruct(v))
+	fmt.Println(ValidateStruct(nil, v))
 
 	type s1 struct {
 		F int `validate:"min(10)"`
@@ -295,16 +295,16 @@ func ExampleBuilder() {
 	}
 
 	v2 := s2{Fs: make([]s1, 1)}
-	fmt.Println(ValidateStruct(v2))
+	fmt.Println(ValidateStruct(nil, v2))
 
 	v2.Fs[0].F = 10
-	fmt.Println(ValidateStruct(v2))
+	fmt.Println(ValidateStruct(nil, v2))
 
 	// Example 7: Others
 	fmt.Println("\n--- Others ---")
 	const oneof = `oneof(v1, v2, "c")`
-	fmt.Println(Validate("a", oneof))
-	fmt.Println(Validate("x", oneof))
+	fmt.Println(Validate(nil, "a", oneof))
+	fmt.Println(Validate(nil, "x", oneof))
 
 	// Output:
 	//

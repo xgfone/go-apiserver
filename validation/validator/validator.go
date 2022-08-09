@@ -28,14 +28,14 @@ type ValueValidator interface {
 	Validate() error
 }
 
-// Validator is a validator to check whether a value is valid.
+// Validator is a validator to check whether the given value is valid.
 type Validator interface {
-	Validate(i interface{}) error
+	Validate(ctx, value interface{}) error
 	String() string
 }
 
 // ValidatorFunc represents a validation function.
-type ValidatorFunc func(interface{}) error
+type ValidatorFunc func(interface{}, interface{}) error
 
 // NewValidator returns the new Validator based on the validation rule
 // and function.
@@ -48,8 +48,8 @@ type validator struct {
 	f ValidatorFunc
 }
 
-func (v validator) Validate(i interface{}) error { return v.f(i) }
-func (v validator) String() string               { return v.s }
+func (v validator) Validate(c, i interface{}) error { return v.f(c, i) }
+func (v validator) String() string                  { return v.s }
 
 // BoolValidatorFunc converts a bool validation function to ValidatorFunc,
 // which returns err if validate returns false, or nil if true.
@@ -61,7 +61,7 @@ func BoolValidatorFunc(validate func(interface{}) bool, err error) ValidatorFunc
 		panic("BoolValidatorFunc: the validation function must not be nil")
 	}
 
-	return func(i interface{}) error {
+	return func(_, i interface{}) error {
 		if validate(i) {
 			return nil
 		}
@@ -79,7 +79,7 @@ func StringBoolValidatorFunc(validate func(string) bool, err error) ValidatorFun
 		panic("StringBoolValidatorFunc: the validation function must not be nil")
 	}
 
-	return func(i interface{}) error {
+	return func(_, i interface{}) error {
 		var ok bool
 		switch t := i.(type) {
 		case string:
@@ -139,9 +139,9 @@ func composeValidators(name string, validators ...Validator) (Validator, string)
 type andValidator []Validator
 
 // Validate implements the interface Validator.
-func (vs andValidator) Validate(v interface{}) (err error) {
+func (vs andValidator) Validate(c, v interface{}) (err error) {
 	for i, _len := 0, len(vs); i < _len; i++ {
-		if err = vs[i].Validate(v); err != nil {
+		if err = vs[i].Validate(c, v); err != nil {
 			return
 		}
 	}
@@ -179,9 +179,9 @@ func And(validators ...Validator) Validator {
 type orValidator []Validator
 
 // Validate implements the interface Validator.
-func (vs orValidator) Validate(v interface{}) (err error) {
+func (vs orValidator) Validate(c, v interface{}) (err error) {
 	for i, _len := 0, len(vs); i < _len; i++ {
-		if err = vs[i].Validate(v); err == nil {
+		if err = vs[i].Validate(c, v); err == nil {
 			return nil
 		}
 	}
@@ -223,11 +223,11 @@ func Array(validators ...Validator) Validator {
 	}
 
 	validator, desc := composeValidators("array", validators...)
-	return NewValidator(desc, func(i interface{}) error {
+	return NewValidator(desc, func(c, i interface{}) error {
 		switch vs := i.(type) {
 		case []string:
 			for i, s := range vs {
-				if err := validator.Validate(s); err != nil {
+				if err := validator.Validate(c, s); err != nil {
 					return fmt.Errorf("%dth element is invalid: %v", i, err)
 				}
 			}
@@ -245,7 +245,7 @@ func Array(validators ...Validator) Validator {
 
 			for i, _len := 0, vf.Len(); i < _len; i++ {
 				vf.Index(i).Interface()
-				if err := validator.Validate(vf.Index(i).Interface()); err != nil {
+				if err := validator.Validate(c, vf.Index(i).Interface()); err != nil {
 					return fmt.Errorf("%dth element is invalid: %v", i, err)
 				}
 			}
@@ -265,18 +265,18 @@ func MapK(validators ...Validator) Validator {
 	}
 
 	validator, desc := composeValidators("mapk", validators...)
-	return NewValidator(desc, func(i interface{}) error {
+	return NewValidator(desc, func(c, i interface{}) error {
 		switch vs := i.(type) {
 		case map[string]string:
 			for key := range vs {
-				if err := validator.Validate(key); err != nil {
+				if err := validator.Validate(c, key); err != nil {
 					return fmt.Errorf("map key '%s' is invalid: %v", key, err)
 				}
 			}
 
 		case map[string]interface{}:
 			for key := range vs {
-				if err := validator.Validate(key); err != nil {
+				if err := validator.Validate(c, key); err != nil {
 					return fmt.Errorf("map key '%s' is invalid: %v", key, err)
 				}
 			}
@@ -288,7 +288,7 @@ func MapK(validators ...Validator) Validator {
 			}
 
 			for _, key := range vf.MapKeys() {
-				if err := validator.Validate(key.Interface()); err != nil {
+				if err := validator.Validate(c, key.Interface()); err != nil {
 					return fmt.Errorf("map key '%v' is invalid: %v", key.Interface(), err)
 				}
 			}
@@ -306,18 +306,18 @@ func MapV(validators ...Validator) Validator {
 	}
 
 	validator, desc := composeValidators("mapv", validators...)
-	return NewValidator(desc, func(i interface{}) error {
+	return NewValidator(desc, func(c, i interface{}) error {
 		switch vs := i.(type) {
 		case map[string]string:
 			for _, value := range vs {
-				if err := validator.Validate(value); err != nil {
+				if err := validator.Validate(c, value); err != nil {
 					return fmt.Errorf("map value '%s' is invalid: %v", value, err)
 				}
 			}
 
 		case map[string]interface{}:
 			for _, value := range vs {
-				if err := validator.Validate(value); err != nil {
+				if err := validator.Validate(c, value); err != nil {
 					return fmt.Errorf("map value '%v' is invalid: %v", value, err)
 				}
 			}
@@ -330,7 +330,7 @@ func MapV(validators ...Validator) Validator {
 
 			for iter := vf.MapRange(); iter.Next(); {
 				value := iter.Value().Interface()
-				if err := validator.Validate(value); err != nil {
+				if err := validator.Validate(c, value); err != nil {
 					return fmt.Errorf("map value '%v' is invalid: %v", value, err)
 				}
 			}
@@ -356,18 +356,18 @@ func MapKV(validators ...Validator) Validator {
 	}
 
 	validator, desc := composeValidators("mapkv", validators...)
-	return NewValidator(desc, func(i interface{}) error {
+	return NewValidator(desc, func(c, i interface{}) error {
 		switch vs := i.(type) {
 		case map[string]string:
 			for key, value := range vs {
-				if err := validator.Validate(KV{Key: key, Value: value}); err != nil {
+				if err := validator.Validate(c, KV{Key: key, Value: value}); err != nil {
 					return fmt.Errorf("map from key '%v' is invalid: %v", key, err)
 				}
 			}
 
 		case map[string]interface{}:
 			for key, value := range vs {
-				if err := validator.Validate(KV{Key: key, Value: value}); err != nil {
+				if err := validator.Validate(c, KV{Key: key, Value: value}); err != nil {
 					return fmt.Errorf("map from key '%v' is invalid: %v", key, err)
 				}
 			}
@@ -381,7 +381,7 @@ func MapKV(validators ...Validator) Validator {
 			for iter := vf.MapRange(); iter.Next(); {
 				key := iter.Key().Interface()
 				value := iter.Value().Interface()
-				if err := validator.Validate(KV{Key: key, Value: value}); err != nil {
+				if err := validator.Validate(c, KV{Key: key, Value: value}); err != nil {
 					return fmt.Errorf("map from key '%v' is invalid: %v", key, err)
 				}
 			}

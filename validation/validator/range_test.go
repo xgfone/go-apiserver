@@ -20,10 +20,10 @@ func ExampleExp() {
 	valiator := Exp(2, 1, 4) // one of "2", "4", "8", "16"
 	fmt.Println(valiator.String())
 
-	fmt.Println(valiator.Validate(1))
-	fmt.Println(valiator.Validate(2))
-	fmt.Println(valiator.Validate(16))
-	fmt.Println(valiator.Validate(32))
+	fmt.Println(valiator.Validate(nil, 1))
+	fmt.Println(valiator.Validate(nil, 2))
+	fmt.Println(valiator.Validate(nil, 16))
+	fmt.Println(valiator.Validate(nil, 32))
 
 	// Output:
 	// exp(2,1,4)

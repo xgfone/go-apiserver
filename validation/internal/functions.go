@@ -36,7 +36,7 @@ func (o OneOf) Name() string { return o.name }
 func (o OneOf) String() string { return o.desc }
 
 // Validate validates the value i is valid.
-func (o OneOf) Validate(i interface{}) error {
+func (o OneOf) Validate(_, i interface{}) error {
 	switch v := helper.Indirect(i).(type) {
 	case string:
 		if !helper.InStrings(v, o.values) {

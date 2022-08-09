@@ -23,7 +23,7 @@ import (
 // with the given time format.
 func Time(format string) Validator {
 	rule := fmt.Sprintf(`time("%s")`, format)
-	return NewValidator(rule, func(i interface{}) error {
+	return NewValidator(rule, func(_, i interface{}) error {
 		_, err := time.Parse(format, i.(string))
 		return err
 	})
@@ -32,7 +32,7 @@ func Time(format string) Validator {
 // Duration returns a new validator to check whether the string value is
 // a valid duration validated by time.ParseDuration.
 func Duration() Validator {
-	return NewValidator("duration", func(i interface{}) error {
+	return NewValidator("duration", func(_, i interface{}) error {
 		_, err := time.ParseDuration(i.(string))
 		return err
 	})

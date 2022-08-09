@@ -92,14 +92,14 @@ func BuildValidator(rule string) (validator.Validator, error) {
 	return DefaultBuilder.BuildValidator(rule)
 }
 
-// Validate is equal to DefaultBuilder.Validate(v, rule).
-func Validate(v interface{}, rule string) error {
-	return DefaultBuilder.Validate(v, rule)
+// Validate is equal to DefaultBuilder.Validate(ctx, v, rule).
+func Validate(ctx, v interface{}, rule string) error {
+	return DefaultBuilder.Validate(ctx, v, rule)
 }
 
-// ValidateStruct is equal to DefaultBuilder.ValidateStruct(s).
-func ValidateStruct(s interface{}) error {
-	return DefaultBuilder.ValidateStruct(s)
+// ValidateStruct is equal to DefaultBuilder.ValidateStruct(ctx, s).
+func ValidateStruct(ctx, s interface{}) error {
+	return DefaultBuilder.ValidateStruct(ctx, s)
 }
 
 // LookupStructFieldNameByTags returns a function to lookup the field name
@@ -315,7 +315,7 @@ type validatorWrapper struct{ validator.Validator }
 // Validate validates whether the value v is valid by the rule.
 //
 // If failing to build the rule to the validator, panic with the error.
-func (b *Builder) Validate(v interface{}, rule string) (err error) {
+func (b *Builder) Validate(ctx, v interface{}, rule string) (err error) {
 	if rule == "" {
 		return nil
 	}
@@ -324,13 +324,13 @@ func (b *Builder) Validate(v interface{}, rule string) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	return validator.Validate(v)
+	return validator.Validate(ctx, v)
 }
 
 // ValidateStruct validates whether the struct value is valid,
 // which extracts the validation rule from the field tag "validate"
 // validate the field value with the extracted rule.
-func (b *Builder) ValidateStruct(s interface{}) error {
+func (b *Builder) ValidateStruct(ctx, s interface{}) error {
 	v := reflect.ValueOf(s)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -340,7 +340,7 @@ func (b *Builder) ValidateStruct(s interface{}) error {
 		return fmt.Errorf("the value is %T, not a struct", v.Interface())
 	}
 
-	errs := b.validateStruct("", v, nil)
+	errs := b.validateStruct(ctx, "", v, nil)
 	if len(errs) > 0 {
 		return errs
 	}
@@ -349,7 +349,7 @@ func (b *Builder) ValidateStruct(s interface{}) error {
 
 var validatorImpl = reflect.TypeOf((*validator.ValueValidator)(nil)).Elem()
 
-func (b *Builder) validateStruct(prefix string, v reflect.Value, errs NamedErrors) NamedErrors {
+func (b *Builder) validateStruct(c interface{}, prefix string, v reflect.Value, errs NamedErrors) NamedErrors {
 	tag := b.StructFieldTag
 	if len(tag) == 0 {
 		if tag = StructFieldTag; len(tag) == 0 {
@@ -365,7 +365,7 @@ func (b *Builder) validateStruct(prefix string, v reflect.Value, errs NamedError
 		// Validate the fields of the sub-struct recursively.
 		if ft.Type.Kind() == reflect.Struct {
 			name := b.getStructFieldName(prefix, ft)
-			errs = b.validateStruct(name, fv, errs)
+			errs = b.validateStruct(c, name, fv, errs)
 			if errs == nil {
 				if ft.Type.Implements(validatorImpl) {
 					err := fv.Interface().(validator.ValueValidator).Validate()
@@ -380,7 +380,7 @@ func (b *Builder) validateStruct(prefix string, v reflect.Value, errs NamedError
 			continue
 		}
 
-		err := b.Validate(fv.Interface(), rule)
+		err := b.Validate(c, fv.Interface(), rule)
 		if err != nil {
 			errs = addError(errs, b.getStructFieldName(prefix, ft), err)
 		}
