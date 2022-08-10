@@ -25,7 +25,7 @@ import (
 //
 // If a value has implemented the interface, it can validate itself.
 type ValueValidator interface {
-	Validate() error
+	Validate(ctx interface{}) error
 }
 
 // Validator is a validator to check whether the given value is valid.

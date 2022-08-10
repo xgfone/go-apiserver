@@ -368,7 +368,7 @@ func (b *Builder) validateStruct(c interface{}, prefix string, v reflect.Value, 
 			errs = b.validateStruct(c, name, fv, errs)
 			if errs == nil {
 				if ft.Type.Implements(validatorImpl) {
-					err := fv.Interface().(validator.ValueValidator).Validate()
+					err := fv.Interface().(validator.ValueValidator).Validate(c)
 					errs = addError(errs, name, err)
 				}
 			}

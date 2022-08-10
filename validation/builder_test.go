@@ -28,7 +28,7 @@ type testT2 struct {
 	F2 int    `validate:"zero || min==5"`
 }
 
-func (t testT2) Validate() error {
+func (t testT2) Validate(interface{}) error {
 	if t.F2 > 0 && t.F2 != len(t.F1) {
 		return fmt.Errorf("F2 is not equal to the length of F1")
 	}
