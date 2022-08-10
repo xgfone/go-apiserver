@@ -14,23 +14,38 @@
 
 package validator
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestStructFieldLess(t *testing.T) {
 	var v struct {
 		Field1 int
-		Field2 string
+		Field2 time.Time
 	}
 	v.Field1 = 123
+	v.Field2 = time.Unix(123, 0)
 
-	validator := StructFieldLess("Field1")
-	if err := validator.Validate(v, 100); err != nil {
+	validator1 := StructFieldLess("Field1")
+	if err := validator1.Validate(v, 100); err != nil {
 		t.Errorf("expect nil, but got an error: %v", err)
 	}
-	if err := validator.Validate(v, 123); err == nil {
+	if err := validator1.Validate(v, 123); err == nil {
 		t.Errorf("expect an error, but got nil")
 	}
-	if err := validator.Validate(v, 200); err == nil {
+	if err := validator1.Validate(v, 200); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
+
+	validator2 := StructFieldLess("Field2")
+	if err := validator2.Validate(v, time.Unix(100, 0)); err != nil {
+		t.Errorf("expect nil, but got an error: %v", err)
+	}
+	if err := validator2.Validate(v, time.Unix(123, 0)); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
+	if err := validator2.Validate(v, time.Unix(200, 0)); err == nil {
 		t.Errorf("expect an error, but got nil")
 	}
 }
@@ -38,18 +53,30 @@ func TestStructFieldLess(t *testing.T) {
 func TestStructFieldGreater(t *testing.T) {
 	var v struct {
 		Field1 int
-		Field2 string
+		Field2 time.Time
 	}
 	v.Field1 = 123
+	v.Field2 = time.Unix(123, 0)
 
-	validator := StructFieldGreater("Field1")
-	if err := validator.Validate(v, 200); err != nil {
+	validator1 := StructFieldGreater("Field1")
+	if err := validator1.Validate(v, 200); err != nil {
 		t.Errorf("expect nil, but got an error: %v", err)
 	}
-	if err := validator.Validate(v, 123); err == nil {
+	if err := validator1.Validate(v, 123); err == nil {
 		t.Errorf("expect an error, but got nil")
 	}
-	if err := validator.Validate(v, 100); err == nil {
+	if err := validator1.Validate(v, 100); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
+
+	validator2 := StructFieldGreater("Field2")
+	if err := validator2.Validate(v, time.Unix(200, 0)); err != nil {
+		t.Errorf("expect nil, but got an error: %v", err)
+	}
+	if err := validator2.Validate(v, time.Unix(123, 0)); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
+	if err := validator2.Validate(v, time.Unix(100, 0)); err == nil {
 		t.Errorf("expect an error, but got nil")
 	}
 }
@@ -57,18 +84,30 @@ func TestStructFieldGreater(t *testing.T) {
 func TestStructFieldLessEqual(t *testing.T) {
 	var v struct {
 		Field1 int
-		Field2 string
+		Field2 time.Time
 	}
 	v.Field1 = 123
+	v.Field2 = time.Unix(123, 0)
 
-	validator := StructFieldLessEqual("Field1")
-	if err := validator.Validate(v, 100); err != nil {
+	validator1 := StructFieldLessEqual("Field1")
+	if err := validator1.Validate(v, 100); err != nil {
 		t.Errorf("expect nil, but got an error: %v", err)
 	}
-	if err := validator.Validate(v, 123); err != nil {
+	if err := validator1.Validate(v, 123); err != nil {
 		t.Errorf("expect nil, but got an error: %v", err)
 	}
-	if err := validator.Validate(v, 200); err == nil {
+	if err := validator1.Validate(v, 200); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
+
+	validator2 := StructFieldLessEqual("Field2")
+	if err := validator2.Validate(v, time.Unix(100, 0)); err != nil {
+		t.Errorf("expect nil, but got an error: %v", err)
+	}
+	if err := validator2.Validate(v, time.Unix(123, 0)); err != nil {
+		t.Errorf("expect nil, but got an error: %v", err)
+	}
+	if err := validator2.Validate(v, time.Unix(200, 0)); err == nil {
 		t.Errorf("expect an error, but got nil")
 	}
 }
@@ -76,18 +115,30 @@ func TestStructFieldLessEqual(t *testing.T) {
 func TestStructFieldGreaterEqual(t *testing.T) {
 	var v struct {
 		Field1 int
-		Field2 string
+		Field2 time.Time
 	}
 	v.Field1 = 123
+	v.Field2 = time.Unix(123, 0)
 
-	validator := StructFieldGreaterEqual("Field1")
-	if err := validator.Validate(v, 200); err != nil {
+	validator1 := StructFieldGreaterEqual("Field1")
+	if err := validator1.Validate(v, 200); err != nil {
 		t.Errorf("expect nil, but got an error: %v", err)
 	}
-	if err := validator.Validate(v, 123); err != nil {
+	if err := validator1.Validate(v, 123); err != nil {
 		t.Errorf("expect nil, but got an error: %v", err)
 	}
-	if err := validator.Validate(v, 100); err == nil {
+	if err := validator1.Validate(v, 100); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
+
+	validator2 := StructFieldGreaterEqual("Field2")
+	if err := validator2.Validate(v, time.Unix(200, 0)); err != nil {
+		t.Errorf("expect nil, but got an error: %v", err)
+	}
+	if err := validator2.Validate(v, time.Unix(123, 0)); err != nil {
+		t.Errorf("expect nil, but got an error: %v", err)
+	}
+	if err := validator2.Validate(v, time.Unix(100, 0)); err == nil {
 		t.Errorf("expect an error, but got nil")
 	}
 }

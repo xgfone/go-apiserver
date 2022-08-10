@@ -17,6 +17,7 @@ package validator
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/xgfone/go-apiserver/helper"
 )
@@ -28,6 +29,7 @@ import (
 //   uint, uint8, uint16, uint32, uint64
 //   int, int8, int16, int32, int64
 //   float32, float64
+//   time.Time
 //
 // The validator rule is "ltf(fieldName)".
 func StructFieldLess(fieldName string) Validator {
@@ -64,6 +66,7 @@ func StructFieldLess(fieldName string) Validator {
 //   uint, uint8, uint16, uint32, uint64
 //   int, int8, int16, int32, int64
 //   float32, float64
+//   time.Time
 //
 // The validator rule is "lef(fieldName)".
 func StructFieldLessEqual(fieldName string) Validator {
@@ -100,6 +103,7 @@ func StructFieldLessEqual(fieldName string) Validator {
 //   uint, uint8, uint16, uint32, uint64
 //   int, int8, int16, int32, int64
 //   float32, float64
+//   time.Time
 //
 // The validator rule is "gtf(fieldName)".
 func StructFieldGreater(fieldName string) Validator {
@@ -136,6 +140,7 @@ func StructFieldGreater(fieldName string) Validator {
 //   uint, uint8, uint16, uint32, uint64
 //   int, int8, int16, int32, int64
 //   float32, float64
+//   time.Time
 //
 // The validator rule is "gef(fieldName)".
 func StructFieldGreaterEqual(fieldName string) Validator {
@@ -251,6 +256,13 @@ func isLess(left, right interface{}, rightName string) error {
 			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
 		}
 
+	case time.Time:
+		if v2, ok := right.(time.Time); !ok {
+			panic(fmt.Errorf("the type is not consistent with the field named '%s'", rightName))
+		} else if !v1.Before(v2) {
+			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
+		}
+
 	default:
 		panic(fmt.Errorf("not support the type %T", left))
 	}
@@ -342,6 +354,13 @@ func isLessEqual(left, right interface{}, rightName string) error {
 			panic(fmt.Errorf("the type is not consistent with the field named '%s'", rightName))
 		} else if !(v1 <= v2) {
 			return fmt.Errorf("the value is not less than or equal to the field named '%s'", rightName)
+		}
+
+	case time.Time:
+		if v2, ok := right.(time.Time); !ok {
+			panic(fmt.Errorf("the type is not consistent with the field named '%s'", rightName))
+		} else if !(v1.Before(v2) || v1.Equal(v2)) {
+			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
 		}
 
 	default:
@@ -437,6 +456,13 @@ func isGreater(left, right interface{}, rightName string) error {
 			return fmt.Errorf("the value is not greater than the field named '%s'", rightName)
 		}
 
+	case time.Time:
+		if v2, ok := right.(time.Time); !ok {
+			panic(fmt.Errorf("the type is not consistent with the field named '%s'", rightName))
+		} else if !v1.After(v2) {
+			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
+		}
+
 	default:
 		panic(fmt.Errorf("not support the type %T", left))
 	}
@@ -528,6 +554,13 @@ func isGreaterEqual(left, right interface{}, rightName string) error {
 			panic(fmt.Errorf("the type is not consistent with the field named '%s'", rightName))
 		} else if !(v1 >= v2) {
 			return fmt.Errorf("the value is not greater than or equal to the field named '%s'", rightName)
+		}
+
+	case time.Time:
+		if v2, ok := right.(time.Time); !ok {
+			panic(fmt.Errorf("the type is not consistent with the field named '%s'", rightName))
+		} else if !(v1.After(v2) || v1.Equal(v2)) {
+			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
 		}
 
 	default:
