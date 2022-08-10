@@ -35,7 +35,7 @@ type Validator interface {
 }
 
 // ValidatorFunc represents a validation function.
-type ValidatorFunc func(interface{}, interface{}) error
+type ValidatorFunc func(ctx interface{}, value interface{}) error
 
 // NewValidator returns the new Validator based on the validation rule
 // and function.

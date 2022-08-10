@@ -16,7 +16,6 @@ package validation
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -174,19 +173,19 @@ func ExampleBuilder_RegisterValidatorOneof() {
 }
 
 func ExampleBuilder() {
-	// Register the validator building functions.
-	RegisterFunction(NewFunctionWithOneFloat("min", validator.Min))
-	RegisterFunction(NewFunctionWithOneFloat("max", validator.Max))
-	RegisterFunction(NewFunctionWithStrings("oneof", validator.OneOf))
-	RegisterFunction(NewFunctionWithValidators("array", validator.Array))
-	RegisterFunction(NewFunctionWithValidators("mapk", validator.MapK))
-	RegisterFunction(NewFunctionWithValidators("mapv", validator.MapV))
-	RegisterFunction(NewFunctionWithValidators("mapkv", validator.MapKV))
+	////// Register the validator building functions.
+	// RegisterFunction(NewFunctionWithOneFloat("min", validator.Min))
+	// RegisterFunction(NewFunctionWithOneFloat("max", validator.Max))
+	// RegisterFunction(NewFunctionWithStrings("oneof", validator.OneOf))
+	// RegisterFunction(NewFunctionWithValidators("array", validator.Array))
+	// RegisterFunction(NewFunctionWithValidators("mapk", validator.MapK))
+	// RegisterFunction(NewFunctionWithValidators("mapv", validator.MapV))
+	// RegisterFunction(NewFunctionWithValidators("mapkv", validator.MapKV))
 
-	// Register the validator building function based on the bool validation.
-	isZero := func(i interface{}) bool { return reflect.ValueOf(i).IsZero() }
-	RegisterValidatorFuncBool("zero", isZero, fmt.Errorf("the value is expected to be zero"))
-	RegisterValidatorFunc("structure", ValidateStruct)
+	////// Register the validator building function based on the bool validation.
+	// isZero := func(i interface{}) bool { return reflect.ValueOf(i).IsZero() }
+	// RegisterValidatorFuncBool("zero", isZero, fmt.Errorf("the value is expected to be zero"))
+	// RegisterValidatorFunc("structure", ValidateStruct)
 
 	// Add the global symbols.
 	RegisterSymbol("v1", "a")
@@ -263,12 +262,16 @@ func ExampleBuilder() {
 		F3 struct { // Embedded Struct
 			F4 string `validate:"oneof(\"a\", \"b\")"`
 			F5 *[]int `validate:"array(min(1))"`
+			F6 int
+			F7 int `validate:"gtf(\"F3.F6\")"` // => F7 > F6
 		}
 	}
 	var v s
 	v.F2 = new(int64)
 	v.F3.F5 = &[]int{1, 2}
 	v.F3.F4 = "a"
+	v.F3.F6 = 123
+	v.F3.F7 = 456
 
 	*v.F2 = 1
 	fmt.Println(ValidateStruct(nil, v))
@@ -285,6 +288,9 @@ func ExampleBuilder() {
 
 	v.F3.F4 = "a"
 	(*v.F3.F5)[0] = 0
+	fmt.Println(ValidateStruct(nil, v))
+
+	v.F3.F6 = 789
 	fmt.Println(ValidateStruct(nil, v))
 
 	type s1 struct {
@@ -347,6 +353,7 @@ func ExampleBuilder() {
 	// F1: the string length is greater than 8
 	// F3.F4: the string 'c' is not one of [a b]
 	// F3.F5: 0th element is invalid: the integer is less than 1
+	// F3.F5: 0th element is invalid: the integer is less than 1; F3.F7: the value is not greater than the field named 'F3.F6'
 	// Fs: 0th element is invalid: F: the integer is less than 10
 	// <nil>
 	//

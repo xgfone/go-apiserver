@@ -83,6 +83,10 @@ func RegisterDefaults(b *Builder) {
 
 	// We use "structure" instead of "struct" because "struct" is the keyword in Go.
 	b.RegisterValidatorFunc("structure", b.ValidateStruct)
+	b.RegisterFunction(NewFunctionWithOneString("ltf", validator.StructFieldLess))
+	b.RegisterFunction(NewFunctionWithOneString("lef", validator.StructFieldLessEqual))
+	b.RegisterFunction(NewFunctionWithOneString("gtf", validator.StructFieldGreater))
+	b.RegisterFunction(NewFunctionWithOneString("gef", validator.StructFieldGreaterEqual))
 }
 
 func registerTimeValidator(b *Builder, name, layout string) {

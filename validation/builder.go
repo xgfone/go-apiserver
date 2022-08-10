@@ -340,6 +340,10 @@ func (b *Builder) ValidateStruct(ctx, s interface{}) error {
 		return fmt.Errorf("the value is %T, not a struct", v.Interface())
 	}
 
+	if ctx == nil {
+		ctx = v
+	}
+
 	errs := b.validateStruct(ctx, "", v, nil)
 	if len(errs) > 0 {
 		return errs
