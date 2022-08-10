@@ -217,6 +217,8 @@ func Or(validators ...Validator) Validator {
 
 // Array returns a new Validator to use the given validators to check
 // each element of the array or slice.
+//
+// The validator name is "array(validators...)".
 func Array(validators ...Validator) Validator {
 	if len(validators) == 0 {
 		panic("ArrayValidator: need at least one validator")
@@ -259,6 +261,8 @@ func Array(validators ...Validator) Validator {
 
 // MapK returns a new Validator to use the given validators to check
 // each key of the map.
+//
+// The validator name is "mapk(validators...)".
 func MapK(validators ...Validator) Validator {
 	if len(validators) == 0 {
 		panic("MapKValidator: need at least one validator")
@@ -300,6 +304,8 @@ func MapK(validators ...Validator) Validator {
 
 // MapV returns a new Validator to use the given validators to check
 // each value of the map.
+//
+// The validator rule is "mapv(validators...)".
 func MapV(validators ...Validator) Validator {
 	if len(validators) == 0 {
 		panic("MapVValidator: need at least one validator")
@@ -350,6 +356,8 @@ type KV struct {
 // each key-value pair of the map.
 //
 // The value validated by the validators is a KV.
+//
+// The validator rule is "mapkv(validators...)".
 func MapKV(validators ...Validator) Validator {
 	if len(validators) == 0 {
 		panic("MapKVValidator: need at least one validator")

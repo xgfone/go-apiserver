@@ -29,12 +29,14 @@ import (
 //   int, int8, int16, int32, int64
 //   float32, float64
 //
+// The validator rule is "ltf(fieldName)".
 func StructFieldLess(fieldName string) Validator {
 	if fieldName == "" {
 		panic("the field name must not be empty")
 	}
 
-	return NewValidator("", func(ctx, value interface{}) error {
+	rule := fmt.Sprintf("ltf(%s)", fieldName)
+	return NewValidator(rule, func(ctx, value interface{}) error {
 		if ctx == nil {
 			return fmt.Errorf("the context is nil")
 		}
@@ -63,12 +65,14 @@ func StructFieldLess(fieldName string) Validator {
 //   int, int8, int16, int32, int64
 //   float32, float64
 //
+// The validator rule is "lef(fieldName)".
 func StructFieldLessEqual(fieldName string) Validator {
 	if fieldName == "" {
 		panic("the field name must not be empty")
 	}
 
-	return NewValidator("", func(ctx, value interface{}) error {
+	rule := fmt.Sprintf("lef(%s)", fieldName)
+	return NewValidator(rule, func(ctx, value interface{}) error {
 		if ctx == nil {
 			return fmt.Errorf("the context is nil")
 		}
@@ -97,12 +101,14 @@ func StructFieldLessEqual(fieldName string) Validator {
 //   int, int8, int16, int32, int64
 //   float32, float64
 //
+// The validator rule is "gtf(fieldName)".
 func StructFieldGreater(fieldName string) Validator {
 	if fieldName == "" {
 		panic("the field name must not be empty")
 	}
 
-	return NewValidator("", func(ctx, value interface{}) error {
+	rule := fmt.Sprintf("gtf(%s)", fieldName)
+	return NewValidator(rule, func(ctx, value interface{}) error {
 		if ctx == nil {
 			return fmt.Errorf("the context is nil")
 		}
@@ -131,12 +137,14 @@ func StructFieldGreater(fieldName string) Validator {
 //   int, int8, int16, int32, int64
 //   float32, float64
 //
+// The validator rule is "gef(fieldName)".
 func StructFieldGreaterEqual(fieldName string) Validator {
 	if fieldName == "" {
 		panic("the field name must not be empty")
 	}
 
-	return NewValidator("", func(ctx, value interface{}) error {
+	rule := fmt.Sprintf("gef(%s)", fieldName)
+	return NewValidator(rule, func(ctx, value interface{}) error {
 		if ctx == nil {
 			return fmt.Errorf("the context is nil")
 		}

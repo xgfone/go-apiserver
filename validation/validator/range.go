@@ -33,6 +33,7 @@ var errNilPointer = fmt.Errorf("unexpected empty pointer")
 //   - String, Array, Slice, Map: compare the length of them
 //   - Pointer to types above
 //
+// The validator rule is "min(i)".
 func Min(i float64) Validator {
 	s := strconv.FormatFloat(i, 'f', -1, 64)
 	rule := fmt.Sprintf("min(%s)", s)
@@ -123,6 +124,7 @@ func Min(i float64) Validator {
 //   - Integer, Float: compare the value
 //   - String, Array, Slice, Map: compare the length of them
 //
+// The validator rule is "max(i)".
 func Max(i float64) Validator {
 	s := strconv.FormatFloat(i, 'f', -1, 64)
 	rule := fmt.Sprintf("max(%s)", s)
@@ -213,6 +215,8 @@ func Max(i float64) Validator {
 // Support the types as follow:
 //   - Integer, Float: compare the value
 //   - String, Array, Slice, Map: compare the length of them
+//
+// The validator rule is "ranger(smallest, biggest)".
 //
 // Notice: we use ranger instead of range because range is the keyword in Go.
 func Ranger(smallest, biggest float64) Validator {
@@ -312,6 +316,7 @@ func inRange(v, smallest, biggest float64) bool {
 //   endExp must be greater than startExp
 //   base must be greater than or equal to 2
 //
+// The validator rule is "exp(base, startExp, endExp)".
 func Exp(base, startExp, endExp int) Validator {
 	if base < 2 {
 		panic("the exp base must not be less than 2")

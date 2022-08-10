@@ -46,6 +46,8 @@ var (
 //   - xxxx.xxxx.xxxx
 //   - XXXX.XXXX.XXXX
 //   - XxXx.XxXx.XxXx
+//
+// The validator rule is "mac".
 func Mac() Validator {
 	return NewValidator("mac", func(_, i interface{}) error {
 		switch v := helper.Indirect(i).(type) {
@@ -70,6 +72,8 @@ func Mac() Validator {
 // IP returns a new Validator to chech whether the value is a valid IP.
 //
 // Support the types: string or net.IP.
+//
+// The validator rule is "ip".
 func IP() Validator {
 	return NewValidator("ip", func(_, i interface{}) error {
 		switch v := helper.Indirect(i).(type) {
@@ -101,6 +105,8 @@ func IP() Validator {
 // Cidr returns a new Validator to chech whether the value is a valid cidr.
 //
 // Support the types: string or net.IPNet.
+//
+// The validator rule is "cidr".
 func Cidr() Validator {
 	return NewValidator("cidr", func(_, i interface{}) error {
 		switch v := i.(type) {
@@ -130,6 +136,8 @@ func Cidr() Validator {
 // Addr returns a new Validator to chech whether the value is a valid HOST:PORT.
 //
 // Support the types: string.
+//
+// The validator rule is "addr".
 func Addr() Validator {
 	return NewValidator("addr", func(_, i interface{}) error {
 		switch v := helper.Indirect(i).(type) {

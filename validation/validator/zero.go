@@ -26,6 +26,8 @@ var (
 
 // Zero returns a new Validator to chech whether the value is ZERO,
 // which returns an error if the value is not ZERO.
+//
+// The validator rule is "zero".
 func Zero() Validator {
 	return NewValidator("zero", func(_, i interface{}) error {
 		if reflect.ValueOf(i).IsZero() {
@@ -37,6 +39,8 @@ func Zero() Validator {
 
 // Required returns a new Validator to chech whether a value is ZERO,
 // which returns an error if the value is ZERO.
+//
+// The validator name is "required".
 func Required() Validator {
 	return NewValidator("required", func(_, i interface{}) error {
 		if reflect.ValueOf(i).IsZero() {

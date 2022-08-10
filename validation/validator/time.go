@@ -21,6 +21,8 @@ import (
 
 // Time returns a new validator to check whether the string value conforms
 // with the given time format.
+//
+// The validator rule is "time(format)".
 func Time(format string) Validator {
 	rule := fmt.Sprintf(`time("%s")`, format)
 	return NewValidator(rule, func(_, i interface{}) error {
@@ -31,6 +33,8 @@ func Time(format string) Validator {
 
 // Duration returns a new validator to check whether the string value is
 // a valid duration validated by time.ParseDuration.
+//
+// The validator rule is "duration".
 func Duration() Validator {
 	return NewValidator("duration", func(_, i interface{}) error {
 		_, err := time.ParseDuration(i.(string))

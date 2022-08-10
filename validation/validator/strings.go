@@ -24,12 +24,16 @@ import (
 var CountString func(string) int = utf8.RuneCountInString
 
 // OneOf is equal to OneOfWithName("oneof", values...).
+//
+// The validator rule is "oneof(values...)".
 func OneOf(values ...string) Validator {
 	return OneOfWithName("oneof", values...)
 }
 
 // OneOfWithName returns a new Validator with the validator name
 // to chech whether the string value is one of the given strings.
+//
+// The validator rule is "name(values...)".
 func OneOfWithName(name string, values ...string) Validator {
 	return internal.NewOneOf(name, values...)
 }
