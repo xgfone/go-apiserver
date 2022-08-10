@@ -17,6 +17,7 @@ package handler
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/xgfone/go-apiserver/helper"
@@ -25,6 +26,9 @@ import (
 // NewSetDefaultHandler returns a handler to set the default value
 // of the struct field, which is registered into DefaultReflector
 // with the tag name "default" by default.
+//
+// If the field type is string or int64, and the tag value is like "now()"
+// or "now(layout)", set the default value of the field to the current time by helper.Now().
 func NewSetDefaultHandler() Handler { return setdefault{} }
 
 type setdefault struct{}
@@ -52,10 +56,23 @@ func (h setdefault) Run(c interface{}, r, v reflect.Value, t reflect.StructField
 	s := a.(string)
 	switch v.Kind() {
 	case reflect.String:
+		if strings.HasPrefix(s, "now(") && strings.HasSuffix(s, ")") {
+			if layout := s[4 : len(s)-1]; layout == "" {
+				s = helper.Now().Format(time.RFC3339)
+			} else {
+				s = helper.Now().Format(layout)
+			}
+		}
 		v.SetString(s)
 
+	case reflect.Int64:
+		if strings.HasPrefix(s, "now(") && strings.HasSuffix(s, ")") {
+			return helper.Set(p.Interface(), helper.Now().Unix())
+		}
+		return helper.Set(p.Interface(), s)
+
 	case reflect.Bool, reflect.Float32, reflect.Float64,
-		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return helper.Set(p.Interface(), s)
 

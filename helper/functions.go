@@ -22,6 +22,9 @@ import (
 	"time"
 )
 
+// Now is used to customize the time Now.
+var Now = time.Now
+
 // ScannerFunc is a scanner function.
 type ScannerFunc func(src interface{}) error
 

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/tools/structfield"
 )
 
@@ -29,6 +30,11 @@ func (d *defaultSetter) SetDefault(src interface{}) error {
 }
 
 func ExampleNewSetDefaultHandler() {
+	// For test
+	oldNow := helper.Now
+	helper.Now = func() time.Time { return time.Unix(1660140928, 0).UTC() }
+	defer func() { helper.Now = oldNow }()
+
 	type String string
 	type Struct struct {
 		InnerInt int `default:"123"`
@@ -53,6 +59,9 @@ func ExampleNewSetDefaultHandler() {
 		String3 string  `default:"xxx"`
 		Struct  Struct
 		Structs []Struct
+
+		TimeNowStr string `default:"now(2006-01-02T15:04:05Z)"`
+		TimeNowInt int64  `default:"now()"`
 
 		Setter      defaultSetter `default:"xyz"` // The type implementing helper.DefaultSetter
 		DurationStr time.Duration `default:"2s"`
@@ -90,6 +99,8 @@ func ExampleNewSetDefaultHandler() {
 	fmt.Println(s.Struct.InnerInt)
 	fmt.Println(s.Structs[0].InnerInt)
 	fmt.Println(s.Structs[1].InnerInt)
+	fmt.Println(s.TimeNowStr)
+	fmt.Println(s.TimeNowInt)
 	fmt.Println(s.Setter)
 	fmt.Println(s.DurationStr)
 	fmt.Println(s.TimeStr.UTC().Format(time.RFC3339))
@@ -117,6 +128,8 @@ func ExampleNewSetDefaultHandler() {
 	// 123
 	// 123
 	// 123
+	// 2022-08-10T14:15:28Z
+	// 1660140928
 	// xyz
 	// 2s
 	// 2022-07-24T22:56:28Z
