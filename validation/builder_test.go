@@ -291,6 +291,7 @@ func ExampleBuilder() {
 	fmt.Println(ValidateStruct(nil, v))
 
 	v.F3.F6 = 789
+	(*v.F3.F5)[0] = 1
 	fmt.Println(ValidateStruct(nil, v))
 
 	type s1 struct {
@@ -353,7 +354,7 @@ func ExampleBuilder() {
 	// F1: the string length is greater than 8
 	// F3.F4: the string 'c' is not one of [a b]
 	// F3.F5: 0th element is invalid: the integer is less than 1
-	// F3.F5: 0th element is invalid: the integer is less than 1; F3.F7: the value is not greater than the field named 'F3.F6'
+	// F3.F7: the value is not greater than the field named 'F3.F6'
 	// Fs: 0th element is invalid: F: the integer is less than 10
 	// <nil>
 	//
