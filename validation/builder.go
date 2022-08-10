@@ -23,6 +23,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/xgfone/go-apiserver/tools/structfield/formatter"
 	"github.com/xgfone/go-apiserver/validation/internal"
 	"github.com/xgfone/go-apiserver/validation/validator"
 	"github.com/xgfone/predicate"
@@ -102,29 +103,12 @@ func ValidateStruct(ctx, s interface{}) error {
 	return DefaultBuilder.ValidateStruct(ctx, s)
 }
 
-// LookupStructFieldNameByTags returns a function to lookup the field name
-// from the given tags.
-//
-// If failing to lookup, use the original name of the struct field.
-func LookupStructFieldNameByTags(tags ...string) func(reflect.StructField) string {
-	return func(sf reflect.StructField) string {
-		for _, tag := range tags {
-			if v := strings.TrimSpace(sf.Tag.Get(tag)); v != "" {
-				return v
-			}
-		}
-		return sf.Name
-	}
-}
-
-var lookupStructFieldName = LookupStructFieldNameByTags("json", "query")
-
 // Builder is used to build the validator based on the rule.
 type Builder struct {
-	// LookupStructFieldName is used to lookup the name of the struct field.
+	// FormatStructFieldName is used to format the name of the struct field.
 	//
-	// If nil, use LookupStructFieldNameByTags("json", "query") instead.
-	LookupStructFieldName func(reflect.StructField) string
+	// If nil, use formatter.DefaultNameFormatter instead.
+	FormatStructFieldName formatter.NameFormatter
 
 	// Symbols is used to define the global symbols,
 	// which is used by the default of GetIdentifier.
@@ -394,10 +378,10 @@ func (b *Builder) validateStruct(c interface{}, prefix string, v reflect.Value, 
 }
 
 func (b *Builder) getStructFieldName(prefix string, ft reflect.StructField) (name string) {
-	if b.LookupStructFieldName == nil {
-		name = lookupStructFieldName(ft)
+	if b.FormatStructFieldName == nil {
+		name = formatter.DefaultNameFormatter(ft)
 	} else {
-		name = b.LookupStructFieldName(ft)
+		name = b.FormatStructFieldName(ft)
 	}
 
 	if name == "" {

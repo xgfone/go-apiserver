@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/xgfone/go-apiserver/tools/structfield/formatter"
 	"github.com/xgfone/go-apiserver/validation"
 )
 
@@ -51,13 +52,11 @@ func (h validator) Run(c interface{}, r, v reflect.Value, t reflect.StructField,
 	return err
 }
 
-var lookupStructFieldName = validation.LookupStructFieldNameByTags("json", "query")
-
 func getStructFieldName(b *validation.Builder, ft reflect.StructField) (name string) {
-	if b.LookupStructFieldName == nil {
-		name = lookupStructFieldName(ft)
+	if b.FormatStructFieldName == nil {
+		name = formatter.DefaultNameFormatter(ft)
 	} else {
-		name = b.LookupStructFieldName(ft)
+		name = b.FormatStructFieldName(ft)
 	}
 
 	if name == "" {
