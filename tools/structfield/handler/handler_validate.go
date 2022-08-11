@@ -45,7 +45,7 @@ func (h validator) Run(c interface{}, r, v reflect.Value, t reflect.StructField,
 		builder = validation.DefaultBuilder
 	}
 
-	err := builder.Validate(c, v.Interface(), a.(string))
+	err := builder.Validate(r, v.Interface(), a.(string))
 	if err != nil {
 		err = fmt.Errorf("%s: %w", getStructFieldName(builder, t), err)
 	}
