@@ -263,6 +263,15 @@ func isLess(left, right interface{}, rightName string) error {
 			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
 		}
 
+	case helper.Comparer:
+		switch v := v1.Compare(right); v {
+		case -1:
+		case 0, 1:
+			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
+		default:
+			panic(fmt.Errorf("Compare returns an unknown result %d", v))
+		}
+
 	default:
 		panic(fmt.Errorf("not support the type %T", left))
 	}
@@ -361,6 +370,15 @@ func isLessEqual(left, right interface{}, rightName string) error {
 			panic(fmt.Errorf("the type is not consistent with the field named '%s'", rightName))
 		} else if !(v1.Before(v2) || v1.Equal(v2)) {
 			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
+		}
+
+	case helper.Comparer:
+		switch v := v1.Compare(right); v {
+		case -1, 0:
+		case 1:
+			return fmt.Errorf("the value is not less than or equal to the field named '%s'", rightName)
+		default:
+			panic(fmt.Errorf("Compare returns an unknown result %d", v))
 		}
 
 	default:
@@ -463,6 +481,15 @@ func isGreater(left, right interface{}, rightName string) error {
 			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
 		}
 
+	case helper.Comparer:
+		switch v := v1.Compare(right); v {
+		case 1:
+		case 0, -1:
+			return fmt.Errorf("the value is not greater than the field named '%s'", rightName)
+		default:
+			panic(fmt.Errorf("Compare returns an unknown result %d", v))
+		}
+
 	default:
 		panic(fmt.Errorf("not support the type %T", left))
 	}
@@ -561,6 +588,15 @@ func isGreaterEqual(left, right interface{}, rightName string) error {
 			panic(fmt.Errorf("the type is not consistent with the field named '%s'", rightName))
 		} else if !(v1.After(v2) || v1.Equal(v2)) {
 			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
+		}
+
+	case helper.Comparer:
+		switch v := v1.Compare(right); v {
+		case 1, 0:
+		case -1:
+			return fmt.Errorf("the value is not greater than or equal to the field named '%s'", rightName)
+		default:
+			panic(fmt.Errorf("Compare returns an unknown result %d", v))
 		}
 
 	default:

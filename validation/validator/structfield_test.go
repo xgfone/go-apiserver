@@ -17,15 +17,25 @@ package validator
 import (
 	"testing"
 	"time"
+
+	"github.com/xgfone/go-apiserver/helper"
 )
+
+type intComparer int
+
+func (i intComparer) Compare(other interface{}) int {
+	return helper.Compare(int(i), int(other.(intComparer)))
+}
 
 func TestStructFieldLess(t *testing.T) {
 	var v struct {
 		Field1 int
 		Field2 time.Time
+		Field3 intComparer
 	}
 	v.Field1 = 123
 	v.Field2 = time.Unix(123, 0)
+	v.Field3 = 123
 
 	validator1 := StructFieldLess("Field1")
 	if err := validator1.Validate(v, 100); err != nil {
@@ -48,15 +58,28 @@ func TestStructFieldLess(t *testing.T) {
 	if err := validator2.Validate(v, time.Unix(200, 0)); err == nil {
 		t.Errorf("expect an error, but got nil")
 	}
+
+	validator3 := StructFieldLess("Field3")
+	if err := validator3.Validate(v, intComparer(100)); err != nil {
+		t.Errorf("expect nil, but got an error: %v", err)
+	}
+	if err := validator3.Validate(v, intComparer(123)); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
+	if err := validator3.Validate(v, intComparer(200)); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
 }
 
 func TestStructFieldGreater(t *testing.T) {
 	var v struct {
 		Field1 int
 		Field2 time.Time
+		Field3 intComparer
 	}
 	v.Field1 = 123
 	v.Field2 = time.Unix(123, 0)
+	v.Field3 = 123
 
 	validator1 := StructFieldGreater("Field1")
 	if err := validator1.Validate(v, 200); err != nil {
@@ -79,15 +102,28 @@ func TestStructFieldGreater(t *testing.T) {
 	if err := validator2.Validate(v, time.Unix(100, 0)); err == nil {
 		t.Errorf("expect an error, but got nil")
 	}
+
+	validator3 := StructFieldGreater("Field3")
+	if err := validator3.Validate(v, intComparer(200)); err != nil {
+		t.Errorf("expect nil, but got an error: %v", err)
+	}
+	if err := validator3.Validate(v, intComparer(123)); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
+	if err := validator3.Validate(v, intComparer(100)); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
 }
 
 func TestStructFieldLessEqual(t *testing.T) {
 	var v struct {
 		Field1 int
 		Field2 time.Time
+		Field3 intComparer
 	}
 	v.Field1 = 123
 	v.Field2 = time.Unix(123, 0)
+	v.Field3 = 123
 
 	validator1 := StructFieldLessEqual("Field1")
 	if err := validator1.Validate(v, 100); err != nil {
@@ -110,15 +146,28 @@ func TestStructFieldLessEqual(t *testing.T) {
 	if err := validator2.Validate(v, time.Unix(200, 0)); err == nil {
 		t.Errorf("expect an error, but got nil")
 	}
+
+	validator3 := StructFieldLessEqual("Field3")
+	if err := validator3.Validate(v, intComparer(100)); err != nil {
+		t.Errorf("expect nil, but got an error: %v", err)
+	}
+	if err := validator3.Validate(v, intComparer(123)); err != nil {
+		t.Errorf("expect nil, but got an error: %v", err)
+	}
+	if err := validator3.Validate(v, intComparer(200)); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
 }
 
 func TestStructFieldGreaterEqual(t *testing.T) {
 	var v struct {
 		Field1 int
 		Field2 time.Time
+		Field3 intComparer
 	}
 	v.Field1 = 123
 	v.Field2 = time.Unix(123, 0)
+	v.Field3 = 123
 
 	validator1 := StructFieldGreaterEqual("Field1")
 	if err := validator1.Validate(v, 200); err != nil {
@@ -139,6 +188,17 @@ func TestStructFieldGreaterEqual(t *testing.T) {
 		t.Errorf("expect nil, but got an error: %v", err)
 	}
 	if err := validator2.Validate(v, time.Unix(100, 0)); err == nil {
+		t.Errorf("expect an error, but got nil")
+	}
+
+	validator3 := StructFieldGreaterEqual("Field3")
+	if err := validator3.Validate(v, intComparer(200)); err != nil {
+		t.Errorf("expect nil, but got an error: %v", err)
+	}
+	if err := validator3.Validate(v, intComparer(123)); err != nil {
+		t.Errorf("expect nil, but got an error: %v", err)
+	}
+	if err := validator3.Validate(v, intComparer(100)); err == nil {
 		t.Errorf("expect an error, but got nil")
 	}
 }
