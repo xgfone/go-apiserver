@@ -95,7 +95,7 @@ func StartTLS(name, addr string, handler interface{}, tlsconfig *tls.Config, for
 		log.Fatal("fail to start the server", "name", name, "addr", addr, "err", err)
 	}
 
-	atexit.Register(ep.Stop)
+	atexit.OnExit(ep.Stop)
 	ep.OnShutdown(atexit.Execute)
 	ep.SetTLSConfig(tlsconfig)
 	ep.SetTLSForce(forceTLS)
