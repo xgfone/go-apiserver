@@ -67,6 +67,8 @@ type responseWriter struct {
 
 	written    int64
 	statusCode int
+
+	wrappedWrite func(http.ResponseWriter, []byte) (int, error)
 }
 
 func (rw *responseWriter) Written() int64    { return rw.written }
@@ -99,7 +101,11 @@ func (rw *responseWriter) Write(p []byte) (n int, err error) {
 		rw.WriteHeader(http.StatusOK)
 	}
 
-	n, err = rw.ResponseWriter.Write(p)
+	if rw.wrappedWrite == nil {
+		n, err = rw.ResponseWriter.Write(p)
+	} else {
+		n, err = rw.wrappedWrite(rw.ResponseWriter, p)
+	}
 	rw.written += int64(n)
 	return
 }
@@ -109,13 +115,32 @@ func (rw *responseWriter) WriteString(s string) (n int, err error) {
 		rw.WriteHeader(http.StatusOK)
 	}
 
-	n, err = io.WriteString(rw.ResponseWriter, s)
+	if rw.wrappedWrite == nil {
+		n, err = io.WriteString(rw.ResponseWriter, s)
+	} else {
+		n, err = rw.wrappedWrite(rw.ResponseWriter, []byte(s))
+	}
 	rw.written += int64(n)
 	return
 }
 
 // NewResponseWriter returns a new ResponseWriter from http.ResponseWriter.
 func NewResponseWriter(w http.ResponseWriter) ResponseWriter {
+	return NewResponseWriterWithWriteResponse(w, nil)
+}
+
+// NewResponseWriterWithWriteFunc returns a new ResponseWriter
+// from http.ResponseWriter with the wrapped write function.
+func NewResponseWriterWithWriteFunc(w http.ResponseWriter, f func([]byte) (int, error)) ResponseWriter {
+	return NewResponseWriterWithWriteResponse(w, func(w http.ResponseWriter, b []byte) (int, error) {
+		return f(b)
+	})
+}
+
+// NewResponseWriterWithWriteResponse returns a new ResponseWriter
+// from http.ResponseWriter with the wrapped write function.
+func NewResponseWriterWithWriteResponse(w http.ResponseWriter,
+	write func(http.ResponseWriter, []byte) (int, error)) ResponseWriter {
 	switch rw := w.(type) {
 	case nil:
 		return nil
@@ -123,7 +148,7 @@ func NewResponseWriter(w http.ResponseWriter) ResponseWriter {
 		return rw
 	}
 
-	rw := &responseWriter{ResponseWriter: w}
+	rw := &responseWriter{ResponseWriter: w, wrappedWrite: write}
 
 	var index int
 	if _, ok := w.(http.CloseNotifier); ok {
