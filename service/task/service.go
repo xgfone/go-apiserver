@@ -40,6 +40,19 @@ func RunFunc(f RunnerFunc) { DefaultService.Run(f) }
 // AsyncRunFunc is eqaul to DefaultService.Run(r).
 func AsyncRunFunc(f AsyncRunnerFunc) { DefaultService.Run(f) }
 
+// WrappedRunnerFunc wraps the runner function and returns a new one
+// that runs the wrapped runner function only when service is activated.
+//
+// If service is nil, use DefaultService instead.
+func WrappedRunnerFunc(service *Service, f RunnerFunc) RunnerFunc {
+	return func(ctx context.Context) {
+		if (service == nil && DefaultService.IsActivated()) ||
+			(service != nil && service.IsActivated()) {
+			f(ctx)
+		}
+	}
+}
+
 // Runner is the task runner.
 type Runner interface {
 	Run(context.Context)
