@@ -20,14 +20,23 @@ import "io"
 type JSONString string
 
 // MarshalJSON implements the interface json.Marshaler.
-func (s JSONString) MarshalJSON() ([]byte, error) { return []byte(s), nil }
+func (s JSONString) MarshalJSON() ([]byte, error) {
+	if len(s) == 0 {
+		return []byte(`""`), nil
+	}
+	return []byte(s), nil
+}
 
 // WriteTo implements the interface io.WriterTo, which writes the string s
 // as the raw json string into w.
 func (s JSONString) WriteTo(w io.Writer) (int64, error) {
+	if len(s) == 0 {
+		s = `""`
+	}
+
 	n, err := io.WriteString(w, string(s))
 	return int64(n), err
 }
 
 // WriteJSON is the same as WriteTo, but returns nothing.
-func (s JSONString) WriteJSON(w io.Writer) { io.WriteString(w, string(s)) }
+func (s JSONString) WriteJSON(w io.Writer) { s.WriteTo(w) }
