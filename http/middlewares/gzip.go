@@ -26,26 +26,16 @@ import (
 	"github.com/xgfone/go-apiserver/nets"
 )
 
-// GZipConfig is used to configure the GZIP middleware.
-type GZipConfig struct {
-	// Level is the compression level, range [-1, 9].
-	//
-	// Default: -1 (default compression level)
-	Level int
-
-	// Domains is the host domains enabling the gzip compression.
-	// If empty, compress all the requests to all the host domains.
-	//
-	// The domain name supports the exact, prefix and suffix match. For example,
-	//   Exact:  www.example.com
-	//   Prefix: www.example.*
-	//   Suffix: *.example.com
-	//
-	// Default: nil
-	Domains []string
-}
-
 // Gzip returns a middleware to compress the response body by GZIP.
+//
+//   level is the compression level, range [-1, 9].
+//
+//   domains is the host domains enabling the gzip compression.
+//   which supports the exact, prefix and suffix match. For example,
+//     Exact:  www.example.com
+//     Prefix: www.example.*
+//     Suffix: *.example.com
+//   If empty, compress all the requests to all the host domains.
 //
 // Notice:
 //   1. the returned gzip middleware will always compress it,
@@ -55,18 +45,13 @@ type GZipConfig struct {
 //      it should be handled before compressing the response body,
 //      that's, the error handler middleware must be appended
 //      after the GZip middleware.
-func Gzip(priority int, config *GZipConfig) middleware.Middleware {
-	var conf GZipConfig
-	if config != nil {
-		conf = *config
-	}
-
-	if _, err := gzip.NewWriterLevel(nil, conf.Level); err != nil {
+func Gzip(priority, level int, domains ...string) middleware.Middleware {
+	if _, err := gzip.NewWriterLevel(nil, level); err != nil {
 		panic(err)
 	}
 
 	gpool := sync.Pool{New: func() interface{} {
-		w, _ := gzip.NewWriterLevel(nil, conf.Level)
+		w, _ := gzip.NewWriterLevel(nil, level)
 		return w
 	}}
 
@@ -80,7 +65,7 @@ func Gzip(priority int, config *GZipConfig) middleware.Middleware {
 	var exactDomains []string
 	var prefixDomains []string
 	var suffixDomains []string
-	for _, domain := range conf.Domains {
+	for _, domain := range domains {
 		if domain == "" {
 			panic("GZip: empty domain")
 		} else if strings.HasPrefix(domain, "*.") {
@@ -92,7 +77,7 @@ func Gzip(priority int, config *GZipConfig) middleware.Middleware {
 		}
 	}
 
-	noDomain := len(conf.Domains) == 0
+	noDomain := len(domains) == 0
 	matchDomain := func(host string) bool {
 		for i, _len := 0, len(exactDomains); i < _len; i++ {
 			if exactDomains[i] == host {

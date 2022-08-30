@@ -32,7 +32,7 @@ func TestGzip(t *testing.T) {
 		w.Write([]byte(expect))
 	})
 
-	gzipMiddleware := Gzip(123, nil)
+	gzipMiddleware := Gzip(123, -1)
 	handler = gzipMiddleware.Handler(handler).(http.Handler)
 
 	rec := httptest.NewRecorder()
