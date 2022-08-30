@@ -45,6 +45,6 @@ func ExampleJSONString() {
 	// Output:
 	// {"k1": "v1", "k2": 123, "k3": true}
 	// {"k1": "v1", "k2": 123, "k3": true}
-	// {"k1": "v1", "k2": 123, "k3": true}
+	// {"k1":"v1","k2":123,"k3":true}
 	// {K1:v1 K2:123 K3:true}
 }
