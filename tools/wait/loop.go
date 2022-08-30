@@ -202,3 +202,12 @@ func Until2(c context.Context, interval time.Duration, f func(context.Context)) 
 		return false, nil
 	})
 }
+
+// RunForever is a convenient function to periodically run the function f forever
+// until the context is done.
+func RunForever(c context.Context, delay, interval time.Duration, f func(context.Context)) {
+	if delay > 0 {
+		delay = Jitter(delay, 0)
+	}
+	NewJitterLoopWithStartDelay(delay, interval, true, 0.1).RunForever(c, f)
+}
