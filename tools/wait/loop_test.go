@@ -121,7 +121,7 @@ func TestJitterUntilNegativeFactor(t *testing.T) {
 }
 
 func TestJitterLoopFirst(t *testing.T) {
-	loop := NewJitterLoopWithFirstRun(true, time.Second, time.Second, true, 0.0)
+	loop := NewJitterLoopWithStartDelay(time.Second, time.Second, true, 0.0)
 
 	start := time.Now()
 	loop.Run(context.TODO(), func(ctx context.Context) (end bool, err error) {
@@ -133,14 +133,14 @@ func TestJitterLoopFirst(t *testing.T) {
 		t.Error("the first delay duration is too long")
 	}
 
-	loop.FirstInstant = false
+	loop.StartDelay = -1
 	start = time.Now()
 	loop.Run(context.TODO(), func(ctx context.Context) (end bool, err error) {
 		return true, nil
 	})
-	if duration := time.Since(start); duration < time.Second*2 {
+	if duration := time.Since(start); duration < time.Second {
 		t.Error("the run duration is too short")
-	} else if duration > time.Second*3 {
+	} else if duration > time.Second*2 {
 		t.Error("the first delay duration is too long")
 	}
 }

@@ -41,11 +41,11 @@ var _ Loop = JitterLoop{}
 
 // JitterLoop loops running the task every jittered interval duration.
 type JitterLoop struct {
-	// The delay duration to run the task first.
-	FirstDelay time.Duration
-
-	// If true, immediately run the task first without waiting for the interval.
-	FirstInstant bool
+	// The delay duration to run the task first without waiting for the interval.
+	//
+	// If 0, immediately run the task first without waiting for the interval.
+	// If negative, don't run the task before waiting for the interval.
+	StartDelay time.Duration
 
 	// The interval duration between two runs of f.
 	Interval time.Duration
@@ -59,17 +59,15 @@ type JitterLoop struct {
 	JitterFactor float64
 }
 
-// NewJitterLoop is equal to NewJitterLoopWithFirstRun(true, 0, interval, sliding, jitterFactor).
+// NewJitterLoop is equal to NewJitterLoopWithStartDelay(0, interval, sliding, jitterFactor).
 func NewJitterLoop(interval time.Duration, sliding bool, jitterFactor float64) JitterLoop {
-	return NewJitterLoopWithFirstRun(true, 0, interval, sliding, jitterFactor)
+	return NewJitterLoopWithStartDelay(0, interval, sliding, jitterFactor)
 }
 
-// NewJitterLoopWithFirstRun returns a new JitterLoop.
-func NewJitterLoopWithFirstRun(firstInstant bool, firstDelay time.Duration,
-	interval time.Duration, sliding bool, jitterFactor float64) JitterLoop {
+// NewJitterLoopWithStartDelay returns a new JitterLoop.
+func NewJitterLoopWithStartDelay(startDelay, interval time.Duration, sliding bool, jitterFactor float64) JitterLoop {
 	return JitterLoop{
-		FirstDelay:   firstDelay,
-		FirstInstant: firstInstant,
+		StartDelay:   startDelay,
 		JitterFactor: jitterFactor,
 		Interval:     interval,
 		Sliding:      sliding,
@@ -90,8 +88,8 @@ func (l JitterLoop) Run(c context.Context, r Runner) error {
 		panic("JitterLoop: the interval duration must not be negative")
 	}
 
-	if l.FirstDelay > 0 {
-		t := time.NewTimer(l.FirstDelay)
+	if l.StartDelay > 0 {
+		t := time.NewTimer(l.StartDelay)
 		select {
 		case <-t.C:
 		case <-c.Done():
@@ -120,7 +118,7 @@ func (l JitterLoop) Run(c context.Context, r Runner) error {
 
 		if !run {
 			run = true
-			if !l.FirstInstant {
+			if l.StartDelay < 0 {
 				t = time.NewTimer(interval)
 				select {
 				case <-t.C:
