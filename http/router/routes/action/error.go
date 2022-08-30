@@ -120,6 +120,11 @@ type CodeGetter interface {
 	GetCode() string
 }
 
+// MessageGetter is an interface used to get the error message.
+type MessageGetter interface {
+	GetMessage() string
+}
+
 var _ CodeGetter = Error{}
 
 // Error represents an error.
@@ -128,6 +133,8 @@ type Error struct {
 	Message   string  `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
 	Component string  `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
 	Causes    []error `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
+
+	WrappedErr error `json:"-" yaml:"-" xml:"-"`
 }
 
 // NewError returns a new Error.
@@ -150,24 +157,35 @@ func (e Error) IsCode(target string) bool { return IsCode(e.Code, target) }
 // GetCode returns the error code.
 func (e Error) GetCode() string { return e.Code }
 
+// GetMessage returns the error message.
+func (e Error) GetMessage() string {
+	if e.Message != "" {
+		return e.Message
+	} else if e.WrappedErr != nil {
+		return e.WrappedErr.Error()
+	}
+	return ""
+}
+
 // Error implements the interface error.
 func (e Error) Error() string {
-	if len(e.Message) == 0 {
-		return e.Code
+	if msg := e.GetMessage(); len(msg) > 0 {
+		return fmt.Sprintf("%s: %s", e.Code, msg)
 	}
 
-	return fmt.Sprintf("%s: %s", e.Code, e.Message)
+	return e.Code
 }
 
 // String implements the interface fmt.Stringer.
 func (e Error) String() string {
+	msg := e.GetMessage()
 	_len := len(e.Causes)
 	if _len == 0 {
 		if e.Component == "" {
-			return fmt.Sprintf("code=%s, msg=%s", e.Code, e.Message)
+			return fmt.Sprintf("code=%s, msg=%s", e.Code, msg)
 		}
 		return fmt.Sprintf("component=%s, code=%s, msg=%s",
-			e.Component, e.Code, e.Message)
+			e.Component, e.Code, msg)
 	}
 
 	_causes := make([]string, _len)
@@ -177,10 +195,10 @@ func (e Error) String() string {
 	causes := strings.Join(_causes, " |> ")
 
 	if e.Component == "" {
-		return fmt.Sprintf("code=%s, msg=%s, causes=[%s]", e.Code, e.Message, causes)
+		return fmt.Sprintf("code=%s, msg=%s, causes=[%s]", e.Code, msg, causes)
 	}
 	return fmt.Sprintf("component=%s, code=%s, msg=%s, causes=[%s]",
-		e.Component, e.Code, e.Message, causes)
+		e.Component, e.Code, msg, causes)
 }
 
 // WithCode clones itself and returns a new Error with the code.
@@ -190,9 +208,28 @@ func (e Error) WithCode(code string) Error {
 	return ne
 }
 
-// WithError is equal to e.WithMessage(err.Error()).
+// WithError clones itself and returns the new one, which will inspect
+// the error code and message from the error.
 func (e Error) WithError(err error) Error {
-	return e.WithMessage(err.Error())
+	ne := e.Clone()
+	ne.WrappedErr = err
+	switch ce := err.(type) {
+	case nil:
+	case Error:
+		ne = ce
+
+	case interface {
+		CodeGetter
+		MessageGetter
+	}:
+		ne.Code = ce.GetCode()
+		ne.Message = ce.GetMessage()
+
+	default:
+		ne.Message = err.Error()
+	}
+
+	return ne
 }
 
 // WithMessage clones itself and returns a new Error with the message.
