@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/log"
 	mw "github.com/xgfone/go-apiserver/middleware"
@@ -79,7 +80,8 @@ func LoggerWithConfig(c mw.LoggerConfig) mw.Middleware {
 			)
 
 			if logReqBody {
-				kvs = append(kvs, "reqbody", reqbody)
+				// (xgfone): We needs to check whether the reqbody is a valid raw json string??
+				kvs = append(kvs, "reqbody", helper.JSONString(reqbody))
 			}
 
 			if err != nil {
