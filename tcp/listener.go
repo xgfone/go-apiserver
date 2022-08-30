@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,9 +68,6 @@ type ForwardConnListenerConfig struct {
 	// Close is the callback function when closing the listener.
 	Close func() error
 
-	// OnShutdown is the callback function when calling the method OnShutdown.
-	OnShutdown func(context.Context)
-
 	// ConnCacheSize is the size of the connection cache.
 	//
 	// Default: runtime.NumCPU()
@@ -80,8 +77,11 @@ type ForwardConnListenerConfig struct {
 // ForwardConnListener is a listener implementing the interface Handler,
 // which accepts and returns a received connection.
 type ForwardConnListener struct {
-	onShutdown func(context.Context)
-	onClose    func() error
+	// OnShutdownFunc is the callback function when calling the method OnShutdown.
+	OnShutdownFunc func(context.Context)
+
+	// OnCloseFunc is the callback function when closing the listener.
+	OnCloseFunc func() error
 
 	addr   net.Addr
 	connch chan net.Conn
@@ -89,24 +89,17 @@ type ForwardConnListener struct {
 }
 
 // NewForwardConnListener returns a new ForwardConnListener.
-func NewForwardConnListener(localAddr net.Addr, c *ForwardConnListenerConfig) *ForwardConnListener {
-	var config ForwardConnListenerConfig
-	if c != nil {
-		config = *c
-	}
-
-	if config.ConnCacheSize < 0 {
-		config.ConnCacheSize = 0
-	} else if config.ConnCacheSize == 0 {
-		config.ConnCacheSize = runtime.NumCPU()
+//
+// If connCacheSize is less than 0, use runtime.NumCPU().
+func NewForwardConnListener(localAddr net.Addr, connCacheSize int) *ForwardConnListener {
+	if connCacheSize < 0 {
+		connCacheSize = runtime.NumCPU()
 	}
 
 	return &ForwardConnListener{
-		onShutdown: config.OnShutdown,
-		onClose:    config.Close,
-		connch:     make(chan net.Conn, config.ConnCacheSize),
-		errch:      make(chan error),
-		addr:       localAddr,
+		connch: make(chan net.Conn, connCacheSize),
+		errch:  make(chan error),
+		addr:   localAddr,
 	}
 }
 
@@ -118,8 +111,8 @@ func (l *ForwardConnListener) OnServerExit(err error) { l.errch <- err }
 
 // OnShutdown implements the interface Handler.
 func (l *ForwardConnListener) OnShutdown(ctx context.Context) {
-	if l.onShutdown != nil {
-		l.onShutdown(ctx)
+	if l.OnShutdownFunc != nil {
+		l.OnShutdownFunc(ctx)
 	}
 }
 
@@ -128,8 +121,8 @@ func (l *ForwardConnListener) Addr() net.Addr { return l.addr }
 
 // Close implements the interface net.Listener.
 func (l *ForwardConnListener) Close() (err error) {
-	if l.onClose != nil {
-		err = l.onClose()
+	if l.OnCloseFunc != nil {
+		err = l.OnCloseFunc()
 	}
 	return
 }

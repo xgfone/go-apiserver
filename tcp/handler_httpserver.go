@@ -49,9 +49,8 @@ func NewHTTPServerHandler(localAddr net.Addr, handler http.Handler) *HTTPServerH
 	h := new(HTTPServerHandler)
 	h.handler.Set(handler)
 	h.server.Store(&http.Server{Handler: h, ErrorLog: logger})
-	h.listener = NewForwardConnListener(localAddr, &ForwardConnListenerConfig{
-		OnShutdown: h.onShutdown,
-	})
+	h.listener = NewForwardConnListener(localAddr, -1)
+	h.listener.OnShutdownFunc = h.onShutdown
 
 	return h
 }
