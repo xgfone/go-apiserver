@@ -214,6 +214,17 @@ func (m *Router) GetActions() (actions []string) {
 	return
 }
 
+// RegisterContextFuncWithError is the same as RegisterContextFunc,
+// but supports to return an error.
+func (m *Router) RegisterContextFuncWithError(action string, f func(*Context) error) (ok bool) {
+	return m.RegisterFunc(action, func(w http.ResponseWriter, r *http.Request) {
+		c := GetContext(w, r)
+		if err := f(c); err != nil {
+			c.Err = err
+		}
+	})
+}
+
 // RegisterContextFunc is the same as RegisterFunc, but use Context instead.
 func (m *Router) RegisterContextFunc(action string, f func(*Context)) (ok bool) {
 	return m.RegisterFunc(action, func(w http.ResponseWriter, r *http.Request) {
