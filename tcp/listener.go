@@ -63,17 +63,6 @@ var (
 	_ net.Listener = &ForwardConnListener{}
 )
 
-// ForwardConnListenerConfig is used to
-type ForwardConnListenerConfig struct {
-	// Close is the callback function when closing the listener.
-	Close func() error
-
-	// ConnCacheSize is the size of the connection cache.
-	//
-	// Default: runtime.NumCPU()
-	ConnCacheSize int
-}
-
 // ForwardConnListener is a listener implementing the interface Handler,
 // which accepts and returns a received connection.
 type ForwardConnListener struct {
