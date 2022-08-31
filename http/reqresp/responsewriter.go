@@ -145,7 +145,9 @@ func NewResponseWriterWithWriteResponse(w http.ResponseWriter,
 	case nil:
 		return nil
 	case ResponseWriter:
-		return rw
+		if write == nil {
+			return rw
+		}
 	}
 
 	rw := &responseWriter{ResponseWriter: w, wrappedWrite: write}
