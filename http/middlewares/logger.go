@@ -29,14 +29,14 @@ import (
 	"github.com/xgfone/go-apiserver/tools/rawjson"
 )
 
-// LoggerHandler is used to handle the extra logs.
-type LoggerHandler func(http.ResponseWriter, *http.Request, []interface{}) []interface{}
+// LogKvsAppender is used to append the extra log key-value contexts.
+type LogKvsAppender func(http.ResponseWriter, *http.Request, []interface{}) []interface{}
 
 // Logger is equal to LoggerWithOptions(priority, nil).
 func Logger(priority int) middleware.Middleware { return LoggerWithOptions(priority, nil) }
 
 // LoggerWithOptions returns a new common http handler middleware to log the http request.
-func LoggerWithOptions(priority int, handler LoggerHandler, options ...logger.Option) middleware.Middleware {
+func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.Option) middleware.Middleware {
 	var config logger.Config
 	for _, opt := range options {
 		opt(&config)
@@ -121,8 +121,8 @@ func LoggerWithOptions(priority int, handler LoggerHandler, options ...logger.Op
 				"cost", cost,
 			)
 
-			if handler != nil {
-				kvs = handler(w, r, kvs)
+			if appender != nil {
+				kvs = appender(w, r, kvs)
 			}
 
 			if config.GetLogReqHeaders() {
