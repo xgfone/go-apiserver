@@ -18,14 +18,14 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	mw "github.com/xgfone/go-apiserver/middleware"
+	"github.com/xgfone/go-apiserver/middleware"
 )
 
 // ResponseWriter returns a new http handler middleware, which converts
 // http.ResponseWriter to the extended http ResponseWriter that supports
 // to get the status code of the response.
-func ResponseWriter(priority int) mw.Middleware {
-	return mw.NewMiddleware("responsewriter", priority, func(h interface{}) interface{} {
+func ResponseWriter(priority int) middleware.Middleware {
+	return middleware.NewMiddleware("responsewriter", priority, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			h.(http.Handler).ServeHTTP(reqresp.NewResponseWriter(w), r)
 		})

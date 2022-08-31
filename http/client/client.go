@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package client provides a http client, which supports switch *http.Client
+// thread-safely.
 package client
 
 import (

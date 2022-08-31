@@ -20,40 +20,81 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/log"
-	mw "github.com/xgfone/go-apiserver/middleware"
+	"github.com/xgfone/go-apiserver/middleware"
+	"github.com/xgfone/go-apiserver/middleware/logger"
+	"github.com/xgfone/go-apiserver/tools/pool"
+	"github.com/xgfone/go-apiserver/tools/rawjson"
 )
 
-// Logger is a convenient logger middleware, which is equal to
-//   LoggerWithConfig(middleware.NewLoggerConfig(priority))
-func Logger(priority int) mw.Middleware {
-	return LoggerWithConfig(mw.NewLoggerConfig(priority))
-}
+// LoggerHandler is used to handle the extra logs.
+type LoggerHandler func(http.ResponseWriter, *http.Request, []interface{}) []interface{}
 
-// LoggerWithConfig returns a new http handler middleware to log the http request.
-func LoggerWithConfig(c mw.LoggerConfig) mw.Middleware {
-	return mw.NewMiddleware("logger", c.Priority, func(h interface{}) interface{} {
+// Logger is equal to LoggerWithOptions(priority, nil).
+func Logger(priority int) middleware.Middleware { return LoggerWithOptions(priority, nil) }
+
+// LoggerWithOptions returns a new common http handler middleware to log the http request.
+func LoggerWithOptions(priority int, handler LoggerHandler, options ...logger.Option) middleware.Middleware {
+	var config logger.Config
+	for _, opt := range options {
+		opt(&config)
+	}
+
+	return middleware.NewMiddleware("logger", priority, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			logLevel := c.GetLogLevel()
+			logLevel := config.GetLogLevel()
 			if !log.Enabled(logLevel) {
 				h.(http.Handler).ServeHTTP(w, r)
 				return
 			}
 
-			var reqbody string
-			logReqBody := c.GetLogReqBody()
-			if logReqBody {
-				reqbuf := bytes.NewBuffer(nil)
-				if r.ContentLength > 0 {
-					reqbuf.Grow(int(r.ContentLength))
-					io.CopyN(reqbuf, r.Body, r.ContentLength)
-				} else {
-					io.CopyBuffer(reqbuf, r.Body, make([]byte, 2048))
+			ctx := reqresp.GetContext(w, r)
+
+			var reqBodyLen int
+			var reqBodyData string
+			logReqBodyLen := config.GetLogReqBodyLen()
+			if logReqBodyLen > 0 && (r.ContentLength <= 0 || r.ContentLength <= int64(logReqBodyLen)) {
+				reqBuf := pool.GetBuffer(logReqBodyLen)
+				defer reqBuf.Release()
+
+				_, err := io.CopyBuffer(reqBuf, r.Body, make([]byte, 1024))
+				if err != nil {
+					log.Error("fail to read the request body", "raddr", r.RemoteAddr,
+						"method", r.Method, "path", r.RequestURI, "err", err)
 				}
-				reqbody = reqbuf.String()
-				r.Body = bufferCloser{Buffer: reqbuf, Closer: r.Body}
+
+				reqBodyLen = reqBuf.Len()
+				if reqBodyLen <= logReqBodyLen {
+					reqBodyData = reqBuf.String()
+				} else {
+					logReqBodyLen = -1
+				}
+
+				defer resetReqBody(r, r.Body)
+				r.Body = bufferCloser{Buffer: reqBuf.Buffer, Closer: r.Body}
+			}
+
+			var respBuf *pool.Buffer
+			logRespBodyLen := config.GetLogRespBodyLen()
+			if logRespBodyLen > 0 {
+				respBuf = pool.GetBuffer(logRespBodyLen)
+				defer respBuf.Release()
+
+				rw := reqresp.NewResponseWriterWithWriteResponse(w,
+					func(w http.ResponseWriter, b []byte) (int, error) {
+						n, err := w.Write(b)
+						if n > 0 {
+							respBuf.Write(b[:n])
+						}
+						return n, err
+					})
+
+				if ctx != nil {
+					ctx.ResponseWriter = rw
+				}
+				w = rw
 			}
 
 			start := time.Now()
@@ -62,16 +103,17 @@ func LoggerWithConfig(c mw.LoggerConfig) mw.Middleware {
 
 			var code int
 			var err error
-			if ctx := reqresp.GetContext(w, r); ctx != nil {
+			if ctx != nil {
 				code = ctx.StatusCode()
 				err = ctx.Err
 			} else if rw, ok := w.(reqresp.ResponseWriter); ok {
 				code = rw.StatusCode()
 			}
 
-			kvs := make([]interface{}, 0, 16)
+			ikvs := pool.GetInterfaces(32)
+			kvs := ikvs.Interfaces
 			kvs = append(kvs,
-				"addr", r.RemoteAddr,
+				"raddr", r.RemoteAddr,
 				"method", r.Method,
 				"path", r.URL.Path,
 				"code", code,
@@ -79,9 +121,38 @@ func LoggerWithConfig(c mw.LoggerConfig) mw.Middleware {
 				"cost", cost,
 			)
 
-			if logReqBody {
-				// (xgfone): We needs to check whether the reqbody is a valid raw json string??
-				kvs = append(kvs, "reqbody", helper.JSONString(reqbody))
+			if handler != nil {
+				kvs = handler(w, r, kvs)
+			}
+
+			if config.GetLogReqHeaders() {
+				kvs = append(kvs, "reqheaders", r.Header)
+			}
+
+			if reqBodyLen <= logReqBodyLen {
+				kvs = append(kvs, "reqbodylen", reqBodyLen)
+
+				if header.ContentType(r.Header) == header.MIMEApplicationJSON {
+					// (xgfone): We needs to check whether reqbody is a valid raw json string??
+					kvs = append(kvs, "reqbodydata", rawjson.RawString(reqBodyData))
+				} else {
+					kvs = append(kvs, "reqbodydata", reqBodyData)
+				}
+			}
+
+			if config.GetLogRespHeaders() {
+				kvs = append(kvs, "respheaders", w.Header())
+			}
+
+			if respBuf != nil && respBuf.Len() <= logRespBodyLen {
+				kvs = append(kvs, "respbodylen", respBuf.Len())
+
+				if header.ContentType(w.Header()) == header.MIMEApplicationJSON {
+					// (xgfone): We needs to check whether respbody is a valid raw json string??
+					kvs = append(kvs, "respbodydata", rawjson.RawString(respBuf.String()))
+				} else {
+					kvs = append(kvs, "respbodydata", respBuf.String())
+				}
 			}
 
 			if err != nil {
@@ -89,6 +160,8 @@ func LoggerWithConfig(c mw.LoggerConfig) mw.Middleware {
 			}
 
 			log.Log(logLevel, 0, "log http request", kvs...)
+			ikvs.Interfaces = kvs
+			ikvs.Release()
 		})
 	})
 }
@@ -97,3 +170,5 @@ type bufferCloser struct {
 	*bytes.Buffer
 	io.Closer
 }
+
+func resetReqBody(r *http.Request, body io.ReadCloser) { r.Body = body }

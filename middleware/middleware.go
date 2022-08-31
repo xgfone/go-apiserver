@@ -15,52 +15,6 @@
 // Package middleware provides the common middleware functions for the handler.
 package middleware
 
-import "github.com/xgfone/go-apiserver/log"
-
-// Define the global logger option config.
-var (
-	LogLevel   func() int
-	LogReqBody func() bool
-)
-
-// LoggerConfig is used to configure the logger middleware.
-type LoggerConfig struct {
-	Priority   int
-	LogLevel   func() int
-	LogReqBody func() bool
-}
-
-// NewLoggerConfig returns a new LoggerConfig with the static information.
-func NewLoggerConfig(priority int) LoggerConfig {
-	return LoggerConfig{Priority: priority}
-}
-
-// GetLogLevel returns the log level.
-//
-// If the field LogLevel is nil, call the global function LogLevel instead.
-// If it's also nil, return log.LvlInfo instead.
-func (c LoggerConfig) GetLogLevel() int {
-	if c.LogLevel != nil {
-		return c.LogLevel()
-	} else if LogLevel != nil {
-		return LogLevel()
-	}
-	return log.LvlInfo
-}
-
-// GetLogReqBody reports whether to log the request body or not.
-//
-// If the field LogReqBody is nil, call the global function LogReqBody instead.
-// If it's also nil, return false instead.
-func (c LoggerConfig) GetLogReqBody() bool {
-	if c.LogReqBody != nil {
-		return c.LogReqBody()
-	} else if LogReqBody != nil {
-		return LogReqBody()
-	}
-	return false
-}
-
 // Middleware is the common handler middleware.
 type Middleware interface {
 	// Name returns the name of the middleware.
