@@ -12,16 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helper
+package rawjson
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"testing"
 )
 
-func ExampleJSONString() {
-	s := JSONString(`{"k1": "v1", "k2": 123, "k3": true}`)
+func ExampleRawBytes() {
+	s := RawBytes(` {"k1": "v1", "k2": 123, "k3": true} `)
+	bs, _ := s.MarshalJSON()
+	fmt.Println(string(bs))
 
 	buf := bytes.NewBuffer(nil)
 	s.WriteTo(buf)
@@ -44,7 +47,18 @@ func ExampleJSONString() {
 
 	// Output:
 	// {"k1": "v1", "k2": 123, "k3": true}
-	// {"k1": "v1", "k2": 123, "k3": true}
+	// {"k1":"v1","k2":123,"k3":true}
+	// {"k1":"v1","k2":123,"k3":true}
 	// {"k1":"v1","k2":123,"k3":true}
 	// {K1:v1 K2:123 K3:true}
+}
+
+func TestJSONBytes(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	_, err := RawBytes("  ").WriteTo(buf)
+	if err != nil {
+		t.Error(err)
+	} else if s := buf.String(); s != `""` {
+		t.Errorf(`expect json string %s, but got %s`, `""`, s)
+	}
 }
