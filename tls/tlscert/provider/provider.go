@@ -35,6 +35,14 @@ type Provider interface {
 	OnChangedCertificate(context.Context, tlscert.Updater)
 }
 
+// ProviderFunc is used to convert a function to a provider.
+type ProviderFunc func(context.Context, tlscert.Updater)
+
+// OnChangedCertificate implements the interface Provider.
+func (f ProviderFunc) OnChangedCertificate(c context.Context, u tlscert.Updater) {
+	f(c, u)
+}
+
 type providerWrapper struct {
 	context.CancelFunc
 	Provider
