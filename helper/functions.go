@@ -17,8 +17,11 @@ package helper
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -50,6 +53,24 @@ func Indirect(value interface{}) interface{} {
 	default:
 		return value
 	}
+}
+
+// FindCmd finds the full path of the command from the directories.
+//
+// If dirs is empty, use the environment $PATH or %PATH% instead.
+func FindCmd(cmd string, dirs ...string) string {
+	if len(dirs) == 0 {
+		dirs = strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
+	}
+
+	for _, dir := range dirs {
+		fullname := filepath.Join(dir, cmd)
+		if _, err := os.Stat(fullname); err == nil {
+			return fullname
+		}
+	}
+
+	return cmd
 }
 
 // Set does the best to set the value of dst to src.
