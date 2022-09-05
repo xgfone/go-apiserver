@@ -56,6 +56,7 @@ func Indirect(value interface{}) interface{} {
 }
 
 // FindCmd finds the full path of the command from the directories.
+// Or, return the command itself.
 //
 // If dirs is empty, use the environment $PATH or %PATH% instead.
 func FindCmd(cmd string, dirs ...string) string {

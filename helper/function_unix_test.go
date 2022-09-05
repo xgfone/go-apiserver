@@ -17,21 +17,29 @@
 
 package helper
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 func ExampleFindCmd() {
+	// Create a command file for test.
+	os.Create("/tmp/test_cmd")
+	defer os.Remove("/tmp/test_cmd")
+
 	dirs := []string{
-		"/usr/local/bin",
-		"/usr/local/sbin",
-		"/usr/bin",
-		"/usr/sbin",
 		"/bin",
 		"/sbin",
+		"/usr/bin",
+		"/usr/sbin",
+		"/usr/local/bin",
+		"/usr/local/sbin",
+		"/tmp",
 	}
 
-	cmd := FindCmd("ls", dirs...)
+	cmd := FindCmd("test_cmd", dirs...)
 	fmt.Println(cmd)
 
 	// Output:
-	// /bin/ls
+	// /tmp/test_cmd
 }
