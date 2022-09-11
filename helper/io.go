@@ -25,6 +25,9 @@ func Close(closer interface{}) (err error) {
 
 	case interface{ Close() }:
 		v.Close()
+
+	case interface{ Unwrap() error }:
+		err = Close(v.Unwrap())
 	}
 
 	return
