@@ -17,6 +17,7 @@ package binder
 import (
 	"errors"
 	"fmt"
+	"mime/multipart"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -31,7 +32,7 @@ type BindUnmarshaler interface {
 	UnmarshalBind(param string) error
 }
 
-// BindURLValues parses the data and assign to the pointer ptr to a struct.
+// BindURLValuesAndFiles parses the data and assign to the pointer ptr to a struct.
 //
 // Notice: tag is the name of the struct tag. such as "form", "query", etc.
 // If the tag value is equal to "-", ignore this field.
@@ -53,18 +54,27 @@ type BindUnmarshaler interface {
 //   - float64
 //   - time.Time     // use time.Time.UnmarshalText(), so only support RFC3339 format
 //   - time.Duration // use time.ParseDuration()
+// And any pointer to the type above, and
+//   - *multipart.FileHeader
+//   - []*multipart.FileHeader
 //   - interface { UnmarshalBind(param string) error }
-// And any pointer to the type above.
 //
-func BindURLValues(ptr interface{}, data url.Values, tag string) error {
+func BindURLValuesAndFiles(ptr interface{}, data url.Values,
+	files map[string][]*multipart.FileHeader, tag string) error {
 	value := reflect.ValueOf(ptr)
 	if value.Kind() != reflect.Ptr {
 		return fmt.Errorf("%T is not a pointer", ptr)
 	}
-	return bindURLValues(value.Elem(), data, tag)
+	return bindURLValues(value.Elem(), files, data, tag)
 }
 
-func bindURLValues(val reflect.Value, data url.Values, tag string) (err error) {
+// BindURLValues is equal to BindURLValuesAndFiles(ptr, data, nil, tag).
+func BindURLValues(ptr interface{}, data url.Values, tag string) error {
+	return BindURLValuesAndFiles(ptr, data, nil, tag)
+}
+
+func bindURLValues(val reflect.Value, files map[string][]*multipart.FileHeader,
+	data url.Values, tag string) (err error) {
 	valType := val.Type()
 	if valType.Kind() != reflect.Struct {
 		return errors.New("binding element must be a struct")
@@ -84,7 +94,7 @@ func bindURLValues(val reflect.Value, data url.Values, tag string) (err error) {
 		fieldKind := fieldValue.Kind()
 		if !fieldValue.CanSet() {
 			if field.Anonymous && fieldKind == reflect.Struct {
-				if err = bindURLValues(fieldValue, data, tag); err != nil {
+				if err = bindURLValues(fieldValue, files, data, tag); err != nil {
 					return err
 				}
 			}
@@ -92,7 +102,17 @@ func bindURLValues(val reflect.Value, data url.Values, tag string) (err error) {
 		}
 
 		inputValue, exists := data[fieldName]
-		if !exists || len(inputValue) == 0 {
+		if !exists {
+			if fhs := files[fieldName]; len(fhs) > 0 {
+				switch fieldValue.Interface().(type) {
+				case *multipart.FileHeader:
+					fieldValue.Set(reflect.ValueOf(fhs[0]))
+				case []*multipart.FileHeader:
+					fieldValue.Set(reflect.ValueOf(fhs))
+				}
+			}
+			continue
+		} else if len(inputValue) == 0 {
 			continue
 		}
 

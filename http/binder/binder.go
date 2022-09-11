@@ -18,9 +18,9 @@ package binder
 import (
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
@@ -52,6 +52,7 @@ func init() {
 	DefaultMuxBinder.Add(header.MIMEApplicationXML, XMLBinder())
 	DefaultMuxBinder.Add(header.MIMEApplicationJSON, JSONBinder())
 	DefaultMuxBinder.Add(header.MIMEApplicationForm, FormBinder(10<<20))
+	DefaultMuxBinder.Add(header.MIMEMultipartForm, FormBinder(10<<20))
 }
 
 // Binder is used to bind the data to the http request.
@@ -94,17 +95,22 @@ func XMLBinder() Binder {
 // which supports the struct tag "form".
 func FormBinder(maxMemory int64) Binder {
 	return BinderFunc(func(v interface{}, r *http.Request) (err error) {
-		ct := r.Header.Get("Content-Type")
+		switch ct := header.ContentType(r.Header); ct {
+		case header.MIMEMultipartForm:
+			err = r.ParseMultipartForm(maxMemory)
 
-		if strings.HasPrefix(ct, header.MIMEMultipartForm) {
-			if err = r.ParseMultipartForm(maxMemory); err != nil {
-				return
-			}
-		} else if err = r.ParseForm(); err != nil {
-			return err
+		case header.MIMEApplicationForm:
+			err = r.ParseForm()
+
+		default:
+			return fmt.Errorf("unsupported content-type '%s'", ct)
 		}
 
-		return BindURLValues(v, r.Form, "form")
+		if err == nil {
+			err = BindURLValuesAndFiles(v, r.Form, r.MultipartForm.File, "form")
+		}
+
+		return
 	})
 }
 
