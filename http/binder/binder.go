@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 
@@ -107,7 +108,12 @@ func FormBinder(maxMemory int64) Binder {
 		}
 
 		if err == nil {
-			err = BindURLValuesAndFiles(v, r.Form, r.MultipartForm.File, "form")
+			var fhs map[string][]*multipart.FileHeader
+			if r.MultipartForm != nil {
+				fhs = r.MultipartForm.File
+			}
+
+			err = BindURLValuesAndFiles(v, r.Form, fhs, "form")
 		}
 
 		return
