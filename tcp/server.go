@@ -25,6 +25,20 @@ import (
 	"github.com/xgfone/go-apiserver/nets"
 )
 
+var defaultCipherSuites []uint16
+
+func init() {
+	css := tls.CipherSuites()
+	defaultCipherSuites = make([]uint16, len(css))
+	for i, cs := range css {
+		defaultCipherSuites[i] = cs.ID
+	}
+}
+
+func getCipherSuites() []uint16 {
+	return append([]uint16{}, defaultCipherSuites...)
+}
+
 type tlsOption struct {
 	TLSConfig *tls.Config
 	ForceTLS  bool
@@ -53,6 +67,9 @@ func NewServer(ln net.Listener, handler Handler) *Server {
 // If tlsConfig is set and forceTLS is false, the client maybe use TLS or not-TLS.
 // If tlsConfig is not set, forceTLS is ignored and the client must use not-TLS.
 func (s *Server) SetTLSConfig(tlsConfig *tls.Config, forceTLS bool) {
+	if tlsConfig != nil && len(tlsConfig.CipherSuites) == 0 {
+		tlsConfig.CipherSuites = getCipherSuites()
+	}
 	s.tlsconf.Store(tlsOption{TLSConfig: tlsConfig, ForceTLS: forceTLS})
 }
 
