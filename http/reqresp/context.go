@@ -418,6 +418,7 @@ func (c *Context) Render(code int, name string, data interface{}) (err error) {
 //
 // Notice: herrors.Error has implements the interface http.Handler.
 func (c *Context) Error(err error) error {
+	c.Err = err
 	switch e := err.(type) {
 	case nil:
 		c.WriteHeader(200)
