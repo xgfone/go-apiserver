@@ -100,6 +100,7 @@ func StartTLS(name, addr string, handler interface{}, tlsconfig *tls.Config, for
 	ep.SetTLSConfig(tlsconfig)
 	ep.SetTLSForce(forceTLS)
 	ep.Start()
+	atexit.Wait()
 }
 
 // Start is used to rapidly start the entrypoint server.
