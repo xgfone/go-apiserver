@@ -30,19 +30,22 @@ func wrapPanic(w http.ResponseWriter, r *http.Request) {
 		log.Error("wrap a panic", "addr", r.RemoteAddr, "method", r.Method,
 			"uri", r.RequestURI, "panic", err, "stacks", stacks)
 
+		var _err error
 		switch e := err.(type) {
 		case Error:
-			GetContext(w, r).Err = e
+			_err = e
 
 		case string:
-			GetContext(w, r).Err = ErrInternalServerError.WithMessage(e)
+			_err = ErrInternalServerError.WithMessage(e)
 
 		case error:
-			GetContext(w, r).Err = ErrInternalServerError.WithMessage(e.Error())
+			_err = ErrInternalServerError.WithMessage(e.Error())
 
 		default:
-			GetContext(w, r).Err = ErrInternalServerError.WithMessage(fmt.Sprint(e))
+			_err = ErrInternalServerError.WithMessage(fmt.Sprint(e))
 		}
+
+		GetContext(w, r).UpdateError(_err)
 	}
 }
 

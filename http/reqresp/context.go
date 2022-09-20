@@ -167,7 +167,7 @@ func (h HandlerWithError) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		c.Request = r
 		defer DefaultContextAllocator.Release(c)
 	}
-	c.Err = h(c)
+	c.UpdateError(h(c))
 	handleContextResult(c)
 }
 
@@ -179,6 +179,10 @@ type ContextGetter interface {
 	// If the Context does not exist, return nil.
 	GetContext(http.ResponseWriter, *http.Request) *Context
 }
+
+// UpdateContextError is a global function to update the context error,
+// which will be used by Context.UpdateError.
+var UpdateContextError func(c *Context, err error)
 
 // Context is used to represents the context information of the request.
 type Context struct {
@@ -226,6 +230,15 @@ func NewContext(dataCapSize int) *Context {
 // GetContext implements the interface ContextGetter which returns itself.
 func (c *Context) GetContext(http.ResponseWriter, *http.Request) *Context {
 	return c
+}
+
+// UpdateError updates the context error.
+func (c *Context) UpdateError(err error) {
+	if UpdateContextError != nil {
+		UpdateContextError(c, err)
+	} else if err != nil {
+		c.Err = err
+	}
 }
 
 // Reset resets the context itself.
@@ -418,7 +431,7 @@ func (c *Context) Render(code int, name string, data interface{}) (err error) {
 //
 // Notice: herrors.Error has implements the interface http.Handler.
 func (c *Context) Error(err error) error {
-	c.Err = err
+	c.UpdateError(err)
 	switch e := err.(type) {
 	case nil:
 		c.WriteHeader(200)

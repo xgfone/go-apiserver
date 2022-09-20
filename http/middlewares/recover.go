@@ -38,7 +38,7 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, recover interface{})
 	}
 
 	if c := reqresp.GetContext(w, r); c != nil {
-		c.Err = err
+		c.UpdateError(err)
 		if !c.WroteHeader() {
 			c.Text(500, err.Error())
 		}

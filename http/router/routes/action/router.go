@@ -219,9 +219,7 @@ func (m *Router) GetActions() (actions []string) {
 func (m *Router) RegisterContextFuncWithError(action string, f func(*Context) error) (ok bool) {
 	return m.RegisterFunc(action, func(w http.ResponseWriter, r *http.Request) {
 		c := GetContext(w, r)
-		if err := f(c); err != nil {
-			c.Err = err
-		}
+		c.UpdateError(f(c))
 	})
 }
 

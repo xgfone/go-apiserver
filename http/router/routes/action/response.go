@@ -71,10 +71,7 @@ func (c *Context) Respond(response Response) {
 	} else {
 		err = c.JSON(200, response)
 	}
-
-	if err != nil && c.Err == nil {
-		c.Err = err
-	}
+	c.UpdateError(err)
 }
 
 // Success is equal to c.Respond(Response{Data: data}).
@@ -84,7 +81,7 @@ func (c *Context) Success(data interface{}) { c.Respond(Response{Data: data}) }
 //
 // If err is nil, it is equal to c.Success(nil).
 func (c *Context) Failure(err error) {
-	c.Err = err
+	c.UpdateError(err)
 
 	switch err.(type) {
 	case nil, Error:
