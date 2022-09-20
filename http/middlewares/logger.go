@@ -129,7 +129,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				kvs = append(kvs, "reqheaders", r.Header)
 			}
 
-			if reqBodyLen <= logReqBodyLen {
+			if logReqBodyLen > 0 && reqBodyLen <= logReqBodyLen {
 				kvs = append(kvs, "reqbodylen", reqBodyLen)
 
 				if header.ContentType(r.Header) == header.MIMEApplicationJSON {
