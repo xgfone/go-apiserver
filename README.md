@@ -23,7 +23,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/entrypoint"
@@ -38,15 +37,6 @@ func httpHandler(route string) http.HandlerFunc {
 		c := reqresp.GetContext(w, r)
 		fmt.Fprintf(w, "%s: %s", route, c.Data["id"])
 	}
-}
-
-// StartHTTPServer is a simple convenient function to start a http server.
-func StartHTTPServer(addr string, handler http.Handler) (err error) {
-	ep, err := entrypoint.NewEntryPoint("test", addr, handler)
-	if err == nil {
-		ep.Start()
-	}
-	return
 }
 
 func main() {
@@ -70,9 +60,8 @@ func main() {
 	router.Middlewares.Use(middlewares.Context(0)) // Add Context to support path parameters
 	router.Middlewares.Use(middlewares.Logger(1), middlewares.Recover(2))
 
-	// err := http.ListenAndServe("127.0.0.1:80", router)
-	err := StartHTTPServer("127.0.0.1:80", router)
-	log.Printf("http server shutdown: %s", err)
+	// http.ListenAndServe("127.0.0.1:80", router)
+	entrypoint.Start("127.0.0.1:80", router)
 
 	// Open a terminal and run the program:
 	// $ go run main.go
@@ -262,7 +251,6 @@ import (
 	"github.com/xgfone/go-apiserver/http/upstream"
 	"github.com/xgfone/go-apiserver/http/upstream/balancer"
 	"github.com/xgfone/go-apiserver/http/upstream/loadbalancer"
-	"github.com/xgfone/go-apiserver/log"
 )
 
 var (
@@ -278,14 +266,7 @@ func main() {
 
 	router := router.NewRouter(routeManager)
 	router.Middlewares.Use(middlewares.DefaultMiddlewares...)
-
-	ep, err := entrypoint.NewEntryPoint("api-gateway", *listenAddr, router)
-	if err != nil {
-		log.Error("fail to initialize the api-gateway entrypoint", "addr", *listenAddr)
-		return
-	}
-
-	ep.Start()
+	entrypoint.Start(*listenAddr, router)
 }
 
 func initAdminManageAPI(router *ruler.Router) {
