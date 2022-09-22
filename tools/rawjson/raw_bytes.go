@@ -20,7 +20,7 @@ import (
 	"io"
 
 	"github.com/xgfone/go-apiserver/log"
-	"github.com/xgfone/go-apiserver/tools/pool"
+	"github.com/xgfone/go-pools"
 )
 
 // RawBytes represent a raw json bytes.
@@ -44,7 +44,7 @@ func (s RawBytes) WriteTo(w io.Writer) (n int64, err error) {
 	if js := bytes.TrimSpace(s); len(js) == 0 {
 		m, err = w.Write(emptyString)
 	} else {
-		buf := pool.GetBuffer(len(js))
+		buf := pools.GetBuffer(len(js))
 		if err = json.Compact(buf.Buffer, js); err == nil {
 			m, err = w.Write(buf.Bytes())
 		}

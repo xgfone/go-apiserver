@@ -25,8 +25,8 @@ import (
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/middleware/logger"
-	"github.com/xgfone/go-apiserver/tools/pool"
 	"github.com/xgfone/go-apiserver/tools/rawjson"
+	"github.com/xgfone/go-pools"
 )
 
 // LogKvsAppender is used to append the extra log key-value contexts.
@@ -56,7 +56,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 			var reqBodyData string
 			logReqBodyLen := config.GetLogReqBodyLen()
 			if logReqBodyLen > 0 && (r.ContentLength <= 0 || r.ContentLength <= int64(logReqBodyLen)) {
-				reqBuf := pool.GetBuffer(logReqBodyLen)
+				reqBuf := pools.GetBuffer(logReqBodyLen)
 				defer reqBuf.Release()
 
 				_, err := io.CopyBuffer(reqBuf, r.Body, make([]byte, 1024))
@@ -76,10 +76,10 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				r.Body = bufferCloser{Buffer: reqBuf.Buffer, Closer: r.Body}
 			}
 
-			var respBuf *pool.Buffer
+			var respBuf *pools.Buffer
 			logRespBodyLen := config.GetLogRespBodyLen()
 			if logRespBodyLen > 0 {
-				respBuf = pool.GetBuffer(logRespBodyLen)
+				respBuf = pools.GetBuffer(logRespBodyLen)
 				defer respBuf.Release()
 
 				rw := reqresp.NewResponseWriterWithWriteResponse(w,
@@ -110,7 +110,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				code = rw.StatusCode()
 			}
 
-			ikvs := pool.GetInterfaces(32)
+			ikvs := pools.GetInterfaces(32)
 			kvs := ikvs.Interfaces
 			kvs = append(kvs,
 				"raddr", r.RemoteAddr,
