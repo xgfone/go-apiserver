@@ -55,25 +55,29 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 			var reqBodyLen int
 			var reqBodyData string
 			logReqBodyLen := config.GetLogReqBodyLen()
-			if logReqBodyLen > 0 && (r.ContentLength <= 0 || r.ContentLength <= int64(logReqBodyLen)) {
-				reqBuf := pools.GetBuffer(logReqBodyLen)
-				defer reqBuf.Release()
-
-				_, err := io.CopyBuffer(reqBuf, r.Body, make([]byte, 1024))
-				if err != nil {
-					log.Error("fail to read the request body", "raddr", r.RemoteAddr,
-						"method", r.Method, "path", r.RequestURI, "err", err)
-				}
-
-				reqBodyLen = reqBuf.Len()
-				if reqBodyLen <= logReqBodyLen {
-					reqBodyData = reqBuf.String()
-				} else {
+			if logReqBodyLen > 0 {
+				if r.ContentLength < 0 || r.ContentLength > int64(logReqBodyLen) {
 					logReqBodyLen = -1
-				}
+				} else {
+					reqBuf := pools.GetBuffer(logReqBodyLen)
+					defer reqBuf.Release()
 
-				defer resetReqBody(r, r.Body)
-				r.Body = bufferCloser{Buffer: reqBuf.Buffer, Closer: r.Body}
+					_, err := io.CopyBuffer(reqBuf, r.Body, make([]byte, 1024))
+					if err != nil {
+						log.Error("fail to read the request body", "raddr", r.RemoteAddr,
+							"method", r.Method, "path", r.RequestURI, "err", err)
+					}
+
+					reqBodyLen = reqBuf.Len()
+					if reqBodyLen <= logReqBodyLen {
+						reqBodyData = reqBuf.String()
+					} else {
+						logReqBodyLen = -1
+					}
+
+					defer resetReqBody(r, r.Body)
+					r.Body = bufferCloser{Buffer: reqBuf.Buffer, Closer: r.Body}
+				}
 			}
 
 			var respBuf *pools.Buffer
