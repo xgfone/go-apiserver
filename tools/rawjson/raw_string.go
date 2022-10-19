@@ -19,8 +19,8 @@ import (
 	"io"
 	"strings"
 
+	"github.com/xgfone/go-apiserver/internal/pools"
 	"github.com/xgfone/go-apiserver/log"
-	"github.com/xgfone/go-pools"
 )
 
 var emptyString = []byte(`""`)
@@ -46,11 +46,11 @@ func (s RawString) WriteTo(w io.Writer) (n int64, err error) {
 	if js := strings.TrimSpace(string(s)); len(js) == 0 {
 		m, err = w.Write(emptyString)
 	} else {
-		buf := pools.GetBuffer(len(js))
-		if err = json.Compact(buf.Buffer, []byte(js)); err == nil {
+		pool, buf := pools.GetBuffer(len(js))
+		if err = json.Compact(buf, []byte(js)); err == nil {
 			m, err = w.Write(buf.Bytes())
 		}
-		buf.Release()
+		pools.PutBuffer(pool, buf)
 	}
 
 	n = int64(m)

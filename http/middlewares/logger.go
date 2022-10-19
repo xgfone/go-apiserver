@@ -18,15 +18,16 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/reqresp"
+	"github.com/xgfone/go-apiserver/internal/pools"
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/middleware/logger"
 	"github.com/xgfone/go-apiserver/tools/rawjson"
-	"github.com/xgfone/go-pools"
 )
 
 // LogKvsAppender is used to append the extra log key-value contexts.
@@ -59,8 +60,8 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				if r.ContentLength < 0 || r.ContentLength > int64(logReqBodyLen) {
 					logReqBodyLen = -1
 				} else {
-					reqBuf := pools.GetBuffer(logReqBodyLen)
-					defer reqBuf.Release()
+					pool, reqBuf := pools.GetBuffer(logReqBodyLen)
+					defer pools.PutBuffer(pool, reqBuf)
 
 					_, err := io.CopyBuffer(reqBuf, r.Body, make([]byte, 1024))
 					if err != nil {
@@ -76,15 +77,16 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 					}
 
 					defer resetReqBody(r, r.Body)
-					r.Body = bufferCloser{Buffer: reqBuf.Buffer, Closer: r.Body}
+					r.Body = bufferCloser{Buffer: reqBuf, Closer: r.Body}
 				}
 			}
 
-			var respBuf *pools.Buffer
+			var respBuf *bytes.Buffer
 			logRespBodyLen := config.GetLogRespBodyLen()
 			if logRespBodyLen > 0 {
-				respBuf = pools.GetBuffer(logRespBodyLen)
-				defer respBuf.Release()
+				var pool *sync.Pool
+				pool, respBuf = pools.GetBuffer(logRespBodyLen)
+				defer pools.PutBuffer(pool, respBuf)
 
 				rw := reqresp.NewResponseWriterWithWriteResponse(w,
 					func(w http.ResponseWriter, b []byte) (int, error) {
@@ -114,7 +116,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				code = rw.StatusCode()
 			}
 
-			ikvs := pools.GetInterfaces(32)
+			ipool, ikvs := pools.GetInterfaces(32)
 			kvs := ikvs.Interfaces
 			kvs = append(kvs,
 				"raddr", r.RemoteAddr,
@@ -165,7 +167,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 
 			log.Log(logLevel, 0, "log http request", kvs...)
 			ikvs.Interfaces = kvs
-			ikvs.Release()
+			pools.PutInterfaces(ipool, ikvs)
 		})
 	})
 }
