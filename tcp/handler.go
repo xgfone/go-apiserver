@@ -17,6 +17,7 @@ package tcp
 import (
 	"context"
 	"net"
+	"sync"
 
 	"github.com/xgfone/go-apiserver/internal/atomic"
 	"github.com/xgfone/go-apiserver/log"
@@ -135,4 +136,46 @@ func (h IPWhitelistHandler) OnConnection(c net.Conn) {
 		c.Close()
 		log.Infof("client from '%s' is not allowed", ip)
 	}
+}
+
+/* ------------------------------------------------------------------------- */
+
+// NewFuncHandler returns a new handler, based on the a simple function,
+// of the tcp server.
+//
+// When the tcp server is stopped, the context is done.
+func NewFuncHandler(handler func(context.Context, net.Conn)) Handler {
+	c, cancel := context.WithCancel(context.Background())
+	return &simpleFuncHandler{Handler: handler, cancel: cancel, context: c}
+}
+
+type simpleFuncHandler struct {
+	Handler func(context.Context, net.Conn)
+
+	cancel  func()
+	context context.Context
+	wg      sync.WaitGroup
+}
+
+func (h *simpleFuncHandler) onConnection(conn net.Conn) {
+	defer h.wg.Done()
+	defer conn.Close()
+	h.Handler(h.context, conn)
+}
+func (h *simpleFuncHandler) OnConnection(conn net.Conn) {
+	h.wg.Add(1)
+	go h.onConnection(conn)
+}
+
+func (h *simpleFuncHandler) OnServerExit(err error)       { h.stop(context.TODO()) }
+func (h *simpleFuncHandler) OnShutdown(c context.Context) { h.stop(c) }
+func (h *simpleFuncHandler) stop(c context.Context) {
+	c, cancel := context.WithCancel(c)
+	go h.wait(cancel)
+	<-c.Done()
+}
+func (h *simpleFuncHandler) wait(cancel context.CancelFunc) {
+	defer cancel()
+	h.cancel()
+	h.wg.Wait()
 }
