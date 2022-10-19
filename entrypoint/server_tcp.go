@@ -23,6 +23,16 @@ import (
 	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
 
+func init() {
+	RegisterServerBuilder("tcp", func(addr string, h interface{}) (Server, error) {
+		ln, err := tcp.Listen(addr)
+		if err != nil {
+			return nil, err
+		}
+		return NewTCPServer(ln, h.(tcp.Handler)), nil
+	})
+}
+
 var _ Server = TCPServer{}
 
 // TCPServer represents a tcp entrypoint server.
