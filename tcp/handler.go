@@ -146,10 +146,10 @@ func (h IPWhitelistHandler) OnConnection(c net.Conn) {
 // When the tcp server is stopped, the context is done.
 func NewFuncHandler(handler func(context.Context, net.Conn)) Handler {
 	c, cancel := context.WithCancel(context.Background())
-	return &simpleFuncHandler{Handler: handler, cancel: cancel, context: c}
+	return &funcHandler{Handler: handler, cancel: cancel, context: c}
 }
 
-type simpleFuncHandler struct {
+type funcHandler struct {
 	Handler func(context.Context, net.Conn)
 
 	cancel  func()
@@ -157,24 +157,24 @@ type simpleFuncHandler struct {
 	wg      sync.WaitGroup
 }
 
-func (h *simpleFuncHandler) onConnection(conn net.Conn) {
+func (h *funcHandler) onConnection(conn net.Conn) {
 	defer h.wg.Done()
 	defer conn.Close()
 	h.Handler(h.context, conn)
 }
-func (h *simpleFuncHandler) OnConnection(conn net.Conn) {
+func (h *funcHandler) OnConnection(conn net.Conn) {
 	h.wg.Add(1)
 	go h.onConnection(conn)
 }
 
-func (h *simpleFuncHandler) OnServerExit(err error)       { h.stop(context.TODO()) }
-func (h *simpleFuncHandler) OnShutdown(c context.Context) { h.stop(c) }
-func (h *simpleFuncHandler) stop(c context.Context) {
+func (h *funcHandler) OnServerExit(err error)       { h.stop(context.TODO()) }
+func (h *funcHandler) OnShutdown(c context.Context) { h.stop(c) }
+func (h *funcHandler) stop(c context.Context) {
 	c, cancel := context.WithCancel(c)
 	go h.wait(cancel)
 	<-c.Done()
 }
-func (h *simpleFuncHandler) wait(cancel context.CancelFunc) {
+func (h *funcHandler) wait(cancel context.CancelFunc) {
 	defer cancel()
 	h.cancel()
 	h.wg.Wait()
