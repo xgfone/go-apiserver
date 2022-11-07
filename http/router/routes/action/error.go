@@ -77,33 +77,36 @@ var (
 	ErrBalanceInsufficient  = NewError(CodeBalanceInsufficient, "balance is insufficient")
 )
 
-// IsCode reports whether the code is equal to or the child-code of target.
+// IsCode reports whether the code is target or child of that.
 //
 // Example
 //
-//   IsCode("InstanceNotFound", "InstanceNotFound")    // => true
-//   IsCode("InstanceNotFound", "InstanceUnavailable") // => false
-//   IsCode("AuthFailure.TokenFailure", "AuthFailure") // => true
-//   IsCode("AuthFailure", "AuthFailure.TokenFailure") // => false
-//
+//	IsCode("InstanceNotFound", "")                    // => true
+//	IsCode("InstanceNotFound", "InstanceNotFound")    // => true
+//	IsCode("InstanceNotFound", "InstanceUnavailable") // => false
+//	IsCode("AuthFailure.TokenFailure", "AuthFailure") // => true
+//	IsCode("AuthFailure", "AuthFailure.TokenFailure") // => false
 func IsCode(code, target string) bool {
-	if code == target {
-		return true
-	}
-
-	minlen := len(target)
-	return len(code) > minlen && code[minlen] == '.' && code[:minlen] == target
+	mlen := len(target)
+	return mlen == 0 || code == target ||
+		(len(code) > mlen && code[mlen] == '.' && code[:mlen] == target)
 }
 
-// ErrorIsCode reports whether the code of the error is equal to or the child-code
-// of the target code.
+// ErrIsCode reports whether the code of the error is the target code
+// or the child of that.
 //
-// If err has not implemented the interface CodeGetter, return false.
-func ErrorIsCode(err error, targetCode string) bool {
-	if c, ok := err.(CodeGetter); ok {
-		return IsCode(c.GetCode(), targetCode)
+// err need to implement the interfaces IsCoder and CodeGetter. Or, return false.
+func ErrIsCode(err error, targetCode string) bool {
+	switch e := err.(type) {
+	case IsCoder:
+		return e.IsCode(targetCode)
+
+	case CodeGetter:
+		return IsCode(e.GetCode(), targetCode)
+
+	default:
+		return false
 	}
-	return false
 }
 
 // GetCode gets the error code from the error if it implements
@@ -115,14 +118,14 @@ func GetCode(err error) string {
 	return ""
 }
 
+// IsCoder is used to reports whether the error is the target code.
+type IsCoder interface {
+	IsCode(target string) bool
+}
+
 // CodeGetter is an interface used to get the error code.
 type CodeGetter interface {
 	GetCode() string
-}
-
-// MessageGetter is an interface used to get the error message.
-type MessageGetter interface {
-	GetMessage() string
 }
 
 var _ CodeGetter = Error{}
@@ -150,6 +153,9 @@ func (e Error) Clone() Error {
 	}
 	return e
 }
+
+// Unwrap unwraps the inner error.
+func (e Error) Unwrap() error { return e.WrappedErr }
 
 // IsCode is equal to IsCode(e.Code, target).
 func (e Error) IsCode(target string) bool { return IsCode(e.Code, target) }
@@ -220,10 +226,14 @@ func (e Error) WithError(err error) Error {
 
 	case interface {
 		CodeGetter
-		MessageGetter
+		GetMessage() string
 	}:
 		ne.Code = ce.GetCode()
 		ne.Message = ce.GetMessage()
+
+	case CodeGetter:
+		ne.Code = ce.GetCode()
+		ne.Message = err.Error()
 
 	default:
 		ne.Message = err.Error()

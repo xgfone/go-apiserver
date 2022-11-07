@@ -17,6 +17,10 @@ package action
 import "testing"
 
 func TestIsCode(t *testing.T) {
+	if !IsCode("InstanceNotFound", "") {
+		t.Errorf("expect the true, but got false")
+	}
+
 	if !IsCode("InstanceNotFound", "InstanceNotFound") {
 		t.Errorf("expect true, but got false")
 	}
