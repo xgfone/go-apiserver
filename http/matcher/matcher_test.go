@@ -73,7 +73,8 @@ func TestMatcher(t *testing.T) {
 	testMatcher(t, req, Must(Host("www.example.cn")), false)
 
 	// HostRegexp
-	// TODO:)
+	testMatcher(t, req, Must(HostRegexp(`.*\.example.com`)), true)
+	testMatcher(t, req, Must(HostRegexp(`.*\.example.cn`)), false)
 
 	// Path
 	testMatcher(t, req, Must(Path("/path/to/")), true)
@@ -89,7 +90,8 @@ func TestMatcher(t *testing.T) {
 	testMatcher(t, req, Must(Header("Content-Type", "application/xml")), false)
 
 	// HeaderRegexp
-	// TODO:)
+	testMatcher(t, req, Must(HeaderRegexp("Content-Type", `application/.?`)), true)
+	testMatcher(t, req, Must(HeaderRegexp("Content-Type", `.?/plain`)), false)
 
 	// Not
 	testMatcher(t, req, Not(Must(ClientIP("1.2.3.4"))), false)
