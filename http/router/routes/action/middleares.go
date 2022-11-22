@@ -22,6 +22,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/middlewares"
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/middleware"
+	"github.com/xgfone/go-apiserver/result"
 )
 
 func wrapPanic(w http.ResponseWriter, r *http.Request) {
@@ -32,17 +33,17 @@ func wrapPanic(w http.ResponseWriter, r *http.Request) {
 
 		var _err error
 		switch e := err.(type) {
-		case Error:
+		case result.Error:
 			_err = e
 
 		case string:
-			_err = ErrInternalServerError.WithMessage(e)
+			_err = result.ErrInternalServerError.WithMessage(e)
 
 		case error:
-			_err = ErrInternalServerError.WithMessage(e.Error())
+			_err = result.ErrInternalServerError.WithMessage(e.Error())
 
 		default:
-			_err = ErrInternalServerError.WithMessage(fmt.Sprint(e))
+			_err = result.ErrInternalServerError.WithMessage(fmt.Sprint(e))
 		}
 
 		GetContext(w, r).UpdateError(_err)

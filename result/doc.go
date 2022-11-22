@@ -12,28 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package action
-
-import "testing"
-
-func TestIsCode(t *testing.T) {
-	if !IsCode("InstanceNotFound", "") {
-		t.Errorf("expect the true, but got false")
-	}
-
-	if !IsCode("InstanceNotFound", "InstanceNotFound") {
-		t.Errorf("expect true, but got false")
-	}
-
-	if IsCode("InstanceNotFound", "InstanceUnavailable") {
-		t.Errorf("expect false, but got true")
-	}
-
-	if !IsCode("AuthFailure.TokenFailure", "AuthFailure") {
-		t.Errorf("expect true, but got false")
-	}
-
-	if IsCode("AuthFailure", "AuthFailure.TokenFailure") {
-		t.Errorf("expect false, but got true")
-	}
-}
+// Package result provides a common error and response.
+package result

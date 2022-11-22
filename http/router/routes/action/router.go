@@ -22,36 +22,15 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/middleware"
+	"github.com/xgfone/go-apiserver/result"
 )
+
+// HeaderAction represents the http header to store the action method.
+var HeaderAction = "X-Action"
 
 var ctxpool = sync.Pool{New: func() interface{} { return &Context{} }}
 
-// Predefine some http headers.
-var (
-	HeaderAction = "X-Action"
-)
-
-// GetContext returns the Context from the http request.
-func GetContext(w http.ResponseWriter, r *http.Request) *Context {
-	c, _ := reqresp.GetContext(w, r).Reg3.(*Context)
-	return c
-}
-
 type actionsWrapper struct{ actions map[string]http.Handler }
-
-// Context is the request context.
-type Context struct {
-	// Notice: It uses Reg3 to store the action context.
-	*reqresp.Context
-
-	// If action is empty, it represents that there is no action in the request.
-	Action  string
-	handler http.Handler
-	respond func(*Context, Response) error
-}
-
-// Reset resets the context.
-func (c *Context) Reset() { *c = Context{} }
 
 // DefaultRouter is the default global action router.
 var DefaultRouter = NewDefaultRouter()
@@ -78,7 +57,7 @@ type Router struct {
 	// which is used by the methods of Context: Respond, Success, Failure.
 	//
 	// Default: c.JSON(200, resp)
-	HandleResponse func(c *Context, resp Response) error
+	HandleResponse func(c *Context, resp result.Response) error
 
 	alock   sync.RWMutex
 	amaps   map[string]http.Handler

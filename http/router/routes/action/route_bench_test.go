@@ -18,10 +18,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/xgfone/go-apiserver/result"
 )
 
 func BenchmarkRouter(b *testing.B) {
 	router := NewRouter()
+	router.HandleResponse = func(*Context, result.Response) error { return nil }
 	router.NotFound = http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic("notfound")
 	})
@@ -35,9 +38,7 @@ func BenchmarkRouter(b *testing.B) {
 
 	b.ReportAllocs()
 	b.ResetTimer()
-
 	for i := 0; i < b.N; i++ {
-		rec.Body.Reset()
 		router.ServeHTTP(rec, req)
 	}
 }
