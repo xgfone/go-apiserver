@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2022 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,23 +52,6 @@ var (
 	ErrStatusHTTPVersionNotSupported = NewError(http.StatusHTTPVersionNotSupported)
 )
 
-// IsStatusCode reports whether the error has the given status code,
-// which gets the status code from the error by inspect whether it has
-// implemented the interface StatusCodeGetter.
-func IsStatusCode(err error, statusCode int) bool {
-	if c, ok := err.(StatusCodeGetter); ok {
-		return statusCode == c.StatusCode()
-	}
-	return false
-}
-
-// StatusCodeGetter is an interface used to get the status code.
-type StatusCodeGetter interface {
-	StatusCode() int
-}
-
-var _ StatusCodeGetter = Error{}
-
 // Error represents a server error.
 type Error struct {
 	Code int
@@ -93,18 +76,18 @@ func (e Error) Error() string {
 // Unwrap unwraps the inner error.
 func (e Error) Unwrap() error { return e.Err }
 
-// NewCT returns a new Error with the new ContentType ct.
-func (e Error) NewCT(ct string) Error { e.CT = ct; return e }
+// WithCT returns a new Error with the new content type.
+func (e Error) WithCT(contentType string) Error { e.CT = contentType; return e }
 
-// New returns a new Error with the new error.
-func (e Error) New(err error) Error { e.Err = err; return e }
+// WithErr returns a new Error with the new error.
+func (e Error) WithErr(err error) Error { e.Err = err; return e }
 
-// Newf is equal to New(fmt.Errorf(msg, args...)).
-func (e Error) Newf(msg string, args ...interface{}) Error {
+// WithMsg is equal to WithErr(fmt.Errorf(msg, args...)).
+func (e Error) WithMsg(msg string, args ...interface{}) Error {
 	if len(args) == 0 {
-		return e.New(errors.New(msg))
+		return e.WithErr(errors.New(msg))
 	}
-	return e.New(fmt.Errorf(msg, args...))
+	return e.WithErr(fmt.Errorf(msg, args...))
 }
 
 // ServeHTTP implements the interface http.Handler.
