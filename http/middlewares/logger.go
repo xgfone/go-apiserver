@@ -135,14 +135,15 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				kvs = append(kvs, "reqheaders", r.Header)
 			}
 
-			if logReqBodyLen > 0 && reqBodyLen <= logReqBodyLen {
+			if logReqBodyLen > 0 {
 				kvs = append(kvs, "reqbodylen", reqBodyLen)
-
-				if header.ContentType(r.Header) == header.MIMEApplicationJSON {
-					// (xgfone): We needs to check whether reqbody is a valid raw json string??
-					kvs = append(kvs, "reqbodydata", rawjson.RawString(reqBodyData))
-				} else {
-					kvs = append(kvs, "reqbodydata", reqBodyData)
+				if reqBodyLen <= logReqBodyLen {
+					if header.ContentType(r.Header) == header.MIMEApplicationJSON {
+						// (xgfone): We needs to check whether reqbody is a valid raw json string??
+						kvs = append(kvs, "reqbodydata", rawjson.RawString(reqBodyData))
+					} else {
+						kvs = append(kvs, "reqbodydata", reqBodyData)
+					}
 				}
 			}
 
@@ -150,14 +151,15 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				kvs = append(kvs, "respheaders", w.Header())
 			}
 
-			if respBuf != nil && respBuf.Len() <= logRespBodyLen {
+			if respBuf != nil {
 				kvs = append(kvs, "respbodylen", respBuf.Len())
-
-				if header.ContentType(w.Header()) == header.MIMEApplicationJSON {
-					// (xgfone): We needs to check whether respbody is a valid raw json string??
-					kvs = append(kvs, "respbodydata", rawjson.RawString(respBuf.String()))
-				} else {
-					kvs = append(kvs, "respbodydata", respBuf.String())
+				if respBuf.Len() <= logRespBodyLen {
+					if header.ContentType(w.Header()) == header.MIMEApplicationJSON {
+						// (xgfone): We needs to check whether respbody is a valid raw json string??
+						kvs = append(kvs, "respbodydata", rawjson.RawString(respBuf.String()))
+					} else {
+						kvs = append(kvs, "respbodydata", respBuf.String())
+					}
 				}
 			}
 

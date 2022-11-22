@@ -19,91 +19,12 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/xgfone/go-apiserver/helper"
 )
 
 // DefaultLogger is the default logger implementation.
 var DefaultLogger Logger
-
-// Pre-define some log levels, which may be assigned to the new values.
-var (
-	LvlTrace = int(0)
-	LvlDebug = int(20)
-	LvlInfo  = int(40)
-	LvlWarn  = int(60)
-	LvlError = int(80)
-	LvlAlert = int(100)
-	LvlFatal = int(126)
-)
-
-// ParseLevel parses the level string, which supports
-//   trace
-//   debug
-//   info
-//   warn
-//   error
-//   alert
-//   fatal
-// And they are case insensitive.
-func ParseLevel(s string) (level int, err error) {
-	switch strings.ToLower(s) {
-	case "trace":
-		level = LvlTrace
-	case "debug":
-		level = LvlDebug
-	case "info":
-		level = LvlInfo
-	case "warn":
-		level = LvlWarn
-	case "error":
-		level = LvlError
-	case "alert":
-		level = LvlAlert
-	case "fatal":
-		level = LvlFatal
-	default:
-		err = fmt.Errorf("unknown level '%s'", s)
-	}
-	return
-}
-
-// FormatLevel formats the level to string.
-func FormatLevel(level int) string {
-	switch level {
-	case LvlTrace:
-		return "trace"
-	case LvlDebug:
-		return "debug"
-	case LvlInfo:
-		return "info"
-	case LvlWarn:
-		return "warn"
-	case LvlError:
-		return "error"
-	case LvlAlert:
-		return "alert"
-	case LvlFatal:
-		return "fatal"
-	default:
-		if level < LvlDebug {
-			return fmt.Sprintf("trace%d", level)
-		} else if level < LvlInfo {
-			return fmt.Sprintf("debug%d", level)
-		} else if level < LvlWarn {
-			return fmt.Sprintf("info%d", level)
-		} else if level < LvlError {
-			return fmt.Sprintf("warn%d", level)
-		} else if level < LvlAlert {
-			return fmt.Sprintf("error%d", level)
-		} else if level < LvlFatal {
-			return fmt.Sprintf("alert%d", level)
-		} else {
-			return fmt.Sprintf("fatal%d", level)
-		}
-	}
-}
 
 // Logger represents a logging implementation.
 type Logger interface {
@@ -227,10 +148,11 @@ func IfErr(err error, msg string, keysAndValues ...interface{}) {
 
 // WrapPanic wraps and logs the panic, which should be called directly with defer,
 // For example,
-//   defer WrapPanic()
-//   defer WrapPanic("key1", "value1")
-//   defer WrapPanic("key1", "value1", "key2", "value2")
-//   defer WrapPanic("key1", "value1", "key2", "value2", "key3", "value3")
+//
+//	defer WrapPanic()
+//	defer WrapPanic("key1", "value1")
+//	defer WrapPanic("key1", "value1", "key2", "value2")
+//	defer WrapPanic("key1", "value1", "key2", "value2", "key3", "value3")
 func WrapPanic(kvs ...interface{}) {
 	if r := recover(); r != nil {
 		if len(kvs) == 0 {
