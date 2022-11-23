@@ -45,6 +45,9 @@ func NormalizeMac(mac string) string {
 	return ""
 }
 
+// ToIP converts any value to net.IP, but returns nil if failing.
+func ToIP(v interface{}) net.IP { return toIP(v) }
+
 // IPIsOnInterface reports whether the ip is on the given network interface
 // named ifaceName.
 //
