@@ -16,22 +16,26 @@ package result
 
 // Predefine some error codes.
 const (
-	CodeInvalidAction        = "InvalidAction"
-	CodeInvalidVersion       = "InvalidVersion"
-	CodeInvalidParams        = "InvalidParams"
+	CodeInvalidAction  = "InvalidAction"
+	CodeInvalidVersion = "InvalidVersion"
+	CodeInvalidParams  = "InvalidParams"
+	CodeInvalidAuth    = "InvalidAuth"
+
 	CodeUnsupportedProtocol  = "UnsupportedProtocol"
 	CodeUnsupportedOperation = "UnsupportedOperation"
 	CodeUnsupportedMediaType = "UnsupportedMediaType"
 
+	CodeUnauthorizedOperation = "UnauthorizedOperation"
+	CodeUnallowedOperation    = "UnallowedOperation"
+	CodeFailedOperation       = "FailedOperation"
+
 	CodeAuthFailureTokenFailure     = "AuthFailure.TokenFailure"
 	CodeAuthFailureSignatureFailure = "AuthFailure.SignatureFailure"
 	CodeAuthFailureSignatureExpire  = "AuthFailure.SignatureExpire"
-	CodeUnauthorizedOperation       = "UnauthorizedOperation"
 
-	CodeFailedOperation     = "FailedOperation"
 	CodeInternalServerError = "InternalServerError"
-	CodeGatewayTimeout      = "GatewayTimeout"
 	CodeServiceUnavailable  = "ServiceUnavailable"
+	CodeGatewayTimeout      = "GatewayTimeout"
 
 	CodeQuotaLimitExceeded   = "QuotaLimitExceeded"
 	CodeRequestLimitExceeded = "RequestLimitExceeded"
@@ -46,22 +50,26 @@ const (
 
 // Predefine some errors.
 var (
-	ErrInvalidAction        = NewError(CodeInvalidAction, "invalid action")
-	ErrInvalidVersion       = NewError(CodeInvalidVersion, "invalid version")
-	ErrInvalidParameter     = NewError(CodeInvalidParams, "invalid parameter")
+	ErrInvalidAction    = NewError(CodeInvalidAction, "invalid action")
+	ErrInvalidVersion   = NewError(CodeInvalidVersion, "invalid version")
+	ErrInvalidParameter = NewError(CodeInvalidParams, "invalid parameter")
+	ErrInvalidAuth      = NewError(CodeInvalidAuth, "invalid auth")
+
 	ErrUnsupportedProtocol  = NewError(CodeUnsupportedProtocol, "protocol is unsupported")
 	ErrUnsupportedOperation = NewError(CodeUnsupportedOperation, "operation is unsupported")
 	ErrUnsupportedMediaType = NewError(CodeUnsupportedMediaType, "media type is unsupported")
 
+	ErrUnauthorizedOperation = NewError(CodeUnauthorizedOperation, "operation is unauthorized")
+	ErrUnallowedOperation    = NewError(CodeUnallowedOperation, "operation is not allowed")
+	ErrFailedOperation       = NewError(CodeFailedOperation, "operation failed")
+
 	ErrAuthFailureTokenFailure     = NewError(CodeAuthFailureTokenFailure, "token verification failed")
 	ErrAuthFailureSignatureFailure = NewError(CodeAuthFailureSignatureFailure, "signature verification failed")
 	ErrAuthFailureSignatureExpire  = NewError(CodeAuthFailureSignatureExpire, "signature is expired")
-	ErrUnauthorizedOperation       = NewError(CodeUnauthorizedOperation, "operation is unauthorized")
 
-	ErrFailedOperation     = NewError(CodeFailedOperation, "operation failed")
 	ErrInternalServerError = NewError(CodeInternalServerError, "internal server error")
-	ErrGatewayTimeout      = NewError(CodeGatewayTimeout, "gateway timeout")
 	ErrServiceUnavailable  = NewError(CodeServiceUnavailable, "service is unavailable")
+	ErrGatewayTimeout      = NewError(CodeGatewayTimeout, "gateway timeout")
 
 	ErrQuotaLimitExceeded   = NewError(CodeQuotaLimitExceeded, "exceed the quota limit")
 	ErrRequestLimitExceeded = NewError(CodeRequestLimitExceeded, "exceed the request limit")
