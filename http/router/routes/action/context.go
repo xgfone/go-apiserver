@@ -37,7 +37,6 @@ type Context struct {
 	// If action is empty, it represents that there is no action in the request.
 	Action  string
 	handler http.Handler
-	respond func(*Context, result.Response) error
 }
 
 // Reset resets the context.
@@ -50,8 +49,8 @@ func (c *Context) Respond(response result.Response) {
 	}
 
 	var err error
-	if c.respond != nil {
-		err = c.respond(c, response)
+	if c.ResponseHandler != nil {
+		err = c.ResponseHandler(c.Context, response)
 	} else {
 		err = c.JSON(200, response)
 	}

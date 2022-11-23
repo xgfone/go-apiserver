@@ -19,12 +19,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/xgfone/go-apiserver/http/middlewares"
+	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/result"
 )
 
 func BenchmarkRouter(b *testing.B) {
+	handleResponse := func(*reqresp.Context, result.Response) error { return nil }
+
 	router := NewRouter()
-	router.HandleResponse = func(*Context, result.Response) error { return nil }
+	router.Middlewares.Use(middlewares.Response(30, handleResponse))
 	router.NotFound = http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic("notfound")
 	})

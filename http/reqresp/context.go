@@ -28,6 +28,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
 	"github.com/xgfone/go-apiserver/http/render"
+	"github.com/xgfone/go-apiserver/result"
 )
 
 type builder struct{ buf []byte }
@@ -80,15 +81,24 @@ func (a *contextAllocator) Release(c *Context) {
 // DefaultContextAllocator is the default request context allocator.
 var DefaultContextAllocator = NewContextAllocator(8)
 
-// NewContextAllocator returns a new ContextAllocator, which acquires a request
-// context from the pool and releases the request context into the pool.
+// NewContextAllocator is equal to NewContextAllocatorWithResponseHandle(dataCap, nil).
+func NewContextAllocator(dataCap int) ContextAllocator {
+	return NewContextAllocatorWithResponseHandler(dataCap, nil)
+}
+
+// NewContextAllocatorWithResponseHandler returns a new ContextAllocator,
+// which acquires a request context from the pool and releases the request
+// context into the pool.
 //
 // Notice: if Context.Any has implemented the interface { Reset() },
 // it will be called when releasing the request context.
-func NewContextAllocator(dataCap int) ContextAllocator {
+func NewContextAllocatorWithResponseHandler(dataCap int, handler ResponseHandler) ContextAllocator {
 	var alloc contextAllocator
 	alloc.ctxPool.New = func() interface{} {
-		return &Context{Data: make(map[string]interface{}, dataCap)}
+		return &Context{
+			ResponseHandler: handler,
+			Data:            make(map[string]interface{}, dataCap),
+		}
 	}
 	return &alloc
 }
@@ -184,6 +194,9 @@ type ContextGetter interface {
 // which will be used by Context.UpdateError.
 var UpdateContextError func(c *Context, err error)
 
+// ResponseHandler is used to handle the response.
+type ResponseHandler func(*Context, result.Response) error
+
 // Context is used to represents the context information of the request.
 type Context struct {
 	ResponseWriter
@@ -216,6 +229,9 @@ type Context struct {
 	//
 	// If nil, use binder.HeaderBinder instead.
 	HeaderBinder binder.Binder
+
+	// HandleResponse is used to wrap the response and handle it by itself.
+	ResponseHandler ResponseHandler
 
 	// Query and Cookies are used to cache the parsed request query and cookies.
 	Cookies []*http.Cookie
@@ -251,11 +267,12 @@ func (c *Context) Reset() {
 	}
 
 	*c = Context{
-		Data:         c.Data,
-		Renderer:     c.Renderer,
-		BodyBinder:   c.BodyBinder,
-		QueryBinder:  c.QueryBinder,
-		HeaderBinder: c.HeaderBinder,
+		Data:            c.Data,
+		Renderer:        c.Renderer,
+		BodyBinder:      c.BodyBinder,
+		QueryBinder:     c.QueryBinder,
+		HeaderBinder:    c.HeaderBinder,
+		ResponseHandler: c.ResponseHandler,
 	}
 }
 
@@ -423,11 +440,19 @@ func (c *Context) Render(code int, name string, data interface{}) (err error) {
 	return
 }
 
+// Respond forwards the calling to c.ResponseHandler.
+func (c *Context) Respond(response result.Response) {
+	if response.Error != nil {
+		c.UpdateError(response.Error)
+	}
+	c.UpdateError(c.ResponseHandler(c, response))
+}
+
 // Error sends the error as the response, and returns the sent error.
 //
-//   If err is nil, it is equal to c.WriteHeader(200).
-//   If err implements http.Handler, it is equal to err.ServeHTTP(c.ResponseWriter, c.Request).
-//   Or, it is equal to c.Text(500, err.Error()).
+//	If err is nil, it is equal to c.WriteHeader(200).
+//	If err implements http.Handler, it is equal to err.ServeHTTP(c.ResponseWriter, c.Request).
+//	Or, it is equal to c.Text(500, err.Error()).
 //
 // Notice: herrors.Error has implements the interface http.Handler.
 func (c *Context) Error(err error) error {

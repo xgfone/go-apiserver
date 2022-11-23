@@ -22,7 +22,6 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/middleware"
-	"github.com/xgfone/go-apiserver/result"
 )
 
 // HeaderAction represents the http header to store the action method.
@@ -52,12 +51,6 @@ type Router struct {
 	//
 	// Default: c.Failure(ErrInvalidAction)
 	NotFound http.Handler
-
-	// HandleResponse is used to wrap the response and handle it by itself,
-	// which is used by the methods of Context: Respond, Success, Failure.
-	//
-	// Default: c.JSON(200, resp)
-	HandleResponse func(c *Context, resp result.Response) error
 
 	alock   sync.RWMutex
 	amaps   map[string]http.Handler
@@ -135,7 +128,6 @@ func (m *Router) respond(action string, handler http.Handler,
 	}
 
 	c.handler = handler
-	c.respond = m.HandleResponse
 	m.Middlewares.ServeHTTP(ctx.ResponseWriter, ctx.Request)
 	if !c.WroteHeader() {
 		if c.Err == nil {
