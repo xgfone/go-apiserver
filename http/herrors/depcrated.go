@@ -14,27 +14,19 @@
 
 package herrors
 
-import (
-	"errors"
-	"fmt"
-)
-
 // NewCT is alias of WithCT.
 //
 // Deprecated! Please use WithCT.
-func (e Error) NewCT(ct string) Error { e.CT = ct; return e }
+func (e Error) NewCT(ct string) Error { return e.WithCT(ct) }
 
 // New is alias of WithErr.
 //
 // Deprecated! Please use WithErr.
-func (e Error) New(err error) Error { e.Err = err; return e }
+func (e Error) New(err error) Error { return e.WithErr(err) }
 
-// Newf is alias of WithErr.
+// Newf is alias of WithMsg.
 //
 // Deprecated! Please use WithMsg.
 func (e Error) Newf(msg string, args ...interface{}) Error {
-	if len(args) == 0 {
-		return e.New(errors.New(msg))
-	}
-	return e.New(fmt.Errorf(msg, args...))
+	return e.WithMsg(msg, args...)
 }
