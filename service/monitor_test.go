@@ -38,8 +38,8 @@ func ExampleMonitor() {
 	// Activate the monitor.
 	monitor.Activate()
 
-	time.Sleep(time.Millisecond * 10) // Wait that the monitor to check the vip.
-	fmt.Println(isActivated())        // The service is activated.
+	time.Sleep(time.Millisecond * 100) // Wait that the monitor to check the vip.
+	fmt.Println(isActivated())         // The service is activated.
 
 	// Deactivate the monitor.
 	monitor.Deactivate()

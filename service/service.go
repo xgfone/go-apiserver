@@ -27,6 +27,9 @@ func NewService(activate, deactivate func()) Service {
 	return serviceImpl{activate: activate, deactivate: deactivate}
 }
 
+// NothingService returns a nothing service, which does nothing.
+func NothingService() Service { return NewService(func() {}, func() {}) }
+
 // Service represents a non-blocking service interface.
 type Service interface {
 	// Activate is used to activate the service to work in the background,
