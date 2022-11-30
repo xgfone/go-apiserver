@@ -23,34 +23,35 @@ func init() { RegisterDefaults(DefaultBuilder) }
 //
 // The registered default symbols:
 //
-//   timelayout: 15:04:05
-//   datelayout: 2006-01-02
-//   datetimelayout: 2006-01-02 15:04:05
+//	timelayout: 15:04:05
+//	datelayout: 2006-01-02
+//	datetimelayout: 2006-01-02 15:04:05
 //
 // The Signature of the registered validator functions as follow:
 //
-//   ip() or ip
-//   mac() or mac
-//   addr() or addr
-//   cidr() or cidr
-//   zero() or zero
-//   duration() or duration
-//   required() or required
-//   structure() or structure
-//   exp(base, startExp, endExp int)
-//   min(float64)
-//   max(float64)
-//   ranger(min, max float64)
-//   time(formatLayout string)
-//   oneof(...string)
-//   array(...Validator)
-//   mapkv(...Validator)
-//   mapk(...Validator)
-//   mapv(...Validator)
-//   timeformat() or timeformat => time(timelayout)
-//   dateformat() or dateformat => time(datelayout)
-//   datetimeformat() or datetimeformat => time(datetimelayout)
-//
+//	ip() or ip
+//	mac() or mac
+//	addr() or addr
+//	cidr() or cidr
+//	zero() or zero
+//	isinteger() or isinteger
+//	isnumber() or isnumber
+//	duration() or duration
+//	required() or required
+//	structure() or structure
+//	exp(base, startExp, endExp int)
+//	min(float64)
+//	max(float64)
+//	ranger(min, max float64)
+//	time(formatLayout string)
+//	oneof(...string)
+//	array(...Validator)
+//	mapkv(...Validator)
+//	mapk(...Validator)
+//	mapv(...Validator)
+//	timeformat() or timeformat => time(timelayout)
+//	dateformat() or dateformat => time(datelayout)
+//	datetimeformat() or datetimeformat => time(datetimelayout)
 func RegisterDefaults(b *Builder) {
 	b.RegisterSymbol("timelayout", "15:04:05")
 	b.RegisterSymbol("datelayout", "2006-01-02")
@@ -61,6 +62,8 @@ func RegisterDefaults(b *Builder) {
 
 	b.RegisterFunction(NewFunctionWithoutArgs("zero", validator.Zero))
 	b.RegisterFunction(NewFunctionWithoutArgs("required", validator.Required))
+	b.RegisterFunction(NewFunctionWithoutArgs("isnumber", validator.IsNumber))
+	b.RegisterFunction(NewFunctionWithoutArgs("isinteger", validator.IsInteger))
 
 	b.RegisterFunction(NewFunctionWithoutArgs("ip", validator.IP))
 	b.RegisterFunction(NewFunctionWithoutArgs("mac", validator.Mac))

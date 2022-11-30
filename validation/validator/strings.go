@@ -15,8 +15,11 @@
 package validator
 
 import (
+	"errors"
+	"strconv"
 	"unicode/utf8"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/validation/internal"
 )
 
@@ -36,4 +39,31 @@ func OneOf(values ...string) Validator {
 // The validator rule is "name(values...)".
 func OneOfWithName(name string, values ...string) Validator {
 	return internal.NewOneOf(name, values...)
+}
+
+var (
+	errStrNotNumber  = errors.New("the string is not a number")
+	errStrNotInteger = errors.New("the string is not an integer")
+)
+
+// IsNumber returns a new validator to check whether the string value is
+// a number, such as an integer or float.
+func IsNumber() Validator {
+	return NewValidator("isnumber", func(_, value interface{}) error {
+		if _, err := strconv.ParseFloat(value.(string), 64); err != nil {
+			return errStrNotNumber
+		}
+		return nil
+	})
+}
+
+// IsInteger returns a new validator to check whether the string value is
+// an integer.
+func IsInteger() Validator {
+	return NewValidator("isinteger", func(_, value interface{}) error {
+		if helper.IsInteger(value.(string)) {
+			return nil
+		}
+		return errStrNotInteger
+	})
 }
