@@ -28,3 +28,11 @@ func NewContextWithValue(c context.Context, key string, value interface{}) conte
 func GetContextValue(c context.Context, key string) (value interface{}) {
 	return c.Value(contextKeyType(key))
 }
+
+// ContextCancelWithReason is the same context.WithCancel, but the cancel
+// function receives an error reason.
+func ContextCancelWithReason(parent context.Context) (context.Context, func(reason error)) {
+	c := new(cancelContext)
+	c.Context, c.CancelFunc = context.WithCancel(parent)
+	return c, c.cancel
+}
