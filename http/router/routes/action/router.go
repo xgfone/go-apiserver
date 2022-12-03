@@ -89,14 +89,12 @@ func (m *Router) Route(w http.ResponseWriter, r *http.Request, notFound http.Han
 	}
 
 	var ok bool
-	var h http.Handler
 	if len(ctx.Action) > 0 {
-		h, ok = m.actions.Load().(actionsWrapper).actions[ctx.Action]
+		ctx.Handler, ok = m.actions.Load().(actionsWrapper).actions[ctx.Action]
 	}
 
 	switch true {
 	case ok:
-		ctx.Handler = h
 	case notFound != nil:
 		ctx.Handler = notFound
 	case m.NotFound != nil:
