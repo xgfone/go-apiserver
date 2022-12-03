@@ -26,13 +26,6 @@ import (
 	"github.com/xgfone/go-apiserver/middleware"
 )
 
-type rmFunc func(http.ResponseWriter, *http.Request, http.Handler)
-
-func (f rmFunc) ServeHTTP(http.ResponseWriter, *http.Request) {}
-func (f rmFunc) Route(w http.ResponseWriter, r *http.Request, no http.Handler) {
-	f(w, r, no)
-}
-
 func logMiddleware(buf *bytes.Buffer, name string, prio int) middleware.Middleware {
 	return middleware.NewMiddleware(name, prio, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -45,21 +38,17 @@ func logMiddleware(buf *bytes.Buffer, name string, prio int) middleware.Middlewa
 
 func TestRouter(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	router := NewRouter(rmFunc(func(w http.ResponseWriter, r *http.Request, no http.Handler) {
+	router := NewRouter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && r.URL.Path == "/path1" {
 			w.WriteHeader(201)
 			fmt.Fprintln(buf, "handler")
 		} else {
-			no.ServeHTTP(w, r)
+			w.WriteHeader(204)
+			fmt.Fprintln(buf, "notfound")
 		}
 	}))
 
 	router.Middlewares.Use(logMiddleware(buf, "log1", 1), logMiddleware(buf, "log2", 2))
-	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(204)
-		fmt.Fprintln(buf, "notfound")
-	})
-
 	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/path1", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)

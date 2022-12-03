@@ -69,7 +69,7 @@ func (m *Router) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	m.Route(resp, req, m.NotFound)
 }
 
-// Route implements the interface router.RouteManager.
+// Route is the same ServeHTTP, but support to provide a NotFound handler.
 func (m *Router) Route(w http.ResponseWriter, r *http.Request, notFound http.Handler) {
 	if route, ok := m.MatchRoute(w, r); ok {
 		route.ServeHTTP(w, r)

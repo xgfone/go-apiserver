@@ -16,61 +16,94 @@ package middlewares
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/middleware"
+	"github.com/xgfone/go-apiserver/result"
 )
 
+// DefaultPanicHandler is the global default panic handler.
+var DefaultPanicHandler PanicHandler
+
 // PanicHandler is used to handle the panic.
-var PanicHandler func(w http.ResponseWriter, r *http.Request, recover interface{})
+//
+// If returning true, no longer continue to do something.
+// Or, do extra something, for example, log the panic, etc.
+type PanicHandler func(w http.ResponseWriter, r *http.Request, recover interface{}) (done bool)
 
-func init() { PanicHandler = defaultHandler }
-func defaultHandler(w http.ResponseWriter, r *http.Request, recover interface{}) {
-	var err error
-	if e, ok := recover.(error); ok {
-		err = e
-	} else {
-		err = fmt.Errorf("panic: %v", recover)
-	}
-
-	if c := reqresp.GetContext(w, r); c != nil {
-		c.UpdateError(err)
-		if !c.WroteHeader() {
-			c.Text(500, err.Error())
-		}
-	} else {
-		if rw, ok := w.(reqresp.ResponseWriter); ok && !rw.WroteHeader() {
-			rw.WriteHeader(500)
-			io.WriteString(rw, err.Error())
-		}
-	}
+// Recover is equal to RecoverWithHandler(priority, nil).
+func Recover(priority int) middleware.Middleware {
+	return RecoverWithHandler(priority, nil)
 }
 
-// Recover returns a new http handler middleware, which is used to wrap
-// and recover the panic.
-func Recover(priority int) middleware.Middleware {
+// RecoverWithHandler returns a new http handler middleware with the panic
+// handler, which is used to wrap and recover the panic.
+//
+// If handler is nil, use the global DefaultPanicHandler instead.
+// If DefaultPanicHandler is also nil, use the inner default handler,
+// which will respond with the status code 500.
+func RecoverWithHandler(priority int, handler PanicHandler) middleware.Middleware {
 	return middleware.NewMiddleware("recover", priority, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			defer wrapPanic(w, r)
+			defer wrapPanic(w, r, handler)
 			h.(http.Handler).ServeHTTP(w, r)
 		})
 	})
 }
 
-func wrapPanic(w http.ResponseWriter, r *http.Request) {
+func wrapPanic(w http.ResponseWriter, r *http.Request, handler PanicHandler) {
 	if e := recover(); e != nil {
-		if PanicHandler != nil {
-			PanicHandler(w, r, e)
+		var ok bool
+		if handler != nil {
+			ok = handler(w, r, e)
+		} else if DefaultPanicHandler != nil {
+			ok = DefaultPanicHandler(w, r, e)
 		} else {
-			defaultHandler(w, r, e)
+			ok = defaultHandler(w, r, e)
 		}
 
-		stacks := helper.GetCallStack(helper.RecoverStackSkip)
-		log.Error("wrap a panic", "addr", r.RemoteAddr, "method", r.Method,
-			"uri", r.RequestURI, "panic", e, "stacks", stacks)
+		if !ok {
+			stacks := helper.GetCallStack(helper.RecoverStackSkip)
+			log.Error("wrap a panic", "addr", r.RemoteAddr, "method", r.Method,
+				"uri", r.RequestURI, "panic", e, "stacks", stacks)
+		}
 	}
+}
+
+func defaultHandler(w http.ResponseWriter, r *http.Request, recover interface{}) bool {
+	var rw reqresp.ResponseWriter
+	c := reqresp.GetContext(w, r)
+	if c != nil {
+		rw = c.ResponseWriter
+	} else if _rw, ok := w.(reqresp.ResponseWriter); ok {
+		rw = _rw
+	} else {
+		return false
+	}
+
+	if !rw.WroteHeader() {
+		if c == nil || c.Action == "" {
+			rw.WriteHeader(500)
+			fmt.Fprint(rw, recover)
+		} else {
+			var rerr result.Error
+			switch err := recover.(type) {
+			case result.Error:
+				rerr = err
+
+			case error:
+				rerr = result.ErrInternalServerError.WithError(err)
+
+			default:
+				rerr = result.ErrInternalServerError.WithMessage("%v", err)
+			}
+
+			c.Respond(result.Response{Error: rerr})
+		}
+	}
+
+	return false
 }

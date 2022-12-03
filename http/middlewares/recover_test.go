@@ -55,7 +55,7 @@ func TestRecover(t *testing.T) {
 
 	expects := []string{
 		"github.com/xgfone/go-apiserver/http/middlewares/recover_test.go:func1:33",
-		"github.com/xgfone/go-apiserver/http/middlewares/recover.go:1:59",
+		"github.com/xgfone/go-apiserver/http/middlewares/recover.go:1:52",
 		"github.com/xgfone/go-apiserver/http/middlewares/recover_test.go:TestRecover:38",
 	}
 

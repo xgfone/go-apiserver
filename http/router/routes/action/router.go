@@ -21,26 +21,28 @@ import (
 	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/middleware"
+	"github.com/xgfone/go-apiserver/result"
 )
 
 // HeaderAction represents the http header to store the action method.
 var HeaderAction = "X-Action"
 
-var ctxpool = sync.Pool{New: func() interface{} { return &Context{} }}
-
 type actionsWrapper struct{ actions map[string]http.Handler }
 
+func notFoundHandler(resp http.ResponseWriter, req *http.Request) {
+	c := reqresp.GetContext(resp, req)
+	if len(c.Action) == 0 {
+		c.Failure(result.ErrInvalidAction.WithMessage("missing the action"))
+	} else {
+		c.Failure(result.ErrInvalidAction.WithMessage("action '%s' is unsupported", c.Action))
+	}
+}
+
 // DefaultRouter is the default global action router.
-var DefaultRouter = NewDefaultRouter()
+var DefaultRouter = NewRouter()
 
 // Router is used to manage the routes based on the action service.
 type Router struct {
-	// Middlewares is used to manage the middlewares of the action handlers,
-	// which will wrap the handlers of all the actions and take effect
-	// after finding the action and before the action handler is executed.
-	Middlewares *middleware.Manager
-
 	// GetAction is used to get the action name from the http request.
 	//
 	// Default: HeaderAction
@@ -49,7 +51,7 @@ type Router struct {
 	// NotFound is used when the manager is used as http.Handler
 	// and does not find the route.
 	//
-	// Default: c.Failure(ErrInvalidAction)
+	// Default: c.Failure(result.ErrInvalidAction)
 	NotFound http.Handler
 
 	alock   sync.RWMutex
@@ -61,17 +63,7 @@ type Router struct {
 func NewRouter() *Router {
 	r := &Router{amaps: make(map[string]http.Handler, 16)}
 	r.NotFound = http.HandlerFunc(notFoundHandler)
-	r.Middlewares = middleware.NewManager(nil)
-	r.Middlewares.SetHandler(http.HandlerFunc(r.serveHTTP))
 	r.updateActions()
-	return r
-}
-
-// NewDefaultRouter returns a new default router, which is the same as NewRouter,
-// but also adds the middlewares Logger(10) and Recover(20).
-func NewDefaultRouter() *Router {
-	r := NewRouter()
-	r.Middlewares.Use(Logger(10), Recover(20))
 	return r
 }
 
@@ -82,32 +74,6 @@ func (m *Router) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 // Route implements the interface router.RouteManager.
 func (m *Router) Route(w http.ResponseWriter, r *http.Request, notFound http.Handler) {
-	var action string
-	if m.GetAction != nil {
-		action = m.GetAction(r)
-	} else {
-		action = r.Header.Get(HeaderAction)
-	}
-
-	var ok bool
-	var h http.Handler
-	if len(action) > 0 {
-		h, ok = m.actions.Load().(actionsWrapper).actions[action]
-	}
-
-	if ok {
-		m.respond(action, h, w, r)
-	} else if notFound != nil {
-		m.respond(action, notFound, w, r)
-	} else if m.NotFound != nil {
-		m.respond(action, m.NotFound, w, r)
-	} else {
-		m.respond(action, http.HandlerFunc(notFoundHandler), w, r)
-	}
-}
-
-func (m *Router) respond(action string, handler http.Handler,
-	w http.ResponseWriter, r *http.Request) {
 	ctx := reqresp.GetContext(w, r)
 	if ctx == nil {
 		ctx = reqresp.DefaultContextAllocator.Acquire()
@@ -116,35 +82,33 @@ func (m *Router) respond(action string, handler http.Handler,
 		defer reqresp.DefaultContextAllocator.Release(ctx)
 	}
 
-	c, ok := ctx.Reg3.(*Context)
-	if ok {
-		c.Action = action
+	if m.GetAction != nil {
+		ctx.Action = m.GetAction(r)
 	} else {
-		c = ctxpool.Get().(*Context)
-		c.Context = ctx
-		c.Action = action
-		ctx.Reg3 = c
-		defer releaseContext(c)
+		ctx.Action = r.Header.Get(HeaderAction)
 	}
 
-	c.handler = handler
-	m.Middlewares.ServeHTTP(ctx.ResponseWriter, ctx.Request)
-	if !c.WroteHeader() {
-		if c.Err == nil {
-			c.Success(nil)
-		} else {
-			c.Failure(c.Err)
-		}
+	var ok bool
+	var h http.Handler
+	if len(ctx.Action) > 0 {
+		h, ok = m.actions.Load().(actionsWrapper).actions[ctx.Action]
 	}
-}
 
-func releaseContext(c *Context) {
-	c.Reset()
-	ctxpool.Put(c)
-}
+	switch true {
+	case ok:
+		ctx.Handler = h
+	case notFound != nil:
+		ctx.Handler = notFound
+	case m.NotFound != nil:
+		ctx.Handler = m.NotFound
+	default:
+		ctx.Handler = http.HandlerFunc(notFoundHandler)
+	}
 
-func (m *Router) serveHTTP(w http.ResponseWriter, r *http.Request) {
-	GetContext(w, r).handler.ServeHTTP(w, r)
+	ctx.Handler.ServeHTTP(ctx.ResponseWriter, ctx.Request)
+	if !ctx.WroteHeader() {
+		ctx.Failure(ctx.Err)
+	}
 }
 
 /* ------------------------------------------------------------------------- */
@@ -187,17 +151,17 @@ func (m *Router) GetActions() (actions []string) {
 
 // RegisterContextFuncWithError is the same as RegisterContextFunc,
 // but supports to return an error.
-func (m *Router) RegisterContextFuncWithError(action string, f func(*Context) error) (ok bool) {
+func (m *Router) RegisterContextFuncWithError(action string, f reqresp.HandlerWithError) (ok bool) {
 	return m.RegisterFunc(action, func(w http.ResponseWriter, r *http.Request) {
-		c := GetContext(w, r)
+		c := reqresp.GetContext(w, r)
 		c.UpdateError(f(c))
 	})
 }
 
 // RegisterContextFunc is the same as RegisterFunc, but use Context instead.
-func (m *Router) RegisterContextFunc(action string, f func(*Context)) (ok bool) {
+func (m *Router) RegisterContextFunc(action string, f reqresp.Handler) (ok bool) {
 	return m.RegisterFunc(action, func(w http.ResponseWriter, r *http.Request) {
-		f(GetContext(w, r))
+		f(reqresp.GetContext(w, r))
 	})
 }
 

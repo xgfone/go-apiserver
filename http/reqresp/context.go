@@ -210,6 +210,11 @@ type Context struct {
 	Reg3 interface{}            // The register to save the temporary context value.
 	Data map[string]interface{} // A set of any key-value data
 
+	// The extra context information, which may be used by some middlewares
+	// or services, such as the action router.
+	Action  string
+	Handler http.Handler
+
 	// Render the content to the client.
 	//
 	// If nil, use render.DefaultRenderer instead.
@@ -440,12 +445,37 @@ func (c *Context) Render(code int, name string, data interface{}) (err error) {
 	return
 }
 
-// Respond forwards the calling to c.ResponseHandler.
+// Respond forwards the calling to c.ResponseHandler if it is set.
+// Or, it is equal to c.JSON(200, response).
 func (c *Context) Respond(response result.Response) {
 	if response.Error != nil {
 		c.UpdateError(response.Error)
 	}
-	c.UpdateError(c.ResponseHandler(c, response))
+
+	var err error
+	if c.ResponseHandler != nil {
+		err = c.ResponseHandler(c, response)
+	} else {
+		err = c.JSON(200, response)
+	}
+
+	c.UpdateError(err)
+}
+
+// Success is equal to c.Respond(result.Response{Data: data}).
+func (c *Context) Success(data interface{}) {
+	c.Respond(result.Response{Data: data})
+}
+
+// Failure is the same as c.Respond(result.Response{Error: err})
+// if err is not nil. Or, it is equal to c.Success(nil).
+func (c *Context) Failure(err error) {
+	switch err.(type) {
+	case nil, result.Error:
+	default:
+		err = result.ErrInternalServerError.WithError(err)
+	}
+	c.Respond(result.Response{Error: err})
 }
 
 // Error sends the error as the response, and returns the sent error.

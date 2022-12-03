@@ -29,8 +29,8 @@ func TestActionRoute(t *testing.T) {
 		reqresp.GetContext(w, r).WriteHeader(204)
 	})
 
-	router.RegisterContextFunc("Test1", func(c *Context) { c.WriteHeader(201) })
-	router.RegisterContextFunc("Test2", func(c *Context) { c.WriteHeader(202) })
+	router.RegisterContextFunc("Test1", func(c *reqresp.Context) { c.WriteHeader(201) })
+	router.RegisterContextFunc("Test2", func(c *reqresp.Context) { c.WriteHeader(202) })
 
 	if actions := router.GetActions(); len(actions) != 2 {
 		t.Errorf("expect '%d' actions, but got '%d': %v", 2, len(actions), actions)

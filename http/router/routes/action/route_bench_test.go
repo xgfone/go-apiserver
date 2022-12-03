@@ -18,6 +18,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/xgfone/go-apiserver/http/reqresp"
 )
 
 func BenchmarkRouter(b *testing.B) {
@@ -26,8 +28,8 @@ func BenchmarkRouter(b *testing.B) {
 		panic("notfound")
 	})
 
-	router.RegisterContextFunc("Test1", func(c *Context) {})
-	router.RegisterContextFunc("Test2", func(c *Context) {})
+	router.RegisterContextFunc("Test1", func(*reqresp.Context) {})
+	router.RegisterContextFunc("Test2", func(*reqresp.Context) {})
 
 	req := httptest.NewRequest("GET", "http://127.0.0.1", nil)
 	req.Header.Set(HeaderAction, "Test1")

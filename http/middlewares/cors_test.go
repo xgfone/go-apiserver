@@ -28,7 +28,7 @@ func ExampleCORS() {
 	router.DefaultRouter.Middlewares.Use(middlewares.CORS(123, nil))
 
 	// Use the rule router to manage the routes, which has been done by default.
-	router.DefaultRouter.RouteManager = ruler.DefaultRouter
+	router.DefaultRouter.Router = ruler.DefaultRouter
 
 	// Add the routes
 	ruler.DefaultRouter.Path("/path/to/1").GET(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

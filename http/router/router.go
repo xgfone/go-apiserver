@@ -18,7 +18,6 @@ package router
 import (
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/middlewares"
 	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
 	"github.com/xgfone/go-apiserver/middleware"
@@ -27,44 +26,31 @@ import (
 // DefaultRouter is the default global router.
 var DefaultRouter = NewDefaultRouter(ruler.DefaultRouter)
 
-// RouteManager is used to manage the routes.
-type RouteManager interface {
-	Route(resp http.ResponseWriter, req *http.Request, notFound http.Handler)
-}
-
-// Router is the http router to dispatch the request to the different handlers
-// by the route rule matcher.
+// Router is a http router that manages all the http middlewares uniformly.
 type Router struct {
 	// Middlewares is used to manage the middlewares and takes effect
-	// before the route manager routes the request.
+	// before routing the request.
 	Middlewares *middleware.Manager
 
-	// NotFound is used when no route is found.
-	NotFound http.Handler
-
-	// RouteManager is used to manage the routes.
-	//
-	// If implementing the interface RouteManager, use the method Route
-	// with NotFound instead of ServeHTTP.
-	RouteManager http.Handler
+	// Router is used to manage the routes.
+	Router http.Handler
 }
 
 // NewRouter returns a new Router with the route manager.
-func NewRouter(routeManager http.Handler) *Router {
+func NewRouter(router http.Handler) *Router {
 	r := &Router{
-		RouteManager: routeManager,
-		Middlewares:  middleware.NewManager(nil),
-		NotFound:     handler.Handler404,
+		Router:      router,
+		Middlewares: middleware.NewManager(nil),
 	}
 
 	r.Middlewares.SetHandler(http.HandlerFunc(r.serveHTTP))
 	return r
 }
 
-// NewDefaultRouter returns a new default router, which is the same as NewRouter,
-// but also adds the middlewares Context(1) and DefaultMiddlewares.
-func NewDefaultRouter(routeManager http.Handler) *Router {
-	r := NewRouter(routeManager)
+// NewDefaultRouter is the same as NewRouter, but also adds the default
+// middlewares, that's middlewares.DefaultMiddlewares.
+func NewDefaultRouter(router http.Handler) *Router {
+	r := NewRouter(router)
 	r.Middlewares.Use(middlewares.DefaultMiddlewares...)
 	return r
 }
@@ -75,9 +61,5 @@ func (r *Router) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) serveHTTP(resp http.ResponseWriter, req *http.Request) {
-	if m, ok := r.RouteManager.(RouteManager); ok {
-		m.Route(resp, req, r.NotFound)
-	} else {
-		r.RouteManager.ServeHTTP(resp, req)
-	}
+	r.Router.ServeHTTP(resp, req)
 }

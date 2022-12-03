@@ -127,6 +127,10 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				"cost", cost,
 			)
 
+			if ctx != nil && ctx.Action != "" {
+				kvs = append(kvs, "action", ctx.Action)
+			}
+
 			if appender != nil {
 				kvs = appender(w, r, kvs)
 			}
