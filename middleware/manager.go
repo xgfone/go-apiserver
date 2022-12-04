@@ -118,6 +118,16 @@ func (m *Manager) ResetMiddlewares(mws ...Middleware) {
 	m.lock.Unlock()
 }
 
+// UpsertMiddlewares adds or updates the middlewares.
+func (m *Manager) UpsertMiddlewares(mws ...Middleware) {
+	m.lock.Lock()
+	for _, mw := range mws {
+		m.maps[mw.Name()] = mw
+	}
+	m.updateMiddlewares()
+	m.lock.Unlock()
+}
+
 // AddMiddleware adds the middleware.
 func (m *Manager) AddMiddleware(mw Middleware) (err error) {
 	name := mw.Name()
@@ -162,9 +172,13 @@ func (m *Manager) GetMiddlewares() Middlewares {
 }
 
 // WrapHandler uses the inner middlewares to wrap the given handler.
-func (m *Manager) WrapHandler(handler interface{}) interface{} {
+func (m *Manager) WrapHandler(handler interface{}) (wrappedHandler interface{}) {
 	return m.GetMiddlewares().Handler(handler)
 }
+
+// WrappedHandler returns the handler that is wrapped and handled
+// by the middlewares.
+func (m *Manager) WrappedHandler() interface{} { return m.getHandler() }
 
 func (m *Manager) getHandler() interface{} {
 	return m.handler.Load().(handlerWrapper).Handler
