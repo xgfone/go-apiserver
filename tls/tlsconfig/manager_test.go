@@ -37,21 +37,13 @@ func (u testUpdater) DelTLSConfig(name string) {
 	fmt.Fprintf(u.buf, "delete the tls config named '%s'\n", name)
 }
 
-type setter struct {
-	buf *bytes.Buffer
-}
-
-func (s setter) SetTLSConfig(*tls.Config) {
-	s.buf.WriteString("set tls config\n")
-}
-
 func TestManager(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	m := NewManager()
+	updaters := NewNamedUpdaters()
+	updaters.AddUpdater("updater1", testUpdater{buf})
 
+	m := NewManager(updaters)
 	m.AddTLSConfig("tlsconfig1", new(tls.Config))
-	m.AddUpdater("updater1", testUpdater{buf})
-	m.AddUpdater("updater2", NewSetterUpdater("tlsconfig1", setter{buf}))
 	m.AddTLSConfig("tlsconfig2", new(tls.Config))
 	m.DelTLSConfig("tlsconfig1")
 
@@ -60,7 +52,6 @@ func TestManager(t *testing.T) {
 		"add the tls config named 'tlsconfig1'",
 		"add the tls config named 'tlsconfig2'",
 		"delete the tls config named 'tlsconfig1'",
-		"set tls config",
 		"",
 	}
 

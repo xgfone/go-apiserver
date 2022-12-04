@@ -17,27 +17,49 @@ package tlsconfig
 
 import (
 	"crypto/tls"
-	"fmt"
 	"sync"
+	"sync/atomic"
 )
 
 // DefaultManager is the default tls.Config manager.
-var DefaultManager = NewManager()
+var DefaultManager = NewManager(nil)
 
-// Updater is used to add or delete the TLS config.
-type Updater interface {
-	AddTLSConfig(name string, config *tls.Config)
-	DelTLSConfig(name string)
-}
+type updaterWraper struct{ Updater }
 
 // Manager is used to manage a set of tls.Config.
 type Manager struct {
-	configs  sync.Map
-	updaters sync.Map
+	configs sync.Map
+	updater atomic.Value
 }
 
 // NewManager returns a new TLS config manager.
-func NewManager() *Manager { return &Manager{} }
+func NewManager(updater Updater) *Manager {
+	m := &Manager{}
+	m.updater.Store(updaterWraper{updater})
+	return m
+}
+
+func (m *Manager) updaterAddTLSConfig(name string, config *tls.Config) {
+	if updater := m.GetUpdater(); updater != nil {
+		updater.AddTLSConfig(name, config)
+	}
+}
+
+func (m *Manager) updaterDelCertificate(name string) {
+	if updater := m.GetUpdater(); updater != nil {
+		updater.DelTLSConfig(name)
+	}
+}
+
+// SetUpdater resets the tls config updater.
+func (m *Manager) SetUpdater(updater Updater) {
+	m.updater.Store(updaterWraper{updater})
+}
+
+// GetUpdater returns the tls config updater.
+func (m *Manager) GetUpdater() Updater {
+	return m.updater.Load().(updaterWraper).Updater
+}
 
 // GetTLSConfigs returns all the tls configs.
 func (m *Manager) GetTLSConfigs() map[string]*tls.Config {
@@ -73,10 +95,7 @@ func (m *Manager) AddTLSConfig(name string, config *tls.Config) {
 	}
 
 	m.configs.Store(name, config)
-	m.updaters.Range(func(_, value interface{}) bool {
-		value.(Updater).AddTLSConfig(name, config)
-		return true
-	})
+	m.updaterAddTLSConfig(name, config)
 }
 
 // DelTLSConfig deletes the tls config by the given name.
@@ -86,61 +105,5 @@ func (m *Manager) DelTLSConfig(name string) {
 	}
 
 	m.configs.Delete(name)
-	m.updaters.Range(func(_, value interface{}) bool {
-		value.(Updater).DelTLSConfig(name)
-		return true
-	})
-}
-
-// GetUpdaters returns all the updaters.
-func (m *Manager) GetUpdaters() map[string]Updater {
-	updaters := make(map[string]Updater, 32)
-	m.updaters.Range(func(key, value interface{}) bool {
-		updaters[key.(string)] = value.(Updater)
-		return true
-	})
-	return updaters
-}
-
-// GetUpdater returns the updater by the name.
-//
-// Return nil if the updater does not exist.
-func (m *Manager) GetUpdater(name string) Updater {
-	if name == "" {
-		panic("the tls config updater name is empty")
-	}
-
-	if value, ok := m.updaters.Load(name); ok {
-		return value.(Updater)
-	}
-	return nil
-}
-
-// AddUpdater adds the updater with the name.
-func (m *Manager) AddUpdater(name string, updater Updater) (err error) {
-	if name == "" {
-		panic("the tls config updater name is empty")
-	}
-	if updater == nil {
-		panic("the tls config updater is nil")
-	}
-
-	if _, loaded := m.updaters.LoadOrStore(name, updater); loaded {
-		err = fmt.Errorf("the tls config updater named '%s' has been added", name)
-	} else {
-		m.configs.Range(func(key, value interface{}) bool {
-			updater.AddTLSConfig(key.(string), value.(*tls.Config))
-			return true
-		})
-	}
-
-	return
-}
-
-// DelUpdater deletes the updater by the name.
-func (m *Manager) DelUpdater(name string) {
-	if name == "" {
-		panic("the tls config updater name is empty")
-	}
-	m.updaters.Delete(name)
+	m.updaterDelCertificate(name)
 }

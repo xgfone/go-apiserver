@@ -183,7 +183,7 @@ func main() {
 	// Initialize the certificate.
 	var tlsconfig *tls.Config
 	if *keyFile != "" && *certFile != "" {
-		config := tls2.NewServerConfig(nil, "tlsfile")
+		config := tls2.NewServerConfig(nil)
 		tlsconfig = config.GetTLSConfig()
 
 		// Use the file provider to monitor the change of the certificate files.

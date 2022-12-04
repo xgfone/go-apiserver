@@ -15,6 +15,7 @@
 package tlscert
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/xgfone/go-apiserver/helper"
@@ -23,15 +24,20 @@ import (
 
 func TestManager(t *testing.T) {
 	cert, _ := NewCertificate([]byte(test.Cert), []byte(test.Key))
+	filter := func(prefix string) func(string) bool {
+		return func(s string) bool { return strings.HasPrefix(s, prefix) }
+	}
 
-	cm1 := NewManager()
-	cm2 := NewManager()
+	cm1 := NewManager(nil)
+	cm2 := NewManager(nil)
 
-	m := NewManager()
-	m.AddUpdater("cm1", PrefixUpdater("cm1@", cm1))
+	updaters := NewNamedUpdaters()
+	updaters.AddUpdater("cm1", FilterUpdater(cm1, filter("cm1@")))
+	updaters.AddUpdater("cm2", FilterUpdater(cm2, filter("cm2@")))
+
+	m := NewManager(updaters)
 	m.AddCertificate("cm1@name", cert)
 	m.AddCertificate("cm2@name", cert)
-	m.AddUpdater("cm2", PrefixUpdater("cm2@", cm2))
 
 	checkCerts(t, "t1", cm1.GetCertificates(), []string{"cm1@name"})
 	checkCerts(t, "t2", cm2.GetCertificates(), []string{"cm2@name"})

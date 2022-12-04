@@ -28,20 +28,13 @@ func TestClientConfig(t *testing.T) {
 	cert, _ := tlscert.NewCertificate([]byte(test.Cert), []byte(test.Key))
 	buf := bytes.NewBuffer(nil)
 	c := NewClientConfig(nil)
-	c.AddCertNames("certname")
 	c.OnChangedTLSConfig(func(*tls.Config) { buf.WriteString("update tls.Config\n") })
 
 	c.AddCertificate("certname", cert)
-	c.AddCertificate("certname2", cert)
-	c.AddTLSConfig("config", new(tls.Config))
-
-	c.SetConfigName("config")
-	c.AddTLSConfig("config", new(tls.Config))
-	c.AddTLSConfig("config2", new(tls.Config))
+	c.SetTLSConfig(new(tls.Config))
 
 	results := strings.Split(buf.String(), "\n")
 	test.CheckStrings(t, "TestClientConfig", results, []string{
-		"update tls.Config",
 		"update tls.Config",
 		"update tls.Config",
 		"",
@@ -52,20 +45,13 @@ func TestServerConfig(t *testing.T) {
 	cert, _ := tlscert.NewCertificate([]byte(test.Cert), []byte(test.Key))
 	buf := bytes.NewBuffer(nil)
 	c := NewServerConfig(nil)
-	c.AddCertNames("certname")
 	c.OnChangedTLSConfig(func(*tls.Config) { buf.WriteString("update tls.Config\n") })
 
 	c.AddCertificate("certname", cert)
-	c.AddCertificate("certname2", cert)
-	c.AddTLSConfig("config", new(tls.Config))
-
-	c.SetConfigName("config")
-	c.AddTLSConfig("config", new(tls.Config))
-	c.AddTLSConfig("config2", new(tls.Config))
+	c.SetTLSConfig(new(tls.Config))
 
 	results := strings.Split(buf.String(), "\n")
 	test.CheckStrings(t, "TestServerConfig", results, []string{
-		"update tls.Config",
 		"update tls.Config",
 		"",
 	})

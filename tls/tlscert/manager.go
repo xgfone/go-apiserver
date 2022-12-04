@@ -22,27 +22,50 @@ import (
 )
 
 // DefaultManager is the default certificate manager.
-var DefaultManager = NewManager()
+var DefaultManager = NewManager(nil)
 
 var _ Updater = &Manager{}
 
 type certsWrapper struct{ Certs []Certificate }
+type updaterWraper struct{ Updater }
 
 // Manager is used to manage a set of the certificates,
 // which implements the interface Updater.
 type Manager struct {
-	clock sync.RWMutex
-	cmaps map[string]Certificate
-	certs atomic.Value
-
-	updaters sync.Map
+	clock   sync.RWMutex
+	cmaps   map[string]Certificate
+	certs   atomic.Value
+	updater atomic.Value
 }
 
 // NewManager returns a new certificate manager.
-func NewManager() *Manager {
-	cm := &Manager{cmaps: make(map[string]Certificate, 8)}
-	cm.certs.Store(certsWrapper{})
-	return cm
+func NewManager(updater Updater) *Manager {
+	m := &Manager{cmaps: make(map[string]Certificate, 8)}
+	m.updater.Store(updaterWraper{updater})
+	m.certs.Store(certsWrapper{})
+	return m
+}
+
+func (m *Manager) updaterAddCertificate(name string, cert Certificate) {
+	if updater := m.GetUpdater(); updater != nil {
+		updater.AddCertificate(name, cert)
+	}
+}
+
+func (m *Manager) updaterDelCertificate(name string) {
+	if updater := m.GetUpdater(); updater != nil {
+		updater.DelCertificate(name)
+	}
+}
+
+// SetUpdater resets the certificate updater.
+func (m *Manager) SetUpdater(updater Updater) {
+	m.updater.Store(updaterWraper{updater})
+}
+
+// GetUpdater returns the certificate updater.
+func (m *Manager) GetUpdater() Updater {
+	return m.updater.Load().(updaterWraper).Updater
 }
 
 // GetCertificates returns all the certificates.
@@ -75,17 +98,11 @@ func (m *Manager) AddCertificate(name string, cert Certificate) {
 	}
 
 	m.clock.Lock()
+	defer m.clock.Unlock()
 	if old, ok := m.cmaps[name]; !ok || !old.IsEqual(cert) {
 		m.cmaps[name] = cert
 		m.updateCertificates()
-		m.clock.Unlock()
-
-		m.updaters.Range(func(_, value interface{}) bool {
-			value.(Updater).AddCertificate(name, cert)
-			return true
-		})
-	} else {
-		m.clock.Unlock()
+		m.updaterAddCertificate(name, cert)
 	}
 }
 
@@ -97,17 +114,11 @@ func (m *Manager) DelCertificate(name string) {
 	}
 
 	m.clock.Lock()
+	defer m.clock.Unlock()
 	if _, ok := m.cmaps[name]; ok {
 		delete(m.cmaps, name)
 		m.updateCertificates()
-		m.clock.Unlock()
-
-		m.updaters.Range(func(_, value interface{}) bool {
-			value.(Updater).DelCertificate(name)
-			return true
-		})
-	} else {
-		m.clock.Unlock()
+		m.updaterDelCertificate(name)
 	}
 }
 
@@ -147,59 +158,4 @@ func (m *Manager) GetTLSCertificates() (certificates []tls.Certificate) {
 		certificates[i] = *certs[i].TLSCert
 	}
 	return
-}
-
-// AddUpdater adds the certificate updater with the name.
-//
-// The updater will be called when to add or delete the certificate.
-func (m *Manager) AddUpdater(name string, updater Updater) error {
-	if name == "" {
-		panic("the certificate updater name is empty")
-	} else if updater == nil {
-		panic("the certificate updater is nil")
-	}
-
-	if _, loaded := m.updaters.LoadOrStore(name, updater); loaded {
-		return fmt.Errorf("the certificate updater named '%s' has been added", name)
-	}
-
-	m.clock.RLock()
-	defer m.clock.RUnlock()
-	for name, cert := range m.cmaps {
-		updater.AddCertificate(name, cert)
-	}
-
-	return nil
-}
-
-// DelUpdater deletes the certificate updater by the name.
-func (m *Manager) DelUpdater(name string) {
-	if name == "" {
-		panic("the certificate updater name is empty")
-	}
-	m.updaters.Delete(name)
-}
-
-// GetUpdater returns the certificate updater by the name.
-//
-// Return nil if the certificate updater does not exist.
-func (m *Manager) GetUpdater(name string) Updater {
-	if name == "" {
-		panic("the certificate updater name is empty")
-	}
-
-	if value, ok := m.updaters.Load(name); ok {
-		return value.(Updater)
-	}
-	return nil
-}
-
-// GetUpdaters returns all the certificate updaters.
-func (m *Manager) GetUpdaters() map[string]Updater {
-	updaters := make(map[string]Updater)
-	m.updaters.Range(func(key, value interface{}) bool {
-		updaters[key.(string)] = value.(Updater)
-		return true
-	})
-	return updaters
 }

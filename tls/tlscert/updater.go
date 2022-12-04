@@ -15,7 +15,7 @@
 package tlscert
 
 import (
-	"strings"
+	"fmt"
 	"sync"
 
 	"github.com/xgfone/go-apiserver/log"
@@ -50,84 +50,119 @@ func (u logUpdater) DelCertificate(name string) {
 	}
 }
 
-// PrefixUpdater returns a new certificate updater to only add or delete
-// the certificate whose name has the given prefix.
-func PrefixUpdater(prefix string, updater Updater) Updater {
-	if prefix == "" {
-		panic("the certificate updater prefix is empty")
+// FilterUpdater returns a new certificate updater to add or delete
+// the certificate only if filter returns true.
+func FilterUpdater(updater Updater, filter func(name string) bool) Updater {
+	if updater == nil {
+		panic("the certificate updater must not be nil")
+	}
+	if filter == nil {
+		panic("the certificate updation filter must not be nil")
+	}
+	return filterUpdater{updater: updater, filter: filter}
+}
+
+type filterUpdater struct {
+	updater Updater
+	filter  func(string) bool
+}
+
+func (u filterUpdater) AddCertificate(name string, cert Certificate) {
+	if u.filter(name) {
+		u.updater.AddCertificate(name, cert)
+	}
+}
+
+func (u filterUpdater) DelCertificate(name string) {
+	if u.filter(name) {
+		u.updater.DelCertificate(name)
+	}
+}
+
+// Updaters is a set of the updaters.
+type Updaters []Updater
+
+// AddCertificate implements the interface Updater#AddCertificate.
+func (us Updaters) AddCertificate(name string, cert Certificate) {
+	for _, updater := range us {
+		updater.AddCertificate(name, cert)
+	}
+}
+
+// DelCertificate implements the interface Updater#DelCertificate.
+func (us Updaters) DelCertificate(name string) {
+	for _, updater := range us {
+		updater.DelCertificate(name)
+	}
+}
+
+// NamedUpdaters is a set of the named updaters.
+type NamedUpdaters struct{ updaters sync.Map }
+
+// NewNamedUpdaters returns a new NamedUpdaters.
+func NewNamedUpdaters() *NamedUpdaters { return &NamedUpdaters{} }
+
+// AddCertificate implements the interface Updater#AddCertificate.
+func (us *NamedUpdaters) AddCertificate(name string, cert Certificate) {
+	us.updaters.Range(func(_, value interface{}) bool {
+		value.(Updater).AddCertificate(name, cert)
+		return true
+	})
+}
+
+// DelCertificate implements the interface Updater#DelCertificate.
+func (us *NamedUpdaters) DelCertificate(name string) {
+	us.updaters.Range(func(_, value interface{}) bool {
+		value.(Updater).DelCertificate(name)
+		return true
+	})
+}
+
+// AddUpdater adds the certificate updater with the name.
+//
+// The updater will be called when to add or delete the certificate.
+func (us *NamedUpdaters) AddUpdater(name string, updater Updater) (err error) {
+	if name == "" {
+		panic("the certificate updater name is empty")
 	} else if updater == nil {
 		panic("the certificate updater is nil")
 	}
-	return prefixUpdater{prefix: prefix, updater: updater}
-}
 
-type prefixUpdater struct {
-	updater Updater
-	prefix  string
-}
-
-func (u prefixUpdater) AddCertificate(name string, cert Certificate) {
-	if strings.HasPrefix(name, u.prefix) {
-		u.updater.AddCertificate(name, cert)
+	if _, loaded := us.updaters.LoadOrStore(name, updater); loaded {
+		err = fmt.Errorf("the certificate updater named '%s' has been added", name)
 	}
+
+	return
 }
 
-func (u prefixUpdater) DelCertificate(name string) {
-	if strings.HasPrefix(name, u.prefix) {
-		u.updater.DelCertificate(name)
+// DelUpdater deletes the certificate updater by the name.
+func (us *NamedUpdaters) DelUpdater(name string) {
+	if name == "" {
+		panic("the certificate updater name is empty")
 	}
+	us.updaters.Delete(name)
 }
 
-// NameFilterUpdater is a certificate updater proxy to add or delete the certificates
-// that have the specific name.
-type NameFilterUpdater struct {
-	updater Updater
-	names   sync.Map
+// GetUpdater returns the certificate updater by the name.
+//
+// Return nil if the certificate updater does not exist.
+func (us *NamedUpdaters) GetUpdater(name string) Updater {
+	if name == "" {
+		panic("the certificate updater name is empty")
+	}
+
+	if value, ok := us.updaters.Load(name); ok {
+		return value.(Updater)
+	}
+	return nil
 }
 
-// NewNameFilterUpdater returns a new NameFilterUpdater with the wrapped updater.
-func NewNameFilterUpdater(updater Updater, names ...string) *NameFilterUpdater {
-	u := &NameFilterUpdater{updater: updater}
-	u.AddNames(names...)
-	return u
-}
-
-// GetNames returns the name list of the supported certificates.
-func (u *NameFilterUpdater) GetNames() []string {
-	names := make([]string, 0, 4)
-	u.names.Range(func(key, _ interface{}) bool {
-		names = append(names, key.(string))
+// GetUpdaters returns all the certificate updaters.
+func (us *NamedUpdaters) GetUpdaters() map[string]Updater {
+	updaters := make(map[string]Updater)
+	us.updaters.Range(func(key, value interface{}) bool {
+		updaters[key.(string)] = value.(Updater)
 		return true
 	})
-	return names
-}
-
-// AddNames adds the names of the supported certificates.
-func (u *NameFilterUpdater) AddNames(names ...string) {
-	for i, _len := 0, len(names); i < _len; i++ {
-		u.names.LoadOrStore(names[i], struct{}{})
-	}
-}
-
-// DelNames adds the names of the no longer supported certificates.
-func (u *NameFilterUpdater) DelNames(names ...string) {
-	for i, _len := 0, len(names); i < _len; i++ {
-		u.names.Delete(names[i])
-	}
-}
-
-// AddCertificate implements the interface Updater, which only adds
-// the certificates that have the specific name.
-func (u *NameFilterUpdater) AddCertificate(name string, cert Certificate) {
-	if _, ok := u.names.Load(name); ok {
-		u.updater.AddCertificate(name, cert)
-	}
-}
-
-// DelCertificate implements the interface Updater, which only deletes
-// the certificates that have the specific name.
-func (u *NameFilterUpdater) DelCertificate(name string) {
-	if _, ok := u.names.Load(name); ok {
-		u.updater.DelCertificate(name)
-	}
+	return updaters
 }
