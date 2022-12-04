@@ -24,45 +24,45 @@ import (
 )
 
 // Name returns a route builder with the name, which is equal to
-// NewRouteBuilder(m).Name(name).
-func (m *Router) Name(name string) RouteBuilder {
-	return NewRouteBuilder(m).Name(name)
+// NewRouteBuilder(r).Name(name).
+func (r *Router) Name(name string) RouteBuilder {
+	return NewRouteBuilder(r).Name(name)
 }
 
 // Matcher returns a route builder with the matcher,
-// which is equal to NewRouteBuilder(m).Matcher(matcher).
-func (m *Router) Matcher(matcher matcher.Matcher) RouteBuilder {
-	return NewRouteBuilder(m).Matcher(matcher)
+// which is equal to NewRouteBuilder(r).Matcher(matcher).
+func (r *Router) Matcher(matcher matcher.Matcher) RouteBuilder {
+	return NewRouteBuilder(r).Matcher(matcher)
 }
 
 // Rule returns a route builder with the matcher rule,
-// which is equal to NewRouteBuilder(m).Rule(matcherRule).
-func (m *Router) Rule(matcherRule string) RouteBuilder {
-	return NewRouteBuilder(m).Rule(matcherRule)
+// which is equal to NewRouteBuilder(r).Rule(matcherRule).
+func (r *Router) Rule(matcherRule string) RouteBuilder {
+	return NewRouteBuilder(r).Rule(matcherRule)
 }
 
 // Path returns a route builder with the path matcher,
-// which is equal to NewRouteBuilder(m).Path(path).
-func (m *Router) Path(path string) RouteBuilder {
-	return NewRouteBuilder(m).Path(path)
+// which is equal to NewRouteBuilder(r).Path(path).
+func (r *Router) Path(path string) RouteBuilder {
+	return NewRouteBuilder(r).Path(path)
 }
 
 // PathPrefix returns a route builder with the path prefix matcher,
-// which is equal to NewRouteBuilder(m).PathPrefix(pathPrefix).
-func (m *Router) PathPrefix(pathPrefix string) RouteBuilder {
-	return NewRouteBuilder(m).PathPrefix(pathPrefix)
+// which is equal to NewRouteBuilder(r).PathPrefix(pathPrefix).
+func (r *Router) PathPrefix(pathPrefix string) RouteBuilder {
+	return NewRouteBuilder(r).PathPrefix(pathPrefix)
 }
 
 // Host returns a route builder with the host matcher,
-// which is equal to NewRouteBuilder(m).Host(host).
-func (m *Router) Host(host string) RouteBuilder {
-	return NewRouteBuilder(m).Host(host)
+// which is equal to NewRouteBuilder(r).Host(host).
+func (r *Router) Host(host string) RouteBuilder {
+	return NewRouteBuilder(r).Host(host)
 }
 
 // HostRegexp returns a route builder with the host regexp matcher,
-// which is equal to NewRouteBuilder(m).HostRegexp(regexpHost).
-func (m *Router) HostRegexp(regexpHost string) RouteBuilder {
-	return NewRouteBuilder(m).HostRegexp(regexpHost)
+// which is equal to NewRouteBuilder(r).HostRegexp(regexpHost).
+func (r *Router) HostRegexp(regexpHost string) RouteBuilder {
+	return NewRouteBuilder(r).HostRegexp(regexpHost)
 }
 
 // RouteBuilder is used to build the route.
@@ -78,8 +78,8 @@ type RouteBuilder struct {
 }
 
 // NewRouteBuilder returns a new RouteBuilder with the route manager.
-func NewRouteBuilder(m *Router) RouteBuilder {
-	return RouteBuilder{manager: m, panic: true}
+func NewRouteBuilder(r *Router) RouteBuilder {
+	return RouteBuilder{manager: r, panic: true}
 }
 
 // SetPanic sets the flag to panic when failing to add the route.

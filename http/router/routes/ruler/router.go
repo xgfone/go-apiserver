@@ -58,27 +58,27 @@ type Router struct {
 
 // NewRouter returns a new route manager.
 func NewRouter() *Router {
-	m := &Router{rmaps: make(map[string]Route, 16)}
-	m.BuildMatcherRule = ruler.Build
-	m.updateRoutes()
-	return m
+	r := &Router{rmaps: make(map[string]Route, 16)}
+	r.BuildMatcherRule = ruler.Build
+	r.updateRoutes()
+	return r
 }
 
 // ServeHTTP implements the interface http.Handler.
-func (m *Router) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	m.Route(resp, req, m.NotFound)
+func (r *Router) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	r.Route(resp, req, r.NotFound)
 }
 
 // Route is the same ServeHTTP, but support to provide a NotFound handler.
-func (m *Router) Route(w http.ResponseWriter, r *http.Request, notFound http.Handler) {
-	if route, ok := m.MatchRoute(w, r); ok {
-		route.ServeHTTP(w, r)
+func (r *Router) Route(rw http.ResponseWriter, req *http.Request, notFound http.Handler) {
+	if route, ok := r.MatchRoute(rw, req); ok {
+		route.ServeHTTP(rw, req)
 	} else if notFound != nil {
-		notFound.ServeHTTP(w, r)
-	} else if m.NotFound != nil {
-		m.NotFound.ServeHTTP(w, r)
+		notFound.ServeHTTP(rw, req)
+	} else if r.NotFound != nil {
+		r.NotFound.ServeHTTP(rw, req)
 	} else {
-		handler.Handler404.ServeHTTP(w, r)
+		handler.Handler404.ServeHTTP(rw, req)
 	}
 }
 
@@ -86,10 +86,10 @@ func (m *Router) Route(w http.ResponseWriter, r *http.Request, notFound http.Han
 
 // MatchRoute uses the registered routes to match the http request,
 // and returns the matched route.
-func (m *Router) MatchRoute(w http.ResponseWriter, r *http.Request) (Route, bool) {
-	routes := m.routes.Load().(routesWrapper).Routes
+func (r *Router) MatchRoute(rw http.ResponseWriter, req *http.Request) (Route, bool) {
+	routes := r.routes.Load().(routesWrapper).Routes
 	for i, _len := 0, len(routes); i < _len; i++ {
-		if ok := routes[i].Matcher.Match(w, r); ok {
+		if ok := routes[i].Matcher.Match(rw, req); ok {
 			return routes[i], true
 		}
 	}
@@ -97,102 +97,102 @@ func (m *Router) MatchRoute(w http.ResponseWriter, r *http.Request) (Route, bool
 }
 
 // GetRoute returns the route by the given name.
-func (m *Router) GetRoute(name string) (route Route, ok bool) {
-	m.rlock.RLock()
-	route, ok = m.rmaps[name]
-	m.rlock.RUnlock()
+func (r *Router) GetRoute(name string) (route Route, ok bool) {
+	r.rlock.RLock()
+	route, ok = r.rmaps[name]
+	r.rlock.RUnlock()
 	return
 }
 
 // GetRoutes returns all the registered routes.
-func (m *Router) GetRoutes() (routes Routes) {
-	origs := m.routes.Load().(routesWrapper).Routes
+func (r *Router) GetRoutes() (routes Routes) {
+	origs := r.routes.Load().(routesWrapper).Routes
 	routes = make(Routes, len(origs))
 	copy(routes, origs)
 	return
 }
 
 // AddRoute adds the given route.
-func (m *Router) AddRoute(route Route) (err error) {
-	if err = m.checkRoute(route); err != nil {
+func (r *Router) AddRoute(route Route) (err error) {
+	if err = r.checkRoute(route); err != nil {
 		return
 	}
 
-	m.rlock.Lock()
-	if _, ok := m.rmaps[route.Name]; ok {
+	r.rlock.Lock()
+	if _, ok := r.rmaps[route.Name]; ok {
 		err = fmt.Errorf("the route named '%s' has been added", route.Name)
 	} else {
-		m.rmaps[route.Name] = route
-		m.updateRoutes()
+		r.rmaps[route.Name] = route
+		r.updateRoutes()
 	}
-	m.rlock.Unlock()
+	r.rlock.Unlock()
 	return
 }
 
 // DelRoute deletes and returns the route by the given name.
-func (m *Router) DelRoute(name string) (route Route, ok bool) {
+func (r *Router) DelRoute(name string) (route Route, ok bool) {
 	if len(name) == 0 {
 		return
 	}
 
-	m.rlock.Lock()
-	if route, ok = m.rmaps[name]; ok {
-		delete(m.rmaps, name)
-		m.updateRoutes()
+	r.rlock.Lock()
+	if route, ok = r.rmaps[name]; ok {
+		delete(r.rmaps, name)
+		r.updateRoutes()
 	}
-	m.rlock.Unlock()
+	r.rlock.Unlock()
 	return
 }
 
 // UpdateRoutes updates the given routes, which will add the route
 // if it does not exist, or update it to the new.
-func (m *Router) UpdateRoutes(routes ...Route) (err error) {
-	if err = m.checkRoutes(routes); err != nil {
+func (r *Router) UpdateRoutes(routes ...Route) (err error) {
+	if err = r.checkRoutes(routes); err != nil {
 		return
 	}
 
 	if _len := len(routes); _len > 0 {
-		m.rlock.Lock()
+		r.rlock.Lock()
 		for i := 0; i < _len; i++ {
 			route := routes[i]
-			m.rmaps[route.Name] = route
+			r.rmaps[route.Name] = route
 		}
-		m.updateRoutes()
-		m.rlock.Unlock()
+		r.updateRoutes()
+		r.rlock.Unlock()
 	}
 	return
 }
 
 // ResetRoutes discards all the original routes and resets them to routes.
-func (m *Router) ResetRoutes(routes ...Route) (err error) {
-	if err = m.checkRoutes(routes); err != nil {
+func (r *Router) ResetRoutes(routes ...Route) (err error) {
+	if err = r.checkRoutes(routes); err != nil {
 		return
 	}
 
-	m.rlock.Lock()
-	for name := range m.rmaps {
-		delete(m.rmaps, name)
+	r.rlock.Lock()
+	for name := range r.rmaps {
+		delete(r.rmaps, name)
 	}
 
 	for i, _len := 0, len(routes); i < _len; i++ {
 		route := routes[i]
-		m.rmaps[route.Name] = route
+		r.rmaps[route.Name] = route
 	}
-	m.updateRoutes()
-	m.rlock.Unlock()
+	r.updateRoutes()
+	r.rlock.Unlock()
 	return
 }
 
-func (m *Router) checkRoutes(routes Routes) (err error) {
+func (r *Router) checkRoutes(routes Routes) (err error) {
 	for _len := len(routes) - 1; _len >= 0; _len-- {
-		if err = m.checkRoute(routes[_len]); err != nil {
+		if err = r.checkRoute(routes[_len]); err != nil {
 			break
 		}
 	}
 	return
 }
 
-func (m *Router) checkRoute(route Route) error {
+func (r *Router) checkRoute(route Route) error {
 	if len(route.Name) == 0 {
 		return errors.New("the route name is empty")
 	} else if route.Handler == nil {
@@ -203,31 +203,31 @@ func (m *Router) checkRoute(route Route) error {
 	return nil
 }
 
-func (m *Router) updateRoutes() {
-	routes := make(Routes, 0, len(m.rmaps))
-	for _, route := range m.rmaps {
+func (r *Router) updateRoutes() {
+	routes := make(Routes, 0, len(r.rmaps))
+	for _, route := range r.rmaps {
 		routes = append(routes, route)
 	}
 	sort.Stable(routes)
-	m.routes.Store(routesWrapper{Routes: routes})
+	r.routes.Store(routesWrapper{Routes: routes})
 }
 
 // AddVarsRoute adds the route to serve the published vars coming from "expvar".
-func (m *Router) AddVarsRoute(pathPrefix string) {
+func (r *Router) AddVarsRoute(pathPrefix string) {
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
-	m.Path(pathPrefix + "/debug/vars").GET(expvar.Handler())
+	r.Path(pathPrefix + "/debug/vars").GET(expvar.Handler())
 }
 
 // AddProfileRoutes adds the profile routes coming from "net/http/pprof".
-func (m *Router) AddProfileRoutes(pathPrefix string) {
+func (r *Router) AddProfileRoutes(pathPrefix string) {
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
-	m.Path(pathPrefix + "/debug/pprof/profile").GETFunc(pprof.Profile)
-	m.Path(pathPrefix + "/debug/pprof/cmdline").GETFunc(pprof.Cmdline)
-	m.Path(pathPrefix + "/debug/pprof/symbol").GETFunc(pprof.Symbol)
-	m.Path(pathPrefix + "/debug/pprof/trace").GETFunc(pprof.Trace)
-	m.Path(pathPrefix + "/debug/pprof/").GETFunc(pprof.Index)
-	m.Path(pathPrefix + "/debug/pprof").GETFunc(pprof.Index)
+	r.Path(pathPrefix + "/debug/pprof/profile").GETFunc(pprof.Profile)
+	r.Path(pathPrefix + "/debug/pprof/cmdline").GETFunc(pprof.Cmdline)
+	r.Path(pathPrefix + "/debug/pprof/symbol").GETFunc(pprof.Symbol)
+	r.Path(pathPrefix + "/debug/pprof/trace").GETFunc(pprof.Trace)
+	r.Path(pathPrefix + "/debug/pprof/").GETFunc(pprof.Index)
+	r.Path(pathPrefix + "/debug/pprof").GETFunc(pprof.Index)
 	for _, p := range rpprof.Profiles() {
-		m.Path(pathPrefix + "/debug/pprof/" + p.Name()).GET(pprof.Handler(p.Name()))
+		r.Path(pathPrefix + "/debug/pprof/" + p.Name()).GET(pprof.Handler(p.Name()))
 	}
 }

@@ -68,37 +68,37 @@ func NewRouter() *Router {
 }
 
 // ServeHTTP implements the interface http.Handler.
-func (m *Router) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	m.Route(resp, req, m.NotFound)
+func (r *Router) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	r.Route(resp, req, r.NotFound)
 }
 
 // Route implements the interface router.RouteManager.
-func (m *Router) Route(w http.ResponseWriter, r *http.Request, notFound http.Handler) {
-	ctx := reqresp.GetContext(w, r)
+func (r *Router) Route(rw http.ResponseWriter, req *http.Request, notFound http.Handler) {
+	ctx := reqresp.GetContext(rw, req)
 	if ctx == nil {
 		ctx = reqresp.DefaultContextAllocator.Acquire()
-		ctx.ResponseWriter = reqresp.NewResponseWriter(w)
-		ctx.Request = reqresp.SetContext(r, ctx)
+		ctx.ResponseWriter = reqresp.NewResponseWriter(rw)
+		ctx.Request = reqresp.SetContext(req, ctx)
 		defer reqresp.DefaultContextAllocator.Release(ctx)
 	}
 
-	if m.GetAction != nil {
-		ctx.Action = m.GetAction(r)
+	if r.GetAction != nil {
+		ctx.Action = r.GetAction(req)
 	} else {
-		ctx.Action = r.Header.Get(HeaderAction)
+		ctx.Action = req.Header.Get(HeaderAction)
 	}
 
 	var ok bool
 	if len(ctx.Action) > 0 {
-		ctx.Handler, ok = m.actions.Load().(actionsWrapper).actions[ctx.Action]
+		ctx.Handler, ok = r.actions.Load().(actionsWrapper).actions[ctx.Action]
 	}
 
 	switch true {
 	case ok:
 	case notFound != nil:
 		ctx.Handler = notFound
-	case m.NotFound != nil:
-		ctx.Handler = m.NotFound
+	case r.NotFound != nil:
+		ctx.Handler = r.NotFound
 	default:
 		ctx.Handler = http.HandlerFunc(notFoundHandler)
 	}
@@ -114,137 +114,137 @@ func (m *Router) Route(w http.ResponseWriter, r *http.Request, notFound http.Han
 // GetHandler returns the handler of the action.
 //
 // If the action does not exist, return nil.
-func (m *Router) GetHandler(action string) (handler http.Handler) {
+func (r *Router) GetHandler(action string) (handler http.Handler) {
 	if len(action) == 0 {
 		panic("action name is empty")
 	}
 
-	m.alock.RLock()
-	handler = m.amaps[action]
-	m.alock.RUnlock()
+	r.alock.RLock()
+	handler = r.amaps[action]
+	r.alock.RUnlock()
 	return
 }
 
 // GetHandlers returns the handlers of all the actions.
-func (m *Router) GetHandlers() (handlers map[string]http.Handler) {
-	m.alock.RLock()
-	handlers = make(map[string]http.Handler, len(m.amaps))
-	for action, handler := range m.amaps {
+func (r *Router) GetHandlers() (handlers map[string]http.Handler) {
+	r.alock.RLock()
+	handlers = make(map[string]http.Handler, len(r.amaps))
+	for action, handler := range r.amaps {
 		handlers[action] = handler
 	}
-	m.alock.RUnlock()
+	r.alock.RUnlock()
 	return
 }
 
 // GetActions returns the names of all the actions.
-func (m *Router) GetActions() (actions []string) {
-	m.alock.RLock()
-	actions = make([]string, 0, len(m.amaps))
-	for action := range m.amaps {
+func (r *Router) GetActions() (actions []string) {
+	r.alock.RLock()
+	actions = make([]string, 0, len(r.amaps))
+	for action := range r.amaps {
 		actions = append(actions, action)
 	}
-	m.alock.RUnlock()
+	r.alock.RUnlock()
 	return
 }
 
 // RegisterContextFuncWithError is the same as RegisterContextFunc,
 // but supports to return an error.
-func (m *Router) RegisterContextFuncWithError(action string, f reqresp.HandlerWithError) (ok bool) {
-	return m.RegisterFunc(action, func(w http.ResponseWriter, r *http.Request) {
+func (r *Router) RegisterContextFuncWithError(action string, f reqresp.HandlerWithError) (ok bool) {
+	return r.RegisterFunc(action, func(w http.ResponseWriter, r *http.Request) {
 		c := reqresp.GetContext(w, r)
 		c.UpdateError(f(c))
 	})
 }
 
 // RegisterContextFunc is the same as RegisterFunc, but use Context instead.
-func (m *Router) RegisterContextFunc(action string, f reqresp.Handler) (ok bool) {
-	return m.RegisterFunc(action, func(w http.ResponseWriter, r *http.Request) {
+func (r *Router) RegisterContextFunc(action string, f reqresp.Handler) (ok bool) {
+	return r.RegisterFunc(action, func(w http.ResponseWriter, r *http.Request) {
 		f(reqresp.GetContext(w, r))
 	})
 }
 
 // RegisterFunc is the same as Register, but use the function as the handler.
-func (m *Router) RegisterFunc(action string, handler http.HandlerFunc) (ok bool) {
-	return m.Register(action, handler)
+func (r *Router) RegisterFunc(action string, handler http.HandlerFunc) (ok bool) {
+	return r.Register(action, handler)
 }
 
 // Register registers the action and the handler.
-func (m *Router) Register(action string, handler http.Handler) (ok bool) {
-	m.checkAction(action, handler)
+func (r *Router) Register(action string, handler http.Handler) (ok bool) {
+	r.checkAction(action, handler)
 
-	m.alock.Lock()
-	_, ok = m.amaps[action]
+	r.alock.Lock()
+	_, ok = r.amaps[action]
 	if ok = !ok; ok {
-		m.amaps[action] = handler
-		m.updateActions()
+		r.amaps[action] = handler
+		r.updateActions()
 	}
-	m.alock.Unlock()
+	r.alock.Unlock()
 
 	return
 }
 
 // Update updates the given actions and handlers, which will add the action
 // if it does not exist, or update it to the new.
-func (m *Router) Update(actions map[string]http.Handler) {
+func (r *Router) Update(actions map[string]http.Handler) {
 	if len(actions) == 0 {
 		return
 	}
 
 	for action, handler := range actions {
-		m.checkAction(action, handler)
+		r.checkAction(action, handler)
 	}
 
-	m.alock.Lock()
+	r.alock.Lock()
 	for action, handler := range actions {
-		m.amaps[action] = handler
+		r.amaps[action] = handler
 	}
-	m.updateActions()
-	m.alock.Unlock()
+	r.updateActions()
+	r.alock.Unlock()
 }
 
 // Reset discards all the original actions and resets them to actions.
-func (m *Router) Reset(actions map[string]http.Handler) {
+func (r *Router) Reset(actions map[string]http.Handler) {
 	for action, handler := range actions {
-		m.checkAction(action, handler)
+		r.checkAction(action, handler)
 	}
 
-	m.alock.Lock()
-	for action := range m.amaps {
-		delete(m.amaps, action)
+	r.alock.Lock()
+	for action := range r.amaps {
+		delete(r.amaps, action)
 	}
 
 	for action, handler := range actions {
-		m.amaps[action] = handler
+		r.amaps[action] = handler
 	}
-	m.updateActions()
-	m.alock.Unlock()
+	r.updateActions()
+	r.alock.Unlock()
 }
 
 // Unregister unregisters the given action.
-func (m *Router) Unregister(action string) (ok bool) {
+func (r *Router) Unregister(action string) (ok bool) {
 	if action == "" {
 		panic("action name is empty")
 	}
 
-	m.alock.Lock()
-	if _, ok = m.amaps[action]; ok {
-		delete(m.amaps, action)
-		m.updateActions()
+	r.alock.Lock()
+	if _, ok = r.amaps[action]; ok {
+		delete(r.amaps, action)
+		r.updateActions()
 	}
-	m.alock.Unlock()
+	r.alock.Unlock()
 
 	return
 }
 
-func (m *Router) updateActions() {
-	actions := make(map[string]http.Handler, len(m.amaps))
-	for action, handler := range m.amaps {
+func (r *Router) updateActions() {
+	actions := make(map[string]http.Handler, len(r.amaps))
+	for action, handler := range r.amaps {
 		actions[action] = handler
 	}
-	m.actions.Store(actionsWrapper{actions: actions})
+	r.actions.Store(actionsWrapper{actions: actions})
 }
 
-func (m *Router) checkAction(action string, handler http.Handler) {
+func (r *Router) checkAction(action string, handler http.Handler) {
 	if len(action) == 0 {
 		panic("action name is empty")
 	}
