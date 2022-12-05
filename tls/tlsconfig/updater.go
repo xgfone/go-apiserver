@@ -30,6 +30,18 @@ type Setter interface {
 	SetTLSConfig(*tls.Config)
 }
 
+// GetterFunc is the function to get the tls config.
+type GetterFunc func() *tls.Config
+
+// GetTLSConfig implements the interface Getter.
+func (f GetterFunc) GetTLSConfig() *tls.Config { return f() }
+
+// SetterFunc is the function to set the tls config.
+type SetterFunc func(*tls.Config)
+
+// SetTLSConfig implements the interface Setter.
+func (f SetterFunc) SetTLSConfig(c *tls.Config) { f(c) }
+
 // Updater is used to add or delete the TLS config.
 type Updater interface {
 	AddTLSConfig(name string, config *tls.Config)

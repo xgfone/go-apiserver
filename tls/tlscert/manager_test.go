@@ -28,14 +28,15 @@ func TestManager(t *testing.T) {
 		return func(s string) bool { return strings.HasPrefix(s, prefix) }
 	}
 
-	cm1 := NewManager(nil)
-	cm2 := NewManager(nil)
+	cm1 := NewManager()
+	cm2 := NewManager()
 
 	updaters := NewNamedUpdaters()
 	updaters.AddUpdater("cm1", FilterUpdater(cm1, filter("cm1@")))
 	updaters.AddUpdater("cm2", FilterUpdater(cm2, filter("cm2@")))
 
-	m := NewManager(updaters)
+	m := NewManager()
+	m.SetUpdater(updaters)
 	m.AddCertificate("cm1@name", cert)
 	m.AddCertificate("cm2@name", cert)
 

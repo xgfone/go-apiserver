@@ -50,7 +50,7 @@ func NewTCPServer(ln net.Listener, handler tcp.Handler) (server TCPServer) {
 		panic("the tcp handler is nil")
 	}
 
-	server.CertManager = tlscert.NewManager(nil)
+	server.CertManager = tlscert.NewManager()
 	server.Middlewares = middleware.NewManager(handler)
 	server.Server = tcp.NewServer(ln, server.Middlewares)
 	server.SetTLSForce(true)

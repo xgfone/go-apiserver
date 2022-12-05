@@ -22,7 +22,7 @@ import (
 )
 
 // DefaultManager is the default certificate manager.
-var DefaultManager = NewManager(nil)
+var DefaultManager = NewManager()
 
 var _ Updater = &Manager{}
 
@@ -39,10 +39,10 @@ type Manager struct {
 }
 
 // NewManager returns a new certificate manager.
-func NewManager(updater Updater) *Manager {
+func NewManager() *Manager {
 	m := &Manager{cmaps: make(map[string]Certificate, 8)}
-	m.updater.Store(updaterWraper{updater})
 	m.certs.Store(certsWrapper{})
+	m.SetUpdater(nil)
 	return m
 }
 

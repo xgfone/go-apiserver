@@ -22,7 +22,7 @@ import (
 )
 
 // DefaultManager is the default tls.Config manager.
-var DefaultManager = NewManager(nil)
+var DefaultManager = NewManager()
 
 type updaterWraper struct{ Updater }
 
@@ -33,9 +33,9 @@ type Manager struct {
 }
 
 // NewManager returns a new TLS config manager.
-func NewManager(updater Updater) *Manager {
+func NewManager() *Manager {
 	m := &Manager{}
-	m.updater.Store(updaterWraper{updater})
+	m.SetUpdater(nil)
 	return m
 }
 

@@ -40,7 +40,7 @@ func TestURLProvider(t *testing.T) {
 	defer httpserver.Shutdown(context.Background())
 	time.Sleep(time.Millisecond * 50)
 
-	certmanager := tlscert.NewManager(nil)
+	certmanager := tlscert.NewManager()
 	urlProvider := NewURLProvider(time.Millisecond * 100)
 	err := urlProvider.AddCertURL("test", "http://127.0.0.1:8888")
 	if err != nil {

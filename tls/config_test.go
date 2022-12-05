@@ -22,13 +22,14 @@ import (
 
 	"github.com/xgfone/go-apiserver/internal/test"
 	"github.com/xgfone/go-apiserver/tls/tlscert"
+	"github.com/xgfone/go-apiserver/tls/tlsconfig"
 )
 
 func TestClientConfig(t *testing.T) {
 	cert, _ := tlscert.NewCertificate([]byte(test.Cert), []byte(test.Key))
 	buf := bytes.NewBuffer(nil)
 	c := NewClientConfig(nil)
-	c.OnChangedTLSConfig(func(*tls.Config) { buf.WriteString("update tls.Config\n") })
+	c.OnUpdate(tlsconfig.SetterFunc(func(*tls.Config) { buf.WriteString("update tls.Config\n") }))
 
 	c.AddCertificate("certname", cert)
 	c.SetTLSConfig(new(tls.Config))
@@ -45,7 +46,7 @@ func TestServerConfig(t *testing.T) {
 	cert, _ := tlscert.NewCertificate([]byte(test.Cert), []byte(test.Key))
 	buf := bytes.NewBuffer(nil)
 	c := NewServerConfig(nil)
-	c.OnChangedTLSConfig(func(*tls.Config) { buf.WriteString("update tls.Config\n") })
+	c.OnUpdate(tlsconfig.SetterFunc(func(*tls.Config) { buf.WriteString("update tls.Config\n") }))
 
 	c.AddCertificate("certname", cert)
 	c.SetTLSConfig(new(tls.Config))

@@ -39,8 +39,8 @@ type Config struct {
 	updateTLSCert   func(*Config)
 	updateTLSConfig func(*Config, *tls.Config)
 
-	lock     sync.RWMutex
-	callback func(*tls.Config)
+	lock   sync.Mutex
+	setter tlsconfig.Setter
 }
 
 // NewClientConfig returns a new config that is used by the TLS client.
@@ -65,7 +65,7 @@ func newConfig(config *tls.Config,
 	}
 
 	c := &Config{
-		certManager:     tlscert.NewManager(nil),
+		certManager:     tlscert.NewManager(),
 		updateTLSCert:   updateCert,
 		updateTLSConfig: updateConfig,
 	}
@@ -81,8 +81,8 @@ func updateClientCert(c *Config) {
 	tlsConfig := c.GetTLSConfig()
 	tlsConfig.Certificates = c.certManager.GetTLSCertificates()
 	c.tlsConfig.Store(tlsConfig)
-	if c.callback != nil {
-		c.callback(tlsConfig)
+	if c.setter != nil {
+		c.setter.SetTLSConfig(tlsConfig)
 	}
 }
 
@@ -93,8 +93,8 @@ func updateClientConfig(c *Config, tlsConfig *tls.Config) {
 	tlsConfig = tlsConfig.Clone()
 	tlsConfig.Certificates = c.certManager.GetTLSCertificates()
 	c.tlsConfig.Store(tlsConfig)
-	if c.callback != nil {
-		c.callback(tlsConfig)
+	if c.setter != nil {
+		c.setter.SetTLSConfig(tlsConfig)
 	}
 }
 
@@ -105,15 +105,15 @@ func updateServerConfig(c *Config, tlsConfig *tls.Config) {
 	tlsConfig = tlsConfig.Clone()
 	tlsConfig.GetCertificate = c.certManager.GetTLSCertificate
 	c.tlsConfig.Store(tlsConfig)
-	if c.callback != nil {
-		c.callback(tlsConfig)
+	if c.setter != nil {
+		c.setter.SetTLSConfig(tlsConfig)
 	}
 }
 
-// OnChangedTLSConfig sets the callback function when tls.Config is changed.
-func (c *Config) OnChangedTLSConfig(callback func(*tls.Config)) {
+// OnUpdate sets the update function when tls.Config is changed.
+func (c *Config) OnUpdate(update tlsconfig.Setter) {
 	c.lock.Lock()
-	c.callback = callback
+	c.setter = update
 	c.lock.Unlock()
 }
 

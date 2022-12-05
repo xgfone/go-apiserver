@@ -42,7 +42,8 @@ func TestManager(t *testing.T) {
 	updaters := NewNamedUpdaters()
 	updaters.AddUpdater("updater1", testUpdater{buf})
 
-	m := NewManager(updaters)
+	m := NewManager()
+	m.SetUpdater(updaters)
 	m.AddTLSConfig("tlsconfig1", new(tls.Config))
 	m.AddTLSConfig("tlsconfig2", new(tls.Config))
 	m.DelTLSConfig("tlsconfig1")

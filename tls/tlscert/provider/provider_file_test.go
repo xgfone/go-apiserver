@@ -35,7 +35,7 @@ func TestFileProvider(t *testing.T) {
 	createFile(t, keyfile, test.Key)
 	createFile(t, certfile, test.Cert)
 
-	certmanager := tlscert.NewManager(nil)
+	certmanager := tlscert.NewManager()
 	fileProvider := NewFileProvider(time.Millisecond * 100)
 	err := fileProvider.AddCertFile("test", keyfile, certfile)
 	if err != nil {
