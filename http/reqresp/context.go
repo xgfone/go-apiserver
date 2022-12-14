@@ -435,6 +435,12 @@ func (c *Context) GetCookie(name string) *http.Cookie {
 // Response
 // ---------------------------------------------------------------------------
 
+// SetConnectionClose sets the response header "Connection: close"
+// to tell the server to close the connection.
+func (c *Context) SetConnectionClose() {
+	c.ResponseWriter.Header().Set(header.HeaderConnection, "close")
+}
+
 // SetContentType sets the response header "Content-Type" to ct,
 //
 // If ct is "", do nothing.
@@ -583,4 +589,74 @@ func (c *Context) Stream(code int, contentType string, r io.Reader) (err error) 
 	c.WriteHeader(code)
 	_, err = io.CopyBuffer(c.ResponseWriter, r, make([]byte, 2048))
 	return
+}
+
+// NoContent is the alias of WriteHeader.
+func (c *Context) NoContent(code int) {
+	c.WriteHeader(code)
+}
+
+// File sends a file response, and the body is the content of the file.
+//
+// If not set the Content-Type, it will deduce it from the extension
+// of the file name. If the file does not exist, it returns ErrNotFound.
+func (c *Context) File(file string) (err error) {
+	f, err := os.Open(file)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return herrors.ErrNotFound
+		}
+		return herrors.ErrInternalServerError.WithErr(err)
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		return herrors.ErrInternalServerError.WithErr(err)
+	} else if fi.IsDir() {
+		f, err := os.Open(filepath.Join(file, "index.html"))
+		if err != nil {
+			if os.IsNotExist(err) {
+				return herrors.ErrNotFound
+			}
+			return herrors.ErrInternalServerError.WithErr(err)
+		}
+		defer f.Close()
+
+		if fi, err = f.Stat(); err != nil {
+			return herrors.ErrInternalServerError.WithErr(err)
+		}
+
+		http.ServeContent(c.ResponseWriter, c.Request, fi.Name(), fi.ModTime(), f)
+	} else {
+		http.ServeContent(c.ResponseWriter, c.Request, fi.Name(), fi.ModTime(), f)
+	}
+
+	return
+}
+
+func (c *Context) contentDisposition(file, name, dispositionType string) error {
+	if name == "" {
+		name = filepath.Base(file)
+	}
+
+	params := map[string]string{"filename": name}
+	disposition := mime.FormatMediaType(dispositionType, params)
+	c.ResponseWriter.Header().Set(header.HeaderContentDisposition, disposition)
+	return c.File(file)
+}
+
+// Attachment is the same as File, but sets the header "Content-Disposition"
+// with the type "attachment" to prompt the client to save the file with the name.
+//
+// If the file does not exist, it returns ErrNotFound.
+func (c *Context) Attachment(file string, name string) error {
+	return c.contentDisposition(file, name, "attachment")
+}
+
+// Inline sends a file response as the inline to open the file in the browser.
+//
+// If the file does not exist, it returns ErrNotFound.
+func (c *Context) Inline(file string, name string) error {
+	return c.contentDisposition(file, name, "inline")
 }
