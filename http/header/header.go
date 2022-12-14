@@ -17,6 +17,8 @@ package header
 
 import (
 	"net/http"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -133,4 +135,84 @@ func IsWebSocket(req *http.Request) bool {
 	return req.Method == http.MethodGet &&
 		req.Header.Get(HeaderConnection) == HeaderUpgrade &&
 		req.Header.Get(HeaderUpgrade) == "websocket"
+}
+
+// Accept returns the accepted Content-Type list from the request header
+// "Accept", which are sorted by the q-factor weight from high to low.
+//
+// If there is no the request header "Accept", return nil.
+//
+// Notice:
+//  1. If the value is "*/*", it will be amended as "".
+//  2. If the value is "<MIME_type>/*", it will be amended as "<MIME_type>/".
+//     So it can be used to match the prefix.
+func Accept(header http.Header) []string {
+	type acceptT struct {
+		ct string
+		q  float64
+	}
+
+	accept := header.Get(HeaderAccept)
+	if accept == "" {
+		return nil
+	}
+
+	ss := strings.Split(accept, ",")
+	accepts := make([]acceptT, 0, len(ss))
+	for _, s := range ss {
+		q := 1.0
+		if k := strings.IndexByte(s, ';'); k > 0 {
+			qs := s[k+1:]
+			s = s[:k]
+
+			if j := strings.IndexByte(qs, '='); j > 0 {
+				if qs = qs[j+1:]; qs == "" {
+					continue
+				}
+				if v, _ := strconv.ParseFloat(qs, 32); v > 1.0 || v <= 0.0 {
+					continue
+				} else {
+					q = v
+				}
+			} else {
+				continue
+			}
+		}
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		} else if s == "*/*" {
+			s = ""
+		} else if strings.HasSuffix(s, "/*") {
+			s = s[:len(s)-1]
+		}
+		accepts = append(accepts, acceptT{ct: s, q: -q})
+	}
+
+	sort.SliceStable(accepts, func(i, j int) bool {
+		return accepts[i].q < accepts[j].q
+	})
+
+	results := make([]string, len(accepts))
+	for i := range accepts {
+		results[i] = accepts[i].ct
+	}
+	return results
+}
+
+// Scheme returns the HTTP protocol scheme, `http` or `https`.
+func Scheme(header http.Header) (scheme string) {
+	// Can't use `r.Request.URL.Scheme`
+	// See: https://groups.google.com/forum/#!topic/golang-nuts/pMUkBlQBDF0
+	if header.Get(HeaderXForwardedSSL) == "on" {
+		return "https"
+	} else if scheme = header.Get(HeaderXForwardedProto); scheme != "" {
+		return
+	} else if scheme = header.Get(HeaderXForwardedProtocol); scheme != "" {
+		return
+	} else if scheme = header.Get(HeaderXUrlScheme); scheme != "" {
+		return
+	}
+
+	return "http"
 }

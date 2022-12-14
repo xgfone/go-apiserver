@@ -20,8 +20,11 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/xgfone/go-apiserver/http/binder"
@@ -331,6 +334,20 @@ func (c *Context) ContentType() string { return header.ContentType(c.Request.Hea
 //
 // Return "" if there is no charset.
 func (c *Context) Charset() string { return header.Charset(c.Request.Header) }
+
+// Accept returns the accepted Content-Type list from the request header
+// "Accept", which are sorted by the q-factor weight from high to low.
+//
+// If there is no the request header "Accept", return nil.
+func (c *Context) Accept() []string { return header.Accept(c.Request.Header) }
+
+// Scheme returns the HTTP protocol scheme, `http` or `https`.
+func (c *Context) Scheme() string {
+	if c.Request.TLS != nil {
+		return "https"
+	}
+	return header.Scheme(c.Request.Header)
+}
 
 // ---------------------------------------------------------------------------
 // Data
