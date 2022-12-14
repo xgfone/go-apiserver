@@ -45,3 +45,26 @@ func TestCharset(t *testing.T) {
 		t.Errorf("expect charset '%s', but got '%s'", "UTF-8", charset)
 	}
 }
+
+func TestAccept(t *testing.T) {
+	expects := []string{
+		"text/html",
+		"image/webp",
+		"application/",
+		"",
+	}
+
+	header := make(http.Header)
+	header.Set(HeaderAccept, "text/html, application/*;q=0.9, image/webp, */*;q=0.8")
+	accepts := Accept(header)
+
+	if len(expects) != len(accepts) {
+		t.Errorf("expect %d accepts, but got %d", len(expects), len(accepts))
+	} else {
+		for i := range expects {
+			if expects[i] != accepts[i] {
+				t.Errorf("%d: expect '%s', got '%s'", i, expects[i], accepts[i])
+			}
+		}
+	}
+}
