@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package wait provides some tools to loop calling until a condition reaches.
 package wait
 
 import (
