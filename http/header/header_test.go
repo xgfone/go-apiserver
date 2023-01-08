@@ -19,6 +19,28 @@ import (
 	"testing"
 )
 
+func TestContentType(t *testing.T) {
+	header := make(http.Header)
+	if ct := ContentType(header); ct != "" {
+		t.Errorf("unexpect Content-Type '%s'", ct)
+	}
+
+	header.Set("Content-Type", "application/json")
+	if ct := ContentType(header); ct != "application/json" {
+		t.Errorf("unexpect Content-Type '%s'", ct)
+	}
+
+	header.Set("Content-Type", "; charset=UTF-8")
+	if ct := ContentType(header); ct != "" {
+		t.Errorf("unexpect Content-Type '%s'", ct)
+	}
+
+	header.Set("Content-Type", "application/json; charset=UTF-8")
+	if ct := ContentType(header); ct != "application/json" {
+		t.Errorf("expect Content-Type '%s', but got '%s'", "application/json", ct)
+	}
+}
+
 func TestCharset(t *testing.T) {
 	header := make(http.Header)
 	if charset := Charset(header); charset != "" {
@@ -31,6 +53,11 @@ func TestCharset(t *testing.T) {
 	}
 
 	header.Set("Content-Type", "charset=UTF-8")
+	if charset := Charset(header); charset != "UTF-8" {
+		t.Errorf("expect charset '%s', but got '%s'", "UTF-8", charset)
+	}
+
+	header.Set("Content-Type", "; charset=UTF-8")
 	if charset := Charset(header); charset != "UTF-8" {
 		t.Errorf("expect charset '%s', but got '%s'", "UTF-8", charset)
 	}

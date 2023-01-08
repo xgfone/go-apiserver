@@ -104,7 +104,7 @@ func ContentType(header http.Header) string { return MediaType(header) }
 // MediaType returns the MIME media type portion of the header "Content-Type".
 func MediaType(header http.Header) (mime string) {
 	mime = header.Get(HeaderContentType)
-	if index := strings.IndexAny(mime, ";"); index > 0 {
+	if index := strings.IndexByte(mime, ';'); index > -1 {
 		mime = strings.TrimSpace(mime[:index])
 	}
 	return
@@ -117,11 +117,11 @@ func Charset(header http.Header) string {
 	ct := header.Get(HeaderContentType)
 	for loop := len(ct) > 0; loop; {
 		index := strings.IndexByte(ct, ';')
-		if loop = index > 0; loop {
+		if loop = index > -1; loop {
 			ct = ct[index+1:]
 		}
 
-		if index = strings.IndexByte(ct, '='); index > 0 {
+		if index = strings.IndexByte(ct, '='); index > -1 {
 			if strings.TrimSpace(ct[:index]) == "charset" {
 				return strings.TrimSpace(ct[index+1:])
 			}
@@ -161,11 +161,11 @@ func Accept(header http.Header) []string {
 	accepts := make([]acceptT, 0, len(ss))
 	for _, s := range ss {
 		q := 1.0
-		if k := strings.IndexByte(s, ';'); k > 0 {
+		if k := strings.IndexByte(s, ';'); k > -1 {
 			qs := s[k+1:]
 			s = s[:k]
 
-			if j := strings.IndexByte(qs, '='); j > 0 {
+			if j := strings.IndexByte(qs, '='); j > -1 {
 				if qs = qs[j+1:]; qs == "" {
 					continue
 				}
