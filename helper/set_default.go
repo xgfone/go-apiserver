@@ -37,25 +37,26 @@ type DefaultSetter interface {
 // value is ZERO.
 //
 // For the type of the field, it only supports some base types as follow:
-//   string
-//   float32
-//   float64
-//   int
-//   int8
-//   int16
-//   int32
-//   int64
-//   uint
-//   uint8
-//   uint16
-//   uint32
-//   uint64
-//   struct
-//   struct slice
-//   DefaultSetter
-//   time.Time      // Format: A. Integer(UTC); B. String(RFC3339)
-//   time.Duration  // Format: A. Integer(ms);  B. String(time.ParseDuration)
-//   pointer to the types above
+//
+//	string
+//	float32
+//	float64
+//	int
+//	int8
+//	int16
+//	int32
+//	int64
+//	uint
+//	uint8
+//	uint16
+//	uint32
+//	uint64
+//	struct
+//	struct slice
+//	DefaultSetter
+//	time.Time      // Format: A. Integer(UTC); B. String(RFC3339)
+//	time.Duration  // Format: A. Integer(ms);  B. String(time.ParseDuration)
+//	pointer to the types above
 //
 // Notice: If the tag value starts with ".", it represents a field name and
 // the default value of current field is set to the value of that field.
@@ -63,7 +64,7 @@ type DefaultSetter interface {
 func SetStructFieldToDefault(v interface{}) (err error) {
 	vf := reflect.ValueOf(v)
 	switch kind := vf.Kind(); kind {
-	case reflect.Ptr:
+	case Pointer:
 		vf = vf.Elem()
 		if vf.Kind() != reflect.Struct {
 			return errNotPointerToStruct
@@ -82,7 +83,7 @@ func setDefault(vf reflect.Value) (err error) {
 		fieldv := vf.Field(i)
 
 		tag := strings.TrimSpace(vt.Field(i).Tag.Get("default"))
-		if fieldv.Kind() == reflect.Ptr {
+		if IsPointer(fieldv) {
 			if !fieldv.IsNil() {
 				fieldv = fieldv.Elem()
 			} else if tag != "" {

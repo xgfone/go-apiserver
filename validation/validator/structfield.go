@@ -16,7 +16,6 @@ package validator
 
 import (
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/xgfone/go-apiserver/helper"
@@ -26,10 +25,11 @@ import (
 // is less than other struct field named by fieldName.
 //
 // Notice: it only supports the types as following,
-//   uint, uint8, uint16, uint32, uint64
-//   int, int8, int16, int32, int64
-//   float32, float64
-//   time.Time
+//
+//	uint, uint8, uint16, uint32, uint64
+//	int, int8, int16, int32, int64
+//	float32, float64
+//	time.Time
 //
 // The validator rule is "ltf(fieldName)".
 func StructFieldLess(fieldName string) Validator {
@@ -48,7 +48,7 @@ func StructFieldLess(fieldName string) Validator {
 			panic(fmt.Errorf("the context is not a struct or does not contain the field named '%s'", fieldName))
 		}
 
-		if vf.Kind() == reflect.Ptr {
+		if helper.IsPointer(vf) {
 			if vf.IsNil() {
 				return fmt.Errorf("the field named '%s' is nil", fieldName)
 			}
@@ -63,10 +63,11 @@ func StructFieldLess(fieldName string) Validator {
 // is less than or equal to other struct field named by fieldName.
 //
 // Notice: it only supports the types as following,
-//   uint, uint8, uint16, uint32, uint64
-//   int, int8, int16, int32, int64
-//   float32, float64
-//   time.Time
+//
+//	uint, uint8, uint16, uint32, uint64
+//	int, int8, int16, int32, int64
+//	float32, float64
+//	time.Time
 //
 // The validator rule is "lef(fieldName)".
 func StructFieldLessEqual(fieldName string) Validator {
@@ -85,7 +86,7 @@ func StructFieldLessEqual(fieldName string) Validator {
 			panic(fmt.Errorf("the context is not a struct or does not contain the field named '%s'", fieldName))
 		}
 
-		if vf.Kind() == reflect.Ptr {
+		if helper.IsPointer(vf) {
 			if vf.IsNil() {
 				return fmt.Errorf("the field named '%s' is nil", fieldName)
 			}
@@ -100,10 +101,11 @@ func StructFieldLessEqual(fieldName string) Validator {
 // is greater than other struct field named by fieldName.
 //
 // Notice: it only supports the types as following,
-//   uint, uint8, uint16, uint32, uint64
-//   int, int8, int16, int32, int64
-//   float32, float64
-//   time.Time
+//
+//	uint, uint8, uint16, uint32, uint64
+//	int, int8, int16, int32, int64
+//	float32, float64
+//	time.Time
 //
 // The validator rule is "gtf(fieldName)".
 func StructFieldGreater(fieldName string) Validator {
@@ -122,7 +124,7 @@ func StructFieldGreater(fieldName string) Validator {
 			panic(fmt.Errorf("the context is not a struct or does not contain the field named '%s'", fieldName))
 		}
 
-		if vf.Kind() == reflect.Ptr {
+		if helper.IsPointer(vf) {
 			if vf.IsNil() {
 				return fmt.Errorf("the field named '%s' is nil", fieldName)
 			}
@@ -137,10 +139,11 @@ func StructFieldGreater(fieldName string) Validator {
 // is greater than or equal to other struct field named by fieldName.
 //
 // Notice: it only supports the types as following,
-//   uint, uint8, uint16, uint32, uint64
-//   int, int8, int16, int32, int64
-//   float32, float64
-//   time.Time
+//
+//	uint, uint8, uint16, uint32, uint64
+//	int, int8, int16, int32, int64
+//	float32, float64
+//	time.Time
 //
 // The validator rule is "gef(fieldName)".
 func StructFieldGreaterEqual(fieldName string) Validator {
@@ -159,7 +162,7 @@ func StructFieldGreaterEqual(fieldName string) Validator {
 			panic(fmt.Errorf("the context is not a struct or does not contain the field named '%s'", fieldName))
 		}
 
-		if vf.Kind() == reflect.Ptr {
+		if helper.IsPointer(vf) {
 			if vf.IsNil() {
 				return fmt.Errorf("the field named '%s' is nil", fieldName)
 			}

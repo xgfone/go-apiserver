@@ -14,15 +14,13 @@
 
 package helper
 
-import (
-	"reflect"
-)
+import "reflect"
 
-type kinder interface {
-	Kind() reflect.Kind
+// IsPointer reports whether kind, such as reflect.Value or reflect.Type,
+// is a pointer.
+func IsPointer(kind interface{ Kind() reflect.Kind }) bool {
+	return kind.Kind() == Pointer
 }
-
-func isPointer(k kinder) bool { return k.Kind() == reflect.Pointer }
 
 // Implements reports whether the value has implemented the interface iface.
 //
@@ -50,7 +48,7 @@ func Implements(value, iface interface{}) bool {
 		i = reflect.TypeOf(iface)
 	}
 
-	if isPointer(i) {
+	if IsPointer(i) {
 		i = i.Elem()
 	}
 
@@ -60,7 +58,7 @@ func Implements(value, iface interface{}) bool {
 // FillNilPtr fills the zero value of its base type if value is a pointer
 // and equal to nil. Or, do nothing and return the original value.
 func FillNilPtr(value reflect.Value) reflect.Value {
-	if isPointer(value) && value.CanSet() && value.IsNil() {
+	if IsPointer(value) && value.CanSet() && value.IsNil() {
 		value.Set(reflect.New(value.Type().Elem()))
 	}
 	return value

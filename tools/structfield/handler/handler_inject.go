@@ -46,7 +46,7 @@ type injector struct {
 
 func (h injector) Parse(s string) (interface{}, error) { return h.parser(s) }
 func (h injector) Run(c interface{}, r, v reflect.Value, t reflect.StructField, a interface{}) error {
-	if v = helper.FillNilPtr(v); v.Kind() != reflect.Pointer {
+	if v = helper.FillNilPtr(v); !helper.IsPointer(v) {
 		v = v.Addr()
 	}
 

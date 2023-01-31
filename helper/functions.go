@@ -41,7 +41,7 @@ func Indirect(value interface{}) interface{} {
 	}
 
 	switch vf := reflect.ValueOf(value); vf.Kind() {
-	case reflect.Ptr, reflect.Interface:
+	case Pointer, reflect.Interface:
 		if vf.IsNil() {
 			return nil
 		}

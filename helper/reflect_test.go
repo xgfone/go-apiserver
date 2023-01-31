@@ -51,7 +51,7 @@ func ExampleFillNilPtr() {
 	)
 
 	fill := func(v reflect.Value) reflect.Value {
-		if v = FillNilPtr(v); v.Kind() == reflect.Pointer {
+		if v = FillNilPtr(v); IsPointer(v) {
 			v = v.Elem()
 		}
 		return v

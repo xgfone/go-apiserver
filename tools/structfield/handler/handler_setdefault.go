@@ -40,7 +40,7 @@ func (h setdefault) Run(c interface{}, r, v reflect.Value, t reflect.StructField
 	}
 
 	var p reflect.Value
-	if v.Kind() == reflect.Ptr {
+	if helper.IsPointer(v) {
 		if v.IsNil() {
 			v.Set(reflect.New(v.Type().Elem()))
 		}

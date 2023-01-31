@@ -23,6 +23,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/tools/structfield/formatter"
 	"github.com/xgfone/go-apiserver/validation/internal"
 	"github.com/xgfone/go-apiserver/validation/validator"
@@ -205,10 +206,9 @@ func (b *Builder) RegisterFunction(function Function) {
 // function with the name as a builder function to be registered, which
 // is equal to
 //
-//   b.RegisterFunction(NewFunctionWithoutArgs(name, func() validator.Validator {
-//       return NewValidator(name, f)
-//   }))
-//
+//	b.RegisterFunction(NewFunctionWithoutArgs(name, func() validator.Validator {
+//	    return NewValidator(name, f)
+//	}))
 func (b *Builder) RegisterValidatorFunc(name string, f validator.ValidatorFunc) {
 	v := validator.NewValidator(name, f)
 	b.RegisterFunction(NewFunctionWithoutArgs(name, func() validator.Validator {
@@ -220,8 +220,7 @@ func (b *Builder) RegisterValidatorFunc(name string, f validator.ValidatorFunc) 
 // validation function with the name as a builder function to be registered,
 // which is equal to
 //
-//   b.RegisterValidatorFunc(name, BoolValidatorFunc(f, err))
-//
+//	b.RegisterValidatorFunc(name, BoolValidatorFunc(f, err))
 func (b *Builder) RegisterValidatorFuncBool(name string, f func(interface{}) bool, err error) {
 	b.RegisterValidatorFunc(name, validator.BoolValidatorFunc(f, err))
 }
@@ -230,8 +229,7 @@ func (b *Builder) RegisterValidatorFuncBool(name string, f func(interface{}) boo
 // bool validation function with the name as a builder function to be registered,
 // which is equal to
 //
-//   b.RegisterValidatorFunc(name, StringBoolValidatorFunc(f, err))
-//
+//	b.RegisterValidatorFunc(name, StringBoolValidatorFunc(f, err))
 func (b *Builder) RegisterValidatorFuncBoolString(name string, f func(string) bool, err error) {
 	b.RegisterValidatorFunc(name, validator.StringBoolValidatorFunc(f, err))
 }
@@ -239,8 +237,7 @@ func (b *Builder) RegisterValidatorFuncBoolString(name string, f func(string) bo
 // RegisterValidatorOneof is a convenient method to register a oneof validator
 // as the builder Function, which is equal to
 //
-//   b.RegisterFunction(ValidatorFunction(name, validators.OneOfWithName(name, values...)))
-//
+//	b.RegisterFunction(ValidatorFunction(name, validators.OneOfWithName(name, values...)))
 func (b *Builder) RegisterValidatorOneof(name string, values ...string) {
 	b.RegisterFunction(ValidatorFunction(name, internal.NewOneOf(name, values...)))
 }
@@ -316,7 +313,7 @@ func (b *Builder) Validate(ctx, v interface{}, rule string) (err error) {
 // validate the field value with the extracted rule.
 func (b *Builder) ValidateStruct(ctx, s interface{}) error {
 	v := reflect.ValueOf(s)
-	if v.Kind() == reflect.Ptr {
+	if helper.IsPointer(v) {
 		v = v.Elem()
 	}
 

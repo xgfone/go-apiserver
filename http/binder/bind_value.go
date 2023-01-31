@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/xgfone/go-apiserver/helper"
 )
 
 // BindUnmarshaler is the interface used to wrap the UnmarshalParam method
@@ -54,15 +56,15 @@ type BindUnmarshaler interface {
 //   - float64
 //   - time.Time     // use time.Time.UnmarshalText(), so only support RFC3339 format
 //   - time.Duration // use time.ParseDuration()
+//
 // And any pointer to the type above, and
 //   - *multipart.FileHeader
 //   - []*multipart.FileHeader
 //   - interface { UnmarshalBind(param string) error }
-//
 func BindURLValuesAndFiles(ptr interface{}, data url.Values,
 	files map[string][]*multipart.FileHeader, tag string) error {
 	value := reflect.ValueOf(ptr)
-	if value.Kind() != reflect.Ptr {
+	if !helper.IsPointer(value) {
 		return fmt.Errorf("%T is not a pointer", ptr)
 	}
 	return bindURLValues(value.Elem(), files, data, tag)
@@ -141,7 +143,7 @@ func bindURLValues(val reflect.Value, files map[string][]*multipart.FileHeader,
 var binderType = reflect.TypeOf((*BindUnmarshaler)(nil)).Elem()
 
 func bindUnmarshaler(kind reflect.Kind, val reflect.Value, value string) (ok bool, err error) {
-	if kind != reflect.Ptr && kind != reflect.Interface {
+	if kind != helper.Pointer && kind != reflect.Interface {
 		val = val.Addr()
 	}
 
@@ -155,7 +157,7 @@ func bindUnmarshaler(kind reflect.Kind, val reflect.Value, value string) (ok boo
 }
 
 func setWithProperType(kind reflect.Kind, value reflect.Value, input string) error {
-	if kind == reflect.Ptr && value.IsNil() {
+	if kind == helper.Pointer && value.IsNil() {
 		value.Set(reflect.New(value.Type().Elem()))
 	} else if kind == reflect.Interface && value.IsNil() {
 		panic("the bind struct field interface value must not be nil")
@@ -166,7 +168,7 @@ func setWithProperType(kind reflect.Kind, value reflect.Value, input string) err
 	}
 
 	switch kind {
-	case reflect.Ptr:
+	case helper.Pointer:
 		value = value.Elem()
 		return setWithProperType(value.Kind(), value, input)
 	case reflect.Int:

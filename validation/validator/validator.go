@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/xgfone/go-apiserver/helper"
 )
 
 // ValueValidator represents the interface implemented by the value.
@@ -236,7 +238,7 @@ func Array(validators ...Validator) Validator {
 
 		default:
 			vf := reflect.ValueOf(i)
-			if vf.Kind() == reflect.Ptr {
+			if helper.IsPointer(vf) {
 				vf = vf.Elem()
 			}
 			switch vf.Kind() {
