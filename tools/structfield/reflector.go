@@ -27,8 +27,9 @@ import (
 )
 
 func init() {
-	DefaultReflector.Register("validate", handler.NewValidatorHandler(nil))
-	DefaultReflector.Register("default", handler.NewSetDefaultHandler())
+	Register("validate", handler.NewValidatorHandler(nil))
+	Register("default", handler.NewSetDefaultHandler())
+	Register("inject", handler.NewInjectHandler(nil))
 }
 
 // DefaultReflector is the default global struct field reflector.
