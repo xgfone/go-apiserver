@@ -14,7 +14,25 @@
 
 package nets
 
-import "fmt"
+import (
+	"fmt"
+	"net"
+	"testing"
+)
+
+func TestIsTimeout(t *testing.T) {
+	if IsTimeout(fmt.Errorf("error")) {
+		t.Error("unexpect timeout")
+	}
+
+	if IsTimeout(&net.DNSError{IsTimeout: false}) {
+		t.Error("unexpect timeout")
+	}
+
+	if !IsTimeout(&net.DNSError{IsTimeout: true}) {
+		t.Error("expect timeout")
+	}
+}
 
 func ExampleNormalizeMac() {
 	fmt.Println(NormalizeMac("00:aa:bb:cc:dd:ee"))
