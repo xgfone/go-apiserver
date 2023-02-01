@@ -17,6 +17,7 @@ package middlewares
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/middleware"
@@ -45,7 +46,7 @@ func ClientIP(prioirty int, handler http.Handler, ipOrCidrs ...string) (middlewa
 	return middleware.NewMiddleware("client_ip", prioirty, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			ip, _ := nets.SplitHostPort(r.RemoteAddr)
-			if checkers.CheckIPString(ip) {
+			if checkers.CheckIP(net.ParseIP(ip)) {
 				h.(http.Handler).ServeHTTP(rw, r)
 			} else {
 				handler.ServeHTTP(rw, r)

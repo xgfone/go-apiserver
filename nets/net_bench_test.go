@@ -14,7 +14,10 @@
 
 package nets
 
-import "testing"
+import (
+	"net"
+	"testing"
+)
 
 func BenchmarkIPChecker_IPv4(b *testing.B) {
 	checker, err := NewIPChecker("1.2.3.4")
@@ -26,7 +29,7 @@ func BenchmarkIPChecker_IPv4(b *testing.B) {
 	b.ReportAllocs()
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			checker.CheckIPString("1.2.3.4")
+			checker.CheckIP(net.ParseIP("1.2.3.4"))
 		}
 	})
 }
@@ -41,7 +44,7 @@ func BenchmarkIPChecker_CIDRv4(b *testing.B) {
 	b.ReportAllocs()
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			checker.CheckIPString("10.2.3.4")
+			checker.CheckIP(net.ParseIP("10.2.3.4"))
 		}
 	})
 }
@@ -56,7 +59,7 @@ func BenchmarkIPChecker_IPv6(b *testing.B) {
 	b.ReportAllocs()
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			checker.CheckIPString("'fe80::215:5dff:fe8c:6de7")
+			checker.CheckIP(net.ParseIP("'fe80::215:5dff:fe8c:6de7"))
 		}
 	})
 }
@@ -71,7 +74,7 @@ func BenchmarkIPChecker_CIDRv6(b *testing.B) {
 	b.ReportAllocs()
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			checker.CheckIPString("'fe80::215:5dff:fe8c:6de7")
+			checker.CheckIP(net.ParseIP("'fe80::215:5dff:fe8c:6de7"))
 		}
 	})
 }

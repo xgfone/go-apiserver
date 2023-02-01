@@ -115,3 +115,27 @@ func ToAddr(v interface{}) netip.Addr {
 
 	return addr
 }
+
+type ipChecker struct{ netip.Prefix }
+
+func newIPChecker(cidr string) (c ipChecker, err error) {
+	c.Prefix, err = netip.ParsePrefix(cidr)
+	return
+}
+
+func (c ipChecker) String() string { return c.Prefix.String() }
+
+func (c ipChecker) CheckIP(ip net.IP) bool {
+	if len(ip) == 0 {
+		return false
+	}
+
+	if c.Prefix.Addr().BitLen() == 32 {
+		ip = ip.To4()
+	} else {
+		ip = ip.To16()
+	}
+
+	addr, ok := netip.AddrFromSlice(ip)
+	return ok && c.Prefix.Contains(addr)
+}

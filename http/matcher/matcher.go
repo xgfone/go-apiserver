@@ -19,6 +19,7 @@ package matcher
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/textproto"
 	"net/url"
@@ -441,7 +442,7 @@ func clientIPMatcher(clientIP string) (Matcher, error) {
 	desc := fmt.Sprintf("ClientIP(`%s`)", clientIP)
 	return New(PriorityClientIP, desc, func(_ http.ResponseWriter, r *http.Request) bool {
 		remoteIP, _ := nets.SplitHostPort(r.RemoteAddr)
-		return ipChecker.CheckIPString(remoteIP)
+		return ipChecker.CheckIP(net.ParseIP(remoteIP))
 	}), nil
 }
 

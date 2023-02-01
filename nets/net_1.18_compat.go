@@ -56,3 +56,19 @@ func toIP(v interface{}) net.IP {
 		return nil
 	}
 }
+
+type ipChecker struct{ *net.IPNet }
+
+func newIPChecker(cidr string) (c ipChecker, err error) {
+	_, c.IPNet, err = net.ParseCIDR(cidr)
+	return
+}
+
+func (c ipChecker) String() string { return c.IPNet.String() }
+
+func (c ipChecker) CheckIP(ip net.IP) (ok bool) {
+	if len(ip) > 0 {
+		ok = c.IPNet.Contains(ip)
+	}
+	return
+}

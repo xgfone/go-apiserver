@@ -108,10 +108,10 @@ func ExampleSplitHostPort() {
 
 func ExampleIPChecker() {
 	checkip := func(checker IPChecker, ip string) {
-		if checker.CheckIPString(ip) {
-			fmt.Printf("'%s' contains the ip '%s'\n", checker.String(), ip)
+		if checker.CheckIP(net.ParseIP(ip)) {
+			fmt.Printf("'%v' contains the ip '%s'\n", checker, ip)
 		} else {
-			fmt.Printf("'%s' does not contain the ip '%s'\n", checker.String(), ip)
+			fmt.Printf("'%v' does not contain the ip '%s'\n", checker, ip)
 		}
 	}
 

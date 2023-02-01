@@ -118,10 +118,14 @@ func validOptionalPort(port string) bool {
 
 // IPChecker is used to check whether the ip is legal or allowed.
 type IPChecker interface {
-	CheckIPString(ip string) (ok bool)
 	CheckIP(ip net.IP) (ok bool)
-	fmt.Stringer
 }
+
+// IPCheckerFunc is the ip checker function.
+type IPCheckerFunc func(net.IP) bool
+
+// CheckIP implements the interface IPChecker.
+func (c IPCheckerFunc) CheckIP(ip net.IP) bool { return c(ip) }
 
 // IPCheckers is a set of IPChecker.
 type IPCheckers []IPChecker
@@ -151,7 +155,12 @@ func (cs IPCheckers) String() string {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
-		buf.WriteString(cs[i].String())
+
+		if s, ok := cs[i].(fmt.Stringer); ok {
+			buf.WriteString(s.String())
+		} else {
+			fmt.Fprint(&buf, cs[i])
+		}
 	}
 	return buf.String()
 }
@@ -171,47 +180,29 @@ func (cs IPCheckers) CheckIP(ip net.IP) bool {
 	return false
 }
 
-// CheckIPString implements the interface IPChecker, which returns true
-// if any ip checker return true.
-func (cs IPCheckers) CheckIPString(ip string) bool {
-	return cs.CheckIP(net.ParseIP(ip))
-}
-
 // NewIPChecker returns a new IPChecker based on an IP or CIDR.
 func NewIPChecker(ipOrCidr string) (IPChecker, error) {
-	if strings.IndexByte(ipOrCidr, '/') > -1 { // For CIDR
-		_, ipnet, err := net.ParseCIDR(ipOrCidr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid cidr network address '%s'", ipOrCidr)
-		}
-		return ipChecker{ipnet}, nil
-	}
-
 	cidr := ipOrCidr
-	if strings.IndexByte(cidr, '.') == -1 { // For IPv6
-		cidr += "/128"
-	} else { // For IPv4
-		cidr += "/32"
+
+	var isip bool
+	if isip = strings.IndexByte(cidr, '/') < 0; isip {
+		if strings.IndexByte(cidr, '.') == -1 { // For IPv6
+			cidr += "/128"
+		} else { // For IPv4
+			cidr += "/32"
+		}
 	}
 
-	_, ipnet, err := net.ParseCIDR(cidr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid ip address '%s'", ipOrCidr)
+	ipChecker, err := newIPChecker(cidr)
+	if err == nil {
+		return ipChecker, nil
 	}
-	return ipChecker{ipnet}, nil
-}
 
-type ipChecker struct{ *net.IPNet }
-
-func (c ipChecker) String() string { return c.IPNet.String() }
-
-func (c ipChecker) CheckIP(ip net.IP) bool {
-	if len(ip) == 0 {
-		return false
+	if isip {
+		err = fmt.Errorf("invalid ip address '%s': %w", ipOrCidr, err)
+	} else {
+		err = fmt.Errorf("invalid cidr network address '%s': %w", ipOrCidr, err)
 	}
-	return c.Contains(ip)
-}
 
-func (c ipChecker) CheckIPString(ip string) bool {
-	return c.CheckIP(net.ParseIP(ip))
+	return nil, err
 }
