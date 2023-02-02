@@ -61,6 +61,11 @@ func Reflect(ctx, structValuePtr interface{}) error {
 	return DefaultReflector.Reflect(ctx, structValuePtr)
 }
 
+// ReflectValue is equal to DefaultReflector.ReflectValue(ctx, structValue).
+func ReflectValue(ctx interface{}, structValue reflect.Value) error {
+	return DefaultReflector.ReflectValue(ctx, structValue)
+}
+
 type tagKey struct {
 	Name  string
 	Value string
@@ -139,7 +144,13 @@ func (r *Reflector) Reflect(ctx, structValuePtr interface{}) error {
 		return fmt.Errorf("the value %T is not a struct", structValuePtr)
 	}
 
-	return r.reflectStruct(ctx, v, v)
+	return r.ReflectValue(ctx, v)
+}
+
+// ReflectValue is the same as Reflect, but uses reflect.Value
+// instead of a pointer to a struct.
+func (r *Reflector) ReflectValue(ctx interface{}, structValue reflect.Value) error {
+	return r.reflectStruct(ctx, structValue, structValue)
 }
 
 func (r *Reflector) reflectStruct(c interface{}, root, v reflect.Value) (err error) {

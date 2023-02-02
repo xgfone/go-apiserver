@@ -19,6 +19,7 @@ import (
 	"reflect"
 
 	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-apiserver/log"
 )
 
 // Injector is an interface to inject something into itself.
@@ -47,12 +48,17 @@ type injector struct {
 func (h injector) Parse(s string) (interface{}, error) { return h.parser(s) }
 func (h injector) Run(c interface{}, r, v reflect.Value, t reflect.StructField, a interface{}) error {
 	if v = helper.FillNilPtr(v); !helper.IsPointer(v) {
+		if !v.CanAddr() {
+			log.Warnf("%v is unaddressable by reflect", t.Name)
+			return nil
+		}
 		v = v.Addr()
 	}
 
-	if helper.Implements(v, (*Injector)(nil)) {
-		return v.Interface().(Injector).Inject(a)
+	switch injector := v.Interface().(type) {
+	case Injector:
+		return injector.Inject(a)
+	default:
+		panic(fmt.Errorf("%T has not implemented the interface Injector", injector))
 	}
-
-	panic(fmt.Errorf("%T has not implemented the interface Injector", v.Interface()))
 }

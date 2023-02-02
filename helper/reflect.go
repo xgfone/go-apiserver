@@ -63,3 +63,15 @@ func FillNilPtr(value reflect.Value) reflect.Value {
 	}
 	return value
 }
+
+// IndirectValue returns the underlying value of the pointer or interface
+// if the input value is a pointer or interface. Or, return the input.
+func IndirectValue(value reflect.Value) reflect.Value {
+	switch value.Kind() {
+	case KindPointer, reflect.Interface:
+		if !value.IsNil() {
+			value = IndirectValue(value.Elem())
+		}
+	}
+	return value
+}
