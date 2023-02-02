@@ -23,7 +23,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/tools/structfield/handler"
 )
 
@@ -131,7 +130,7 @@ func (r *Reflector) Reflect(ctx, structValuePtr interface{}) error {
 	v := reflect.ValueOf(structValuePtr)
 	switch kind := v.Kind(); kind {
 	case reflect.Struct:
-	case helper.KindPointer:
+	case reflect.Pointer:
 		if v.IsNil() {
 			return nil
 		}
@@ -170,7 +169,7 @@ func (r *Reflector) reflectField(c interface{}, root, v reflect.Value, t reflect
 		case reflect.Struct:
 			err = r.reflectStruct(c, root, v)
 
-		case helper.KindPointer:
+		case reflect.Pointer:
 			if !v.IsNil() {
 				if v = v.Elem(); v.Kind() == reflect.Struct {
 					err = r.reflectStruct(c, root, v)

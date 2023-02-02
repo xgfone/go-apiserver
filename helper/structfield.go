@@ -44,7 +44,7 @@ func GetStructFieldByName(structValue interface{}, fieldName string) (fieldValue
 
 	switch v.Kind() {
 	case reflect.Struct:
-	case KindPointer:
+	case reflect.Pointer:
 		if v.IsNil() {
 			return
 		}

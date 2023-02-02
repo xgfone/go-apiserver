@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"strings"
 )
 
@@ -33,6 +34,9 @@ func IsTimeout(err error) bool {
 	return errors.As(err, &timeoutErr) && timeoutErr.Timeout()
 }
 
+// IsClosed reports whether the error is closed.
+func IsClosed(err error) bool { return errors.Is(err, net.ErrClosed) }
+
 // NormalizeMac normalizes the mac, which is the convenient function
 // of net.ParseMAC, but only supports the 48-bit format and outputs
 // the string like "xx:xx:xx:xx:xx:xx".
@@ -46,7 +50,97 @@ func NormalizeMac(mac string) string {
 }
 
 // ToIP converts any value to net.IP, but returns nil if failing.
-func ToIP(v interface{}) net.IP { return toIP(v) }
+func ToIP(v interface{}) net.IP {
+	switch ip := v.(type) {
+	case string:
+		return net.ParseIP(ip)
+
+	case net.IP:
+		return ip
+
+	case net.IPAddr:
+		return ip.IP
+
+	case net.TCPAddr:
+		return ip.IP
+
+	case *net.TCPAddr:
+		return ip.IP
+
+	case net.UDPAddr:
+		return ip.IP
+
+	case *net.UDPAddr:
+		return ip.IP
+
+	case netip.Addr:
+		return net.IP(ip.AsSlice())
+
+	case net.Addr:
+		s, _ := SplitHostPort(ip.String())
+		return net.ParseIP(s)
+
+	case fmt.Stringer:
+		return net.ParseIP(ip.String())
+
+	default:
+		return nil
+	}
+}
+
+// ToAddr converts any value to netip.Addr, but returns ZERO if failing.
+func ToAddr(v interface{}) netip.Addr {
+	var addr netip.Addr
+	switch ip := v.(type) {
+	case string:
+		addr, _ = netip.ParseAddr(ip)
+
+	case net.IP:
+		addr = ip2addr(ip)
+
+	case net.IPAddr:
+		addr = ip2addr(ip.IP)
+
+	case net.TCPAddr:
+		addr = ip2addr(ip.IP)
+
+	case *net.TCPAddr:
+		addr = ip2addr(ip.IP)
+
+	case net.UDPAddr:
+		addr = ip2addr(ip.IP)
+
+	case *net.UDPAddr:
+		addr = ip2addr(ip.IP)
+
+	case netip.Addr:
+		addr = ip
+
+	case net.Addr:
+		s, _ := SplitHostPort(ip.String())
+		addr, _ = netip.ParseAddr(s)
+
+	case fmt.Stringer:
+		addr, _ = netip.ParseAddr(ip.String())
+	}
+
+	return addr
+}
+
+func ip2addr(ip net.IP) (addr netip.Addr) {
+	switch len(ip) {
+	case net.IPv4len:
+		var b [4]byte
+		copy(b[:], ip)
+		addr = netip.AddrFrom4(b)
+
+	case net.IPv6len:
+		var b [16]byte
+		copy(b[:], ip)
+		addr = netip.AddrFrom16(b)
+	}
+	return
+}
 
 // IPIsOnInterface reports whether the ip is on the given network interface
 // named ifaceName.
@@ -205,4 +299,28 @@ func NewIPChecker(ipOrCidr string) (IPChecker, error) {
 	}
 
 	return nil, err
+}
+
+type ipChecker struct{ netip.Prefix }
+
+func newIPChecker(cidr string) (c ipChecker, err error) {
+	c.Prefix, err = netip.ParsePrefix(cidr)
+	return
+}
+
+func (c ipChecker) String() string { return c.Prefix.String() }
+
+func (c ipChecker) CheckIP(ip net.IP) bool {
+	if len(ip) == 0 {
+		return false
+	}
+
+	if c.Prefix.Addr().BitLen() == 32 {
+		ip = ip.To4()
+	} else {
+		ip = ip.To16()
+	}
+
+	addr, ok := netip.AddrFromSlice(ip)
+	return ok && c.Prefix.Contains(addr)
 }

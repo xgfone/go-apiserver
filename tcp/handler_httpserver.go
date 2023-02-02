@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/http/handler"
-	"github.com/xgfone/go-apiserver/internal/atomic"
 	"github.com/xgfone/go-apiserver/log"
 )
 

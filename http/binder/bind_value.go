@@ -143,7 +143,7 @@ func bindURLValues(val reflect.Value, files map[string][]*multipart.FileHeader,
 var binderType = reflect.TypeOf((*BindUnmarshaler)(nil)).Elem()
 
 func bindUnmarshaler(kind reflect.Kind, val reflect.Value, value string) (ok bool, err error) {
-	if kind != helper.KindPointer && kind != reflect.Interface {
+	if kind != reflect.Pointer && kind != reflect.Interface {
 		val = val.Addr()
 	}
 
@@ -157,7 +157,7 @@ func bindUnmarshaler(kind reflect.Kind, val reflect.Value, value string) (ok boo
 }
 
 func setWithProperType(kind reflect.Kind, value reflect.Value, input string) error {
-	if kind == helper.KindPointer && value.IsNil() {
+	if kind == reflect.Pointer && value.IsNil() {
 		value.Set(reflect.New(value.Type().Elem()))
 	} else if kind == reflect.Interface && value.IsNil() {
 		panic("the bind struct field interface value must not be nil")
@@ -168,7 +168,7 @@ func setWithProperType(kind reflect.Kind, value reflect.Value, input string) err
 	}
 
 	switch kind {
-	case helper.KindPointer:
+	case reflect.Pointer:
 		value = value.Elem()
 		return setWithProperType(value.Kind(), value, input)
 	case reflect.Int:

@@ -18,8 +18,8 @@ import (
 	"context"
 	"net"
 	"sync"
+	"sync/atomic"
 
-	"github.com/xgfone/go-apiserver/internal/atomic"
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/nets"
 )

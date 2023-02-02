@@ -27,6 +27,12 @@ import (
 
 var defaultCipherSuites []uint16
 
+func init() {
+	for _, cs := range tls.CipherSuites() {
+		defaultCipherSuites = append(defaultCipherSuites, cs.ID)
+	}
+}
+
 func getCipherSuites() []uint16 {
 	if len(defaultCipherSuites) == 0 {
 		return nil

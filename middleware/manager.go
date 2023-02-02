@@ -21,8 +21,8 @@ import (
 	"net/http"
 	"sort"
 	"sync"
+	"sync/atomic"
 
-	"github.com/xgfone/go-apiserver/internal/atomic"
 	"github.com/xgfone/go-apiserver/tcp"
 )
 

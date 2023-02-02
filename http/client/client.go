@@ -19,8 +19,7 @@ package client
 import (
 	"io"
 	"net/http"
-
-	"github.com/xgfone/go-apiserver/internal/atomic"
+	"sync/atomic"
 )
 
 var (

@@ -19,7 +19,7 @@ import "reflect"
 // IsPointer reports whether kind, such as reflect.Value or reflect.Type,
 // is a pointer.
 func IsPointer(kind interface{ Kind() reflect.Kind }) bool {
-	return kind.Kind() == KindPointer
+	return kind.Kind() == reflect.Pointer
 }
 
 // Implements reports whether the value has implemented the interface iface.
@@ -68,7 +68,7 @@ func FillNilPtr(value reflect.Value) reflect.Value {
 // if the input value is a pointer or interface. Or, return the input.
 func IndirectValue(value reflect.Value) reflect.Value {
 	switch value.Kind() {
-	case KindPointer, reflect.Interface:
+	case reflect.Pointer, reflect.Interface:
 		if !value.IsNil() {
 			value = IndirectValue(value.Elem())
 		}

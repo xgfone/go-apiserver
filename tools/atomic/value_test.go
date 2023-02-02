@@ -23,3 +23,22 @@ func TestValue(t *testing.T) {
 		t.Errorf("expect %v, but got %v", true, v)
 	}
 }
+
+func TestValueSwap(t *testing.T) {
+	value := NewValue(true)
+	if v, ok := value.Swap(123).(bool); !ok || !v {
+		t.Errorf("expect %v, but got %v", true, v)
+	}
+
+	if !value.CompareAndSwap(123, false) {
+		t.Errorf("expect compare and swap, but fail")
+	}
+
+	if value.CompareAndSwap(true, false) {
+		t.Errorf("not expect compare and swap, but success")
+	}
+
+	if v, ok := value.Load().(bool); !ok || v {
+		t.Errorf("expect %v, but got %v", false, v)
+	}
+}

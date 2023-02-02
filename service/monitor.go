@@ -20,7 +20,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/xgfone/go-apiserver/internal/ticker"
 	"github.com/xgfone/go-apiserver/log"
 	atomic2 "github.com/xgfone/go-apiserver/tools/atomic"
 )
@@ -174,7 +173,7 @@ func (m *Monitor) run(ctx context.Context) {
 	conf := m.GetCheckConfig()
 	m.check(ctx, conf)
 
-	ticker := ticker.NewTicker(conf.Interval)
+	ticker := time.NewTicker(conf.Interval)
 	defer ticker.Stop()
 
 	for {

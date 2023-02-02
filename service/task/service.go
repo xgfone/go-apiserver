@@ -18,8 +18,7 @@ package task
 import (
 	"context"
 	"sync"
-
-	"github.com/xgfone/go-apiserver/internal/atomic"
+	"sync/atomic"
 )
 
 // DefaultService is the default task service.

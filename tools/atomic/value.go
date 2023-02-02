@@ -41,3 +41,13 @@ func (v *Value) Load() interface{} {
 func (v *Value) Store(val interface{}) {
 	v.value.Store(valueWrapper{val})
 }
+
+// CompareAndSwap refers to sync/atomic.Value#CompareAndSwap.
+func (v *Value) CompareAndSwap(old, new interface{}) (swapped bool) {
+	return v.value.CompareAndSwap(valueWrapper{old}, valueWrapper{new})
+}
+
+// Swap refers to sync/atomic.Value#Swap.
+func (v *Value) Swap(new interface{}) (old interface{}) {
+	return v.value.Swap(valueWrapper{new}).(valueWrapper).Value
+}

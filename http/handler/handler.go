@@ -17,8 +17,7 @@ package handler
 
 import (
 	"net/http"
-
-	"github.com/xgfone/go-apiserver/internal/atomic"
+	"sync/atomic"
 )
 
 // Pre-define some http handlers.

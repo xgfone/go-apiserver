@@ -20,13 +20,12 @@ import (
 	"net/http"
 	"sort"
 	"sync"
-	stdatomic "sync/atomic"
+	"sync/atomic"
 	"time"
 
 	"github.com/xgfone/go-apiserver/http/upstream"
 	"github.com/xgfone/go-apiserver/http/upstream/balancer"
 	"github.com/xgfone/go-apiserver/http/upstream/healthcheck"
-	"github.com/xgfone/go-apiserver/internal/atomic"
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/nets"
 )
@@ -55,14 +54,14 @@ func newUpServer(server upstream.Server) *upserver {
 }
 
 func (s *upserver) IsOnline() bool {
-	return stdatomic.LoadInt32(&s.online) == 1
+	return atomic.LoadInt32(&s.online) == 1
 }
 
 func (s *upserver) SetOnline(online bool) (ok bool) {
 	if online {
-		ok = stdatomic.CompareAndSwapInt32(&s.online, 0, 1)
+		ok = atomic.CompareAndSwapInt32(&s.online, 0, 1)
 	} else {
-		ok = stdatomic.CompareAndSwapInt32(&s.online, 1, 0)
+		ok = atomic.CompareAndSwapInt32(&s.online, 1, 0)
 	}
 	return
 }
@@ -115,12 +114,12 @@ func (lb *LoadBalancer) SwapBalancer(new balancer.Balancer) (old balancer.Balanc
 
 // GetTimeout returns the maximum timeout.
 func (lb *LoadBalancer) GetTimeout() time.Duration {
-	return time.Duration(stdatomic.LoadInt64(&lb.timeout))
+	return time.Duration(atomic.LoadInt64(&lb.timeout))
 }
 
 // SetTimeout sets the maximum timeout.
 func (lb *LoadBalancer) SetTimeout(timeout time.Duration) {
-	stdatomic.StoreInt64(&lb.timeout, int64(timeout))
+	atomic.StoreInt64(&lb.timeout, int64(timeout))
 }
 
 // GetServerDiscovery returns the server discovery.
