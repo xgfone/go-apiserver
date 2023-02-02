@@ -64,7 +64,7 @@ type DefaultSetter interface {
 func SetStructFieldToDefault(v interface{}) (err error) {
 	vf := reflect.ValueOf(v)
 	switch kind := vf.Kind(); kind {
-	case Pointer:
+	case KindPointer:
 		vf = vf.Elem()
 		if vf.Kind() != reflect.Struct {
 			return errNotPointerToStruct

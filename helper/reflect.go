@@ -19,7 +19,7 @@ import "reflect"
 // IsPointer reports whether kind, such as reflect.Value or reflect.Type,
 // is a pointer.
 func IsPointer(kind interface{ Kind() reflect.Kind }) bool {
-	return kind.Kind() == Pointer
+	return kind.Kind() == KindPointer
 }
 
 // Implements reports whether the value has implemented the interface iface.

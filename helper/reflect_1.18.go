@@ -19,5 +19,5 @@ package helper
 
 import "reflect"
 
-// Pointer represents a pointer kind.
-const Pointer = reflect.Pointer
+// KindPointer represents a pointer kind.
+const KindPointer = reflect.Pointer
