@@ -490,8 +490,10 @@ func (c *Context) Success(data interface{}) {
 // Failure is the same as c.Respond(result.Response{Error: err})
 // if err is not nil. Or, it is equal to c.Success(nil).
 func (c *Context) Failure(err error) {
-	switch err.(type) {
+	switch e := err.(type) {
 	case nil, result.Error:
+	case result.CodeError:
+		err = e.CodeError()
 	default:
 		err = result.ErrInternalServerError.WithError(err)
 	}

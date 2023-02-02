@@ -21,6 +21,11 @@ import (
 
 var _ CodeGetter = Error{}
 
+// CodeError is used to convert itself to Error.
+type CodeError interface {
+	CodeError() Error
+}
+
 // Error represents an error.
 type Error struct {
 	Code      string  `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
