@@ -50,7 +50,7 @@ func TestResponseWriter(t *testing.T) {
 
 	if w, ok := NewResponseWriter(rec).(WrappedResponseWriter); !ok {
 		t.Error("expect WrappedResponseWriter")
-	} else if r, ok := w.WrappedResponseWriter().(*httptest.ResponseRecorder); !ok {
+	} else if r, ok := w.Unwrap().(*httptest.ResponseRecorder); !ok {
 		t.Error("expect httptest.ResponseRecorder")
 	} else if r != rec {
 		t.Error("unexpected httptest.ResponseRecorder")
