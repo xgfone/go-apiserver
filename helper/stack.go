@@ -20,10 +20,7 @@ import (
 	"strings"
 )
 
-var trimPrefixes = []string{"/src/", "/pkg/mod/"}
-
-// RecoverStackSkip is used to skip some stacks in recover.
-const RecoverStackSkip = 4
+var trimPrefixes = []string{"/pkg/mod/", "/src/"}
 
 // GetCallStack returns the most 64 call stacks.
 func GetCallStack(skip int) []string {

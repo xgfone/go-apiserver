@@ -159,7 +159,7 @@ func WrapPanic(kvs ...interface{}) {
 			kvs = make([]interface{}, 0, 4)
 		}
 
-		stacks := helper.GetCallStack(helper.RecoverStackSkip)
+		stacks := helper.GetCallStack(4)
 		kvs = append(kvs, "stacks", stacks, "panic", r)
 		DefaultLogger.Log(LvlError, 2, "wrap a panic", kvs...)
 	}

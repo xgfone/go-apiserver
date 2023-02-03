@@ -29,7 +29,7 @@ func TestGetCallStack(t *testing.T) {
 	}
 
 	expects := []string{
-		"github.com/xgfone/go-apiserver/helper/stack.go:GetCallStack:31",
+		"github.com/xgfone/go-apiserver/helper/stack.go:GetCallStack:28",
 		"github.com/xgfone/go-apiserver/helper/stack_test.go:TestGetCallStack:23",
 	}
 
