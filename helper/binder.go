@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package binder
+package helper
 
 import (
-	"errors"
 	"fmt"
 	"mime/multipart"
 	"net/url"
@@ -23,8 +22,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/xgfone/go-apiserver/helper"
 )
 
 // BindUnmarshaler is the interface used to wrap the UnmarshalParam method
@@ -34,12 +31,15 @@ type BindUnmarshaler interface {
 	UnmarshalBind(param string) error
 }
 
-// BindURLValuesAndFiles parses the data and assign to the pointer ptr to a struct.
+// BindStruct binds the fields of the pointer struct to the values got
+// by the get function that should return one of nil, string, []string
+// or []*multipart.FileHeader. For []*multipart.FileHeader, it is only
 //
 // Notice: tag is the name of the struct tag. such as "form", "query", etc.
 // If the tag value is equal to "-", ignore this field.
 //
 // Support the types of the struct fields as follow:
+//
 //   - bool
 //   - int
 //   - int8
@@ -58,30 +58,36 @@ type BindUnmarshaler interface {
 //   - time.Duration // use time.ParseDuration()
 //
 // And any pointer to the type above, and
+//
+//   - BindUnmarshaler
 //   - *multipart.FileHeader
 //   - []*multipart.FileHeader
-//   - interface { UnmarshalBind(param string) error }
-func BindURLValuesAndFiles(ptr interface{}, data url.Values,
-	files map[string][]*multipart.FileHeader, tag string) error {
-	value := reflect.ValueOf(ptr)
-	if !helper.IsPointer(value) {
-		return fmt.Errorf("%T is not a pointer", ptr)
+func BindStruct(structptr interface{}, tag string, get func(name string) interface{}) error {
+	pvalue := reflect.ValueOf(structptr)
+	if !IsPointer(pvalue) {
+		return fmt.Errorf("%T is not a pointer to struct", structptr)
 	}
-	return bindURLValues(value.Elem(), files, data, tag)
+
+	vvalue := pvalue.Elem()
+	if vvalue.Kind() != reflect.Struct {
+		return fmt.Errorf("%T is not a pointer to struct", structptr)
+	}
+
+	return bindValues(vvalue, tag, get)
 }
 
-// BindURLValues is equal to BindURLValuesAndFiles(ptr, data, nil, tag).
-func BindURLValues(ptr interface{}, data url.Values, tag string) error {
-	return BindURLValuesAndFiles(ptr, data, nil, tag)
+// BindStructFromMap is the same BindStruct, but use a map instead of a function.
+func BindStructFromMap(structptr interface{}, tag string, data map[string]interface{}) error {
+	return BindStruct(structptr, tag, func(name string) interface{} { return data[name] })
 }
 
-func bindURLValues(val reflect.Value, files map[string][]*multipart.FileHeader,
-	data url.Values, tag string) (err error) {
+// BindStructFromURLValues is the same BindStruct, but use a map instead of a url.Values.
+func BindStructFromURLValues(structptr interface{}, tag string, data url.Values) error {
+	return BindStruct(structptr, tag, func(name string) interface{} { return data[name] })
+}
+
+func bindValues(val reflect.Value, tag string, get func(string) interface{}) (err error) {
 	valType := val.Type()
-	if valType.Kind() != reflect.Struct {
-		return errors.New("binding element must be a struct")
-	}
-
 	for i, num := 0, valType.NumField(); i < num; i++ {
 		field := valType.Field(i)
 		fieldName := field.Tag.Get(tag)
@@ -95,7 +101,7 @@ func bindURLValues(val reflect.Value, files map[string][]*multipart.FileHeader,
 		fieldValue := val.Field(i)
 		fieldKind := fieldValue.Kind()
 		if field.Anonymous && fieldKind == reflect.Struct {
-			if err = bindURLValues(fieldValue, files, data, tag); err != nil {
+			if err = bindValues(fieldValue, tag, get); err != nil {
 				return err
 			}
 			continue
@@ -103,37 +109,61 @@ func bindURLValues(val reflect.Value, files map[string][]*multipart.FileHeader,
 			continue
 		}
 
-		inputValue, exists := data[fieldName]
-		if !exists {
-			if fhs := files[fieldName]; len(fhs) > 0 {
-				switch fieldValue.Interface().(type) {
-				case *multipart.FileHeader:
-					fieldValue.Set(reflect.ValueOf(fhs[0]))
-				case []*multipart.FileHeader:
-					fieldValue.Set(reflect.ValueOf(fhs))
-				}
-			}
+		switch value := get(fieldName).(type) {
+		case nil:
 			continue
-		} else if len(inputValue) == 0 {
-			continue
-		}
 
-		if fieldKind == reflect.Slice {
-			num := len(inputValue)
-			kind := field.Type.Elem().Kind()
-			slice := reflect.MakeSlice(field.Type, num, num)
-			for j := 0; j < num; j++ {
-				err = setWithProperType(kind, slice.Index(j), inputValue[j])
+		case string:
+			if fieldKind == reflect.Slice {
+				kind := field.Type.Elem().Kind()
+				slice := reflect.MakeSlice(field.Type, 1, 1)
+				err = setWithProperType(kind, slice.Index(0), value)
+				if err != nil {
+					return
+				}
+				fieldValue.Set(slice)
+			} else {
+				err = setWithProperType(fieldKind, fieldValue, value)
 				if err != nil {
 					return
 				}
 			}
-			fieldValue.Set(slice)
-		} else {
-			err = setWithProperType(fieldKind, fieldValue, inputValue[0])
-			if err != nil {
-				return
+
+		case []string:
+			if fieldKind == reflect.Slice {
+				num := len(value)
+				kind := field.Type.Elem().Kind()
+				slice := reflect.MakeSlice(field.Type, num, num)
+				for j := 0; j < num; j++ {
+					err = setWithProperType(kind, slice.Index(j), value[j])
+					if err != nil {
+						return
+					}
+				}
+				fieldValue.Set(slice)
+			} else {
+				err = setWithProperType(fieldKind, fieldValue, value[0])
+				if err != nil {
+					return
+				}
 			}
+
+		case []*multipart.FileHeader:
+			if len(value) == 0 {
+				continue
+			}
+
+			switch fieldValue.Interface().(type) {
+			case *multipart.FileHeader:
+				fieldValue.Set(reflect.ValueOf(value[0]))
+			case []*multipart.FileHeader:
+				fieldValue.Set(reflect.ValueOf(value))
+			default:
+				continue
+			}
+
+		default:
+			return fmt.Errorf("unsupported value type %T", value)
 		}
 	}
 

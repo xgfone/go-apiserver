@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package binder
+package helper
 
 import (
 	"net/url"
@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-func BenchmarkBindURLValues(b *testing.B) {
+func BenchmarkBindStruct(b *testing.B) {
 	type T struct {
 		Bool    bool    `query:"bool"`
 		Int     int     `query:"int"`
@@ -32,17 +32,17 @@ func BenchmarkBindURLValues(b *testing.B) {
 	}
 
 	var v T
-	data := url.Values{
-		"bool":    []string{"true"},
-		"int":     []string{"123"},
-		"uint":    []string{"456"},
-		"string":  []string{"abc"},
-		"float64": []string{"789"},
+	data := map[string]interface{}{
+		"bool":    "true",
+		"int":     "123",
+		"uint":    "456",
+		"string":  "abc",
+		"float64": "789",
 	}
 
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			BindURLValues(&v, data, "query")
+			BindStructFromMap(&v, "query", data)
 		}
 	})
 }
@@ -159,7 +159,7 @@ func TestBindURLValues(t *testing.T) {
 	}
 
 	v := T{Interface2: &paramBinder{}, BindUnmarshaler: &paramBinder{}}
-	if err := BindURLValues(&v, data, "query"); err != nil {
+	if err := BindStructFromURLValues(&v, "query", data); err != nil {
 		t.Fatal(err)
 	} else if !reflect.DeepEqual(v, result) {
 		t.Errorf("expect '%+v', but got '%+v'", result, v)

@@ -1,4 +1,4 @@
-// Copyright 2021~2022 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
 	"github.com/xgfone/go-apiserver/tools/structfield"
@@ -33,11 +34,11 @@ var (
 	DefaultMuxBinder = NewMuxBinder()
 
 	DefaultQueryBinder Binder = BinderFunc(func(dst interface{}, r *http.Request) error {
-		return BindURLValues(dst, r.URL.Query(), "query")
+		return helper.BindStructFromURLValues(dst, "query", r.URL.Query())
 	})
 
 	DefaultHeaderBinder Binder = BinderFunc(func(dst interface{}, r *http.Request) error {
-		return BindURLValues(dst, url.Values(r.Header), "header")
+		return helper.BindStructFromURLValues(dst, "header", url.Values(r.Header))
 	})
 
 	DefaultValidateFunc = func(v interface{}, r *http.Request) error {
@@ -113,7 +114,15 @@ func FormBinder(maxMemory int64) Binder {
 				fhs = r.MultipartForm.File
 			}
 
-			err = BindURLValuesAndFiles(v, r.Form, fhs, "form")
+			err = helper.BindStruct(v, "form", func(name string) interface{} {
+				if values, ok := r.Form[name]; ok {
+					return values
+				}
+				if values, ok := fhs[name]; ok {
+					return values
+				}
+				return nil
+			})
 		}
 
 		return
@@ -161,7 +170,7 @@ func (mb *MuxBinder) Bind(dst interface{}, req *http.Request) error {
 		return binder.Bind(dst, req)
 	}
 
-	return herrors.ErrUnsupportedMediaType.Newf("not support Content-Type '%s'", ct)
+	return herrors.ErrUnsupportedMediaType.WithMsg("not support Content-Type '%s'", ct)
 }
 
 // WrapBinder wraps the binder and returns a new one that goes to handle
