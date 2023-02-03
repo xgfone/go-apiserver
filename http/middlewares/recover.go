@@ -66,7 +66,7 @@ func wrapPanic(w http.ResponseWriter, r *http.Request, handler PanicHandler) {
 		}
 
 		if !ok {
-			stacks := helper.GetCallStack(helper.RecoverStackSkip)
+			stacks := helper.GetCallStack(4)
 			log.Error("wrap a panic", "addr", r.RemoteAddr, "method", r.Method,
 				"uri", r.RequestURI, "panic", e, "stacks", stacks)
 		}

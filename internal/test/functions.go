@@ -46,7 +46,7 @@ func CheckStrings(t *testing.T, name string, results, expects []string) {
 // InStrings checks whether each of the result strings is in the expect strings.
 func InStrings(t *testing.T, name string, results, expects []string) {
 	for _, s := range results {
-		if !helper.InStrings(s, expects) {
+		if !helper.Contains(expects, s) {
 			t.Errorf("%s: the result string '%s' is not in %v", name, s, expects)
 		}
 	}

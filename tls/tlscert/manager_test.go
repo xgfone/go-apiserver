@@ -53,7 +53,7 @@ func checkCerts(t *testing.T, prefix string, certs map[string]Certificate, names
 		t.Errorf("%s: expect %d certificates, but got %d", prefix, len(names), len(certs))
 	} else {
 		for name := range certs {
-			if !helper.InStrings(name, names) {
+			if !helper.Contains(names, name) {
 				t.Errorf("%s: unexpected certificate named '%s'", prefix, name)
 			}
 		}

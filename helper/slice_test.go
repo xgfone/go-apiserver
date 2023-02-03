@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,26 +16,66 @@ package helper
 
 import "fmt"
 
-func ExampleIntsToInterfaces() {
-	vs := IntsToInterfaces([]int{1, 2, 3})
-	fmt.Printf("%T: %v\n", vs, vs)
+func ExampleSliceEqual() {
+	s1 := []string{"a", "b", "c"}
+	s2 := []string{"b", "c", "a"}
+	s3 := []string{"a", "b", "b"}
+	if SliceEqual(s1, s2) {
+		fmt.Printf("%v is equal to %v\n", s1, s2)
+	} else {
+		fmt.Printf("%v is not equal to %v\n", s1, s2)
+	}
+
+	if SliceEqual(s1, s3) {
+		fmt.Printf("%v is equal to %v\n", s1, s3)
+	} else {
+		fmt.Printf("%v is not equal to %v\n", s1, s3)
+	}
 
 	// Output:
-	// []interface {}: [1 2 3]
+	// [a b c] is equal to [b c a]
+	// [a b c] is not equal to [a b b]
 }
 
-func ExampleInt64sToInterfaces() {
-	vs := Int64sToInterfaces([]int64{1, 2, 3})
-	fmt.Printf("%T: %v\n", vs, vs)
+func ExampleContains() {
+	fmt.Println(Contains([]int{1, 2, 3}, 0))
+	fmt.Println(Contains([]int{1, 2, 3}, 1))
+	fmt.Println(Contains([]int{1, 2, 3}, 2))
+	fmt.Println(Contains([]int{1, 2, 3}, 3))
+	fmt.Println(Contains([]int{1, 2, 3}, 4))
 
 	// Output:
-	// []interface {}: [1 2 3]
+	// false
+	// true
+	// true
+	// true
+	// false
 }
 
-func ExampleStringsToInterfaces() {
-	vs := StringsToInterfaces([]string{"a", "b", "c"})
-	fmt.Printf("%T: %v\n", vs, vs)
+func ExampleReverse() {
+	vs1 := []string{"a", "b", "c", "d"}
+	Reverse(vs1)
+	fmt.Println(vs1)
+
+	vs2 := []int{1, 2, 3, 4}
+	Reverse(vs2)
+	fmt.Println(vs2)
+
+	// Output:
+	// [d c b a]
+	// [4 3 2 1]
+}
+
+func ExampleToInterfaces() {
+	ss := []string{"a", "b", "c"}
+	vs1 := ToInterfaces(ss)
+	fmt.Printf("%T: %v\n", vs1, vs1)
+
+	ints := []int{1, 2, 3}
+	vs2 := ToInterfaces(ints)
+	fmt.Printf("%T: %v\n", vs2, vs2)
 
 	// Output:
 	// []interface {}: [a b c]
+	// []interface {}: [1 2 3]
 }

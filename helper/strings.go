@@ -32,40 +32,14 @@ func RandomString(n int, charset string) string {
 	return string(buf)
 }
 
-// IsInteger reports whether s is the integer or not.
-func IsInteger(s string) bool {
+// IsIntegerString reports whether the string s is the integer or not.
+func IsIntegerString(s string) bool {
 	if s == "" {
 		return false
 	}
 
 	for i, _len := 0, len(s); i < _len; i++ {
 		if s[i] < '0' || s[i] > '9' {
-			return false
-		}
-	}
-
-	return true
-}
-
-// InStrings reports whether the string s is in the string slice ss.
-func InStrings(s string, ss []string) (yes bool) {
-	for _len := len(ss) - 1; _len >= 0; _len-- {
-		if ss[_len] == s {
-			return true
-		}
-	}
-	return false
-}
-
-// StringsEqual reports whether the element set of the two strings are equal.
-func StringsEqual(ss1, ss2 []string) bool {
-	len1 := len(ss1)
-	if len1 != len(ss2) {
-		return false
-	}
-
-	for i := 0; i < len1; i++ {
-		if !InStrings(ss1[i], ss2) || !InStrings(ss2[i], ss1) {
 			return false
 		}
 	}

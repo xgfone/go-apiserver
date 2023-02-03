@@ -40,33 +40,6 @@ func TestRandomString(t *testing.T) {
 	}
 }
 
-func TestInStrings(t *testing.T) {
-	ss := []string{"a", "b", "c"}
-
-	if !InStrings("b", ss) {
-		t.Errorf("donot find the string '%s'", "b")
-	}
-
-	if InStrings("d", ss) {
-		t.Errorf("unexpect to find the string '%s'", "d")
-	}
-}
-
-func TestStringsEqual(t *testing.T) {
-	s1 := []string{"a", "b", "b"}
-	s2 := []string{"a", "b", "c"}
-	if StringsEqual(s1, s2) {
-		t.Error("unexpected strings equal")
-	}
-	if StringsEqual(s2, s1) {
-		t.Error("unexpected strings equal")
-	}
-
-	if !StringsEqual(s1, s1) {
-		t.Error("expect strings equal, but got not equal")
-	}
-}
-
 func TestTruncateStringByLen(t *testing.T) {
 	if s := TruncateStringByLen("abc", 4); s != "abc" {
 		t.Errorf("expect '%s', but got '%s'", "abc", s)

@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,26 +14,47 @@
 
 package helper
 
-// IntsToInterfaces converts []int to []interface{}.
-func IntsToInterfaces(vs []int) []interface{} {
-	is := make([]interface{}, len(vs))
-	for i, _len := 0, len(vs); i < _len; i++ {
-		is[i] = vs[i]
+// SliceEqual reports whether the element set of the two slices are equal.
+func SliceEqual[E comparable](vs1, vs2 []E) bool {
+	len1 := len(vs1)
+	if len1 != len(vs2) {
+		return false
 	}
-	return is
+
+	for i := 0; i < len1; i++ {
+		if !Contains(vs1, vs2[i]) || !Contains(vs2, vs1[i]) {
+			return false
+		}
+	}
+
+	return true
 }
 
-// Int64sToInterfaces converts []int64 to []interface{}.
-func Int64sToInterfaces(vs []int64) []interface{} {
-	is := make([]interface{}, len(vs))
+// Contains reports whether the slice vs contains the value v.
+func Contains[E comparable](vs []E, v E) bool {
 	for i, _len := 0, len(vs); i < _len; i++ {
-		is[i] = vs[i]
+		if vs[i] == v {
+			return true
+		}
 	}
-	return is
+	return false
 }
 
-// StringsToInterfaces converts []string to []interface{}.
-func StringsToInterfaces(vs []string) []interface{} {
+// Reverse reverses the elements in the slice.
+func Reverse[E any](vs []E) {
+	_len := len(vs) - 1
+	if _len <= 0 {
+		return
+	}
+
+	for i, j := 0, _len/2; i <= j; i++ {
+		k := _len - i
+		vs[i], vs[k] = vs[k], vs[i]
+	}
+}
+
+// ToInterfaces converts []any to []interface{}.
+func ToInterfaces[T any](vs []T) []interface{} {
 	is := make([]interface{}, len(vs))
 	for i, _len := 0, len(vs); i < _len; i++ {
 		is[i] = vs[i]

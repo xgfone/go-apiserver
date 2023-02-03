@@ -41,7 +41,7 @@ func TestCertificate(t *testing.T) {
 		t.Errorf("expect CN '%s', but got '%s'", CertCN, cn)
 	}
 
-	if !helper.StringsEqual(cert.DNSNames, CertDNSNames) {
+	if !helper.SliceEqual(cert.DNSNames, CertDNSNames) {
 		t.Errorf("expect DNS '%v', but got '%v'", CertDNSNames, cert.DNSNames)
 	}
 
@@ -49,7 +49,7 @@ func TestCertificate(t *testing.T) {
 		t.Errorf("expect %d ips, but got %d: %v", len1, len2, cert.IPAddresses)
 	} else {
 		for _, ip := range cert.IPAddresses {
-			if !helper.InStrings(ip.String(), CertIPAddresses) {
+			if !helper.Contains(CertIPAddresses, ip.String()) {
 				t.Errorf("unexpected ip '%s'", ip.String())
 			}
 		}

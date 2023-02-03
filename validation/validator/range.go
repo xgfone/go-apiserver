@@ -312,9 +312,9 @@ func inRange(v, smallest, biggest float64) bool {
 // Exp returns a validator to checks the integer value is one of the base
 // exponentials of [startExp, endExp].
 //
-//   startExp starts with 0
-//   endExp must be greater than startExp
-//   base must be greater than or equal to 2
+//	startExp starts with 0
+//	endExp must be greater than startExp
+//	base must be greater than or equal to 2
 //
 // The validator rule is "exp(base, startExp, endExp)".
 func Exp(base, startExp, endExp int) Validator {

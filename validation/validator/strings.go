@@ -61,7 +61,7 @@ func IsNumber() Validator {
 // an integer.
 func IsInteger() Validator {
 	return NewValidator("isinteger", func(_, value interface{}) error {
-		if helper.IsInteger(value.(string)) {
+		if helper.IsIntegerString(value.(string)) {
 			return nil
 		}
 		return errStrNotInteger
