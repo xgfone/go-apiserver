@@ -74,6 +74,3 @@ func (sh *SwitchHandler) Swap(new http.Handler) (old http.Handler) {
 func (sh *SwitchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sh.handler.Load().(httpHandlerWrapper).Handler.ServeHTTP(w, r)
 }
-
-// WrappedHandler implements the interface WrappedHandler.
-func (sh *SwitchHandler) WrappedHandler() http.Handler { return sh.Get() }
