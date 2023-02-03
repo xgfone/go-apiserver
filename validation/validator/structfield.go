@@ -266,7 +266,7 @@ func isLess(left, right interface{}, rightName string) error {
 			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
 		}
 
-	case helper.Comparer:
+	case interface{ Compare(interface{}) int }:
 		switch v := v1.Compare(right); v {
 		case -1:
 		case 0, 1:
@@ -375,7 +375,7 @@ func isLessEqual(left, right interface{}, rightName string) error {
 			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
 		}
 
-	case helper.Comparer:
+	case interface{ Compare(interface{}) int }:
 		switch v := v1.Compare(right); v {
 		case -1, 0:
 		case 1:
@@ -484,7 +484,7 @@ func isGreater(left, right interface{}, rightName string) error {
 			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
 		}
 
-	case helper.Comparer:
+	case interface{ Compare(interface{}) int }:
 		switch v := v1.Compare(right); v {
 		case 1:
 		case 0, -1:
@@ -593,7 +593,7 @@ func isGreaterEqual(left, right interface{}, rightName string) error {
 			return fmt.Errorf("the value is not less than the field named '%s'", rightName)
 		}
 
-	case helper.Comparer:
+	case interface{ Compare(interface{}) int }:
 		switch v := v1.Compare(right); v {
 		case 1, 0:
 		case -1:

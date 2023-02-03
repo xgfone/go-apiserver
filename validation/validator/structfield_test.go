@@ -17,14 +17,18 @@ package validator
 import (
 	"testing"
 	"time"
-
-	"github.com/xgfone/go-apiserver/helper"
 )
 
 type intComparer int
 
 func (i intComparer) Compare(other interface{}) int {
-	return helper.Compare(int(i), int(other.(intComparer)))
+	o := other.(intComparer)
+	if i < o {
+		return -1
+	} else if i > o {
+		return 1
+	}
+	return 0
 }
 
 func TestStructFieldLess(t *testing.T) {
