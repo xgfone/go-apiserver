@@ -21,44 +21,32 @@ import (
 	"github.com/xgfone/go-apiserver/log"
 )
 
-func handlePanic(r interface{}) {
-	log.Error("wrap a panic", "panic", r)
-}
-
-func wrapPanic() {
-	if r := recover(); r != nil {
-		handlePanic(r)
-	}
-}
-
-func safeRun(c context.Context, r Runner) (bool, error) {
-	defer wrapPanic()
-	return r(c)
-}
-
-// HandlePanic is used to handle the panic.
-var HandlePanic func(interface{}) = handlePanic
-
 // Group allows to start a group of goroutines and wait for their completion.
 type Group struct{ wg sync.WaitGroup }
 
 // Wait waits until all the goroutines end.
 func (g *Group) Wait() { g.wg.Wait() }
 
-// StartWithChannel starts f in a new goroutine in the group.
+// GoWithChannel starts to run the function f in a new goroutine in the group.
 // stopCh is passed to f as an argument. f should stop when stopCh is available.
-func (g *Group) StartWithChannel(stopCh <-chan struct{}, f func(stopCh <-chan struct{})) {
-	g.Start(func() { f(stopCh) })
+func (g *Group) GoWithChannel(stopCh <-chan struct{}, f func(stopCh <-chan struct{})) {
+	g.Go(func() { f(stopCh) })
 }
 
-// StartWithContext starts f in a new goroutine in the group.
+// GoWithContext starts to run the function f in a new goroutine in the group.
 // ctx is passed to f as an argument. f should stop when ctx.Done() is available.
-func (g *Group) StartWithContext(ctx context.Context, f func(context.Context)) {
-	g.Start(func() { f(ctx) })
+func (g *Group) GoWithContext(ctx context.Context, f func(context.Context)) {
+	g.Go(func() { f(ctx) })
 }
 
-// Start starts f in a new goroutine in the group.
-func (g *Group) Start(f func()) {
+// Go starts to run the function f in a new goroutine in the group.
+func (g *Group) Go(f func()) {
 	g.wg.Add(1)
-	go func() { defer g.wg.Done(); f() }()
+	go g.run(f)
+}
+
+func (g *Group) run(f func()) {
+	defer g.wg.Done()
+	defer log.WrapPanic()
+	f()
 }

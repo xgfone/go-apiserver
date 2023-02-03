@@ -24,14 +24,14 @@ func TestUntil(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	cancel()
 
-	Until2(ctx, 0, func(context.Context) {
+	Until(ctx, 0, ForeverRunner(func(context.Context) {
 		t.Fatal("should not have been invoked")
-	})
+	}))
 
 	ctx, cancel = context.WithCancel(context.TODO())
 	called := make(chan struct{})
 	go func() {
-		Until2(ctx, 0, func(context.Context) { called <- struct{}{} })
+		Until(ctx, 0, ForeverRunner(func(context.Context) { called <- struct{}{} }))
 		close(called)
 	}()
 	<-called
@@ -42,7 +42,7 @@ func TestUntil(t *testing.T) {
 func TestNonSlidingUntil(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	cancel()
-	JitterUntil(ctx, 0, false, 0, func(context.Context) (bool, error) {
+	SlidingUntil(ctx, 0, false, func(context.Context) (bool, error) {
 		t.Fatal("should not have been invoked")
 		return false, nil
 	})
@@ -50,7 +50,7 @@ func TestNonSlidingUntil(t *testing.T) {
 	ctx, cancel = context.WithCancel(context.TODO())
 	called := make(chan struct{})
 	go func() {
-		JitterUntil(ctx, 0, false, 0, func(context.Context) (bool, error) {
+		SlidingUntil(ctx, 0, false, func(context.Context) (bool, error) {
 			called <- struct{}{}
 			return false, nil
 		})
@@ -64,7 +64,7 @@ func TestNonSlidingUntil(t *testing.T) {
 func TestUntilReturnsImmediately(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	now := time.Now()
-	Until2(ctx, 3*time.Second, func(context.Context) { cancel() })
+	Until(ctx, 3*time.Second, ForeverRunner(func(context.Context) { cancel() }))
 	if now.Add(2 * time.Second).Before(time.Now()) {
 		t.Errorf("Until did not return immediately when the stop chan was closed inside the func")
 	}
@@ -73,7 +73,7 @@ func TestUntilReturnsImmediately(t *testing.T) {
 func TestJitterUntil(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	cancel()
-	JitterUntil(ctx, 0, true, 1.0, func(context.Context) (bool, error) {
+	JitterUntil(ctx, 0, 1.0, func(context.Context) (bool, error) {
 		t.Fatal("should not have been invoked")
 		return false, nil
 	})
@@ -81,7 +81,7 @@ func TestJitterUntil(t *testing.T) {
 	ctx, cancel = context.WithCancel(context.TODO())
 	called := make(chan struct{})
 	go func() {
-		JitterUntil(ctx, 0, true, 1.0, func(context.Context) (bool, error) {
+		JitterUntil(ctx, 0, 1.0, func(context.Context) (bool, error) {
 			called <- struct{}{}
 			return false, nil
 		})
@@ -98,7 +98,7 @@ func TestJitterUntilNegativeFactor(t *testing.T) {
 	called := make(chan struct{})
 	received := make(chan struct{})
 	go func() {
-		JitterUntil(ctx, time.Second, true, -30.0, func(context.Context) (bool, error) {
+		JitterUntil(ctx, time.Second, -30.0, func(context.Context) (bool, error) {
 			called <- struct{}{}
 			<-received
 			return false, nil
@@ -121,7 +121,7 @@ func TestJitterUntilNegativeFactor(t *testing.T) {
 }
 
 func TestJitterLoopFirst(t *testing.T) {
-	loop := NewJitterLoopWithStartDelay(time.Second, time.Second, true, 0.0)
+	loop := NewJitterLoop(time.Second, time.Second, true, 0.0)
 
 	start := time.Now()
 	loop.Run(context.TODO(), func(ctx context.Context) (end bool, err error) {

@@ -18,6 +18,8 @@ import (
 	"context"
 	"math/rand"
 	"time"
+
+	"github.com/xgfone/go-apiserver/log"
 )
 
 // Runner is a runner to run a task.
@@ -33,7 +35,7 @@ func ForeverRunner(runner func(context.Context)) Runner {
 
 // Loop is an interface to loop until a condition reaches.
 type Loop interface {
-	// If f returns true or an error, it terminates looping.
+	// If the runner returns true or an error, it terminates looping.
 	Run(context.Context, Runner) error
 }
 
@@ -48,6 +50,8 @@ type JitterLoop struct {
 	StartDelay time.Duration
 
 	// The interval duration between two runs of f.
+	//
+	// If 0, ignore Sliding and JitterFactor.
 	Interval time.Duration
 
 	// If true, the interval is computed after f runs.
@@ -59,13 +63,13 @@ type JitterLoop struct {
 	JitterFactor float64
 }
 
-// NewJitterLoop is equal to NewJitterLoopWithStartDelay(0, interval, sliding, jitterFactor).
-func NewJitterLoop(interval time.Duration, sliding bool, jitterFactor float64) JitterLoop {
-	return NewJitterLoopWithStartDelay(0, interval, sliding, jitterFactor)
+// NewSimpleJitterLoop is equal to NewJitterLoopWithStartDelay(startDelay, interval, true, 0).
+func NewSimpleJitterLoop(startDelay, interval time.Duration) JitterLoop {
+	return NewJitterLoop(startDelay, interval, true, 0)
 }
 
-// NewJitterLoopWithStartDelay returns a new JitterLoop.
-func NewJitterLoopWithStartDelay(startDelay, interval time.Duration, sliding bool, jitterFactor float64) JitterLoop {
+// NewJitterLoop returns a new JitterLoop.
+func NewJitterLoop(startDelay, interval time.Duration, sliding bool, jitterFactor float64) JitterLoop {
 	return JitterLoop{
 		StartDelay:   startDelay,
 		JitterFactor: jitterFactor,
@@ -171,6 +175,11 @@ func (l JitterLoop) r0(c context.Context, r Runner) error {
 	}
 }
 
+func safeRun(c context.Context, r Runner) (bool, error) {
+	defer log.WrapPanic()
+	return r(c)
+}
+
 // Jitter returns a time.Duration between duration and duration + maxFactor *
 // duration.
 //
@@ -184,30 +193,26 @@ func Jitter(duration time.Duration, maxFactor float64) time.Duration {
 }
 
 // JitterUntil is a convenient function to launch the jitter loop.
-func JitterUntil(c context.Context, interval time.Duration, sliding bool, jitter float64, r Runner) error {
-	return NewJitterLoop(interval, sliding, jitter).Run(c, r)
+func JitterUntil(c context.Context, interval time.Duration, jitter float64, r Runner) error {
+	return NewJitterLoop(0, interval, true, jitter).Run(c, r)
 }
 
-// Until is a syntactic sugar on top of JitterUntil with zero jitter factor
-// and with sliding = true.
+// SlidingUntil is a convenient function to launch the sliding loop.
+func SlidingUntil(c context.Context, interval time.Duration, sliding bool, r Runner) error {
+	return NewJitterLoop(0, interval, sliding, 0).Run(c, r)
+}
+
+// Until is a convenient function to launch the sliding loop
+// with jitter=0 and sliding=true.
 func Until(c context.Context, interval time.Duration, r Runner) error {
-	return JitterUntil(c, interval, true, 0.0, r)
-}
-
-// Until2 is the the same as Until, but use func(context.Context) instead
-// to as the runner.
-func Until2(c context.Context, interval time.Duration, f func(context.Context)) error {
-	return Until(c, interval, func(ctx context.Context) (bool, error) {
-		f(ctx)
-		return false, nil
-	})
+	return NewJitterLoop(0, interval, true, 0).Run(c, r)
 }
 
 // RunForever is a convenient function to periodically run the function f forever
 // until the context is done.
-func RunForever(c context.Context, delay, interval time.Duration, f func(context.Context)) {
-	if delay > 0 {
-		delay = Jitter(delay, 0)
+func RunForever(c context.Context, startDelay, interval time.Duration, f func(context.Context)) {
+	if startDelay > 0 {
+		startDelay = Jitter(startDelay, 0)
 	}
-	NewJitterLoopWithStartDelay(delay, interval, true, 0.1).RunForever(c, f)
+	NewSimpleJitterLoop(startDelay, interval).RunForever(c, f)
 }
