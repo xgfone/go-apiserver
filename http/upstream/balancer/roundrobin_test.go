@@ -33,16 +33,16 @@ func TestWeightedRoundRobin(t *testing.T) {
 
 	balancer := WeightedRoundRobin()
 	for i := 0; i < 18; i++ {
-		balancer.Forward(rec, req, servers)
+		balancer.Forward(rec, req, servers.OnServers)
 	}
 
-	if state := server1.State(); state.Total != 3 {
+	if state := server1.RuntimeState(); state.Total != 3 {
 		t.Errorf("expect %d server1, but got %d", 3, state.Total)
 	}
-	if state := server2.State(); state.Total != 6 {
+	if state := server2.RuntimeState(); state.Total != 6 {
 		t.Errorf("expect %d server2, but got %d", 6, state.Total)
 	}
-	if state := server3.State(); state.Total != 9 {
+	if state := server3.RuntimeState(); state.Total != 9 {
 		t.Errorf("expect %d server3, but got %d", 9, state.Total)
 	}
 }

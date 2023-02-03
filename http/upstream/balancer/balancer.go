@@ -23,12 +23,12 @@ import (
 
 // Balancer is used to forward the request to one of the backend servers.
 type Balancer interface {
-	Forward(http.ResponseWriter, *http.Request, upstream.Servers) error
+	Forward(http.ResponseWriter, *http.Request, func() upstream.Servers) error
 	Policy() string
 }
 
 // ForwardFunc is the function to forward the request to one of the servers.
-type ForwardFunc func(http.ResponseWriter, *http.Request, upstream.Servers) error
+type ForwardFunc func(http.ResponseWriter, *http.Request, func() upstream.Servers) error
 
 // NewBalancer returns a new balancer with the policy and the forward function.
 func NewBalancer(policy string, forward ForwardFunc) Balancer {
@@ -40,7 +40,7 @@ type balancer struct {
 	policy  string
 }
 
-func (f balancer) Policy() string { return f.policy }
-func (f balancer) Forward(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
-	return f.forward(w, r, ss)
+func (b balancer) Policy() string { return b.policy }
+func (b balancer) Forward(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) error {
+	return b.forward(w, r, f)
 }

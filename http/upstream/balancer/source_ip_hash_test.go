@@ -37,22 +37,22 @@ func TestSourceIPHash(t *testing.T) {
 	req3.RemoteAddr = "192.168.0.2"
 
 	balancer := SourceIPHash()
-	balancer.Forward(rec, req1, servers)
-	balancer.Forward(rec, req1, servers)
-	balancer.Forward(rec, req1, servers)
-	balancer.Forward(rec, req1, servers)
-	balancer.Forward(rec, req1, servers)
-	balancer.Forward(rec, req1, servers)
-	balancer.Forward(rec, req2, servers)
-	balancer.Forward(rec, req3, servers)
+	balancer.Forward(rec, req1, servers.OnServers)
+	balancer.Forward(rec, req1, servers.OnServers)
+	balancer.Forward(rec, req1, servers.OnServers)
+	balancer.Forward(rec, req1, servers.OnServers)
+	balancer.Forward(rec, req1, servers.OnServers)
+	balancer.Forward(rec, req1, servers.OnServers)
+	balancer.Forward(rec, req2, servers.OnServers)
+	balancer.Forward(rec, req3, servers.OnServers)
 
-	if total := server1.State().Total; total != 6 {
+	if total := server1.RuntimeState().Total; total != 6 {
 		t.Errorf("expect %d server1, but got %d", 6, total)
 	}
-	if total := server2.State().Total; total != 1 {
+	if total := server2.RuntimeState().Total; total != 1 {
 		t.Errorf("expect %d server1, but got %d", 1, total)
 	}
-	if total := server3.State().Total; total != 1 {
+	if total := server3.RuntimeState().Total; total != 1 {
 		t.Errorf("expect %d server1, but got %d", 1, total)
 	}
 }

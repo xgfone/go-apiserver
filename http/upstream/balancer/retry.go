@@ -38,11 +38,12 @@ type retry struct {
 	Balancer
 }
 
-func (f retry) WrappedBalancer() Balancer { return f.Balancer }
-func (f retry) Forward(w http.ResponseWriter, r *http.Request, s up.Servers) (err error) {
-	_len := len(s)
+func (b retry) WrappedBalancer() Balancer { return b.Balancer }
+func (b retry) Forward(w http.ResponseWriter, r *http.Request, f func() up.Servers) (err error) {
+	ss := f()
+	_len := len(ss)
 	if _len == 1 {
-		return s[0].HandleHTTP(w, r)
+		return ss[0].HandleHTTP(w, r)
 	}
 
 	c := r.Context()
@@ -53,12 +54,12 @@ func (f retry) Forward(w http.ResponseWriter, r *http.Request, s up.Servers) (er
 		default:
 		}
 
-		if err = f.Balancer.Forward(w, r, s); err == nil {
+		if err = b.Balancer.Forward(w, r, f); err == nil {
 			break
 		}
 
-		if f.interval > 0 {
-			timer := time.NewTimer(f.interval)
+		if b.interval > 0 {
+			timer := time.NewTimer(b.interval)
 			select {
 			case <-timer.C:
 			case <-c.Done():

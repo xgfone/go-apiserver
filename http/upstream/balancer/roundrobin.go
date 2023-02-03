@@ -34,7 +34,8 @@ func init() {
 func RoundRobin() Balancer {
 	last := uint64(math.MaxUint64)
 	return NewBalancer("round_robin",
-		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
+		func(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) error {
+			ss := f()
 			_len := len(ss)
 			if _len == 1 {
 				return ss[0].HandleHTTP(w, r)
@@ -51,7 +52,8 @@ func RoundRobin() Balancer {
 func WeightedRoundRobin() Balancer {
 	ctx := &weightedRRServerCtx{caches: make(map[string]*weightedRRServer, 16)}
 	return NewBalancer("weight_round_robin",
-		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
+		func(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) error {
+			ss := f()
 			if len(ss) == 1 {
 				return ss[0].HandleHTTP(w, r)
 			}

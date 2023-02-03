@@ -18,8 +18,6 @@ package loadbalancer
 import (
 	"context"
 	"net/http"
-	"sort"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -30,56 +28,25 @@ import (
 	"github.com/xgfone/go-apiserver/nets"
 )
 
-// ResultHandler is used to handle the result of forwarding the request.
-type ResultHandler func(*LoadBalancer, http.ResponseWriter, *http.Request, error)
-
-// ServerDiscovery is used to discover the servers.
-type ServerDiscovery interface {
-	Servers() upstream.Servers
-}
+var _ healthcheck.Updater = &LoadBalancer{}
 
 type (
-	serversWrapper   struct{ upstream.Servers }
 	balancerWrapper  struct{ balancer.Balancer }
-	discoveryWrapper struct{ ServerDiscovery }
+	discoveryWrapper struct{ upstream.ServerDiscovery }
 )
 
-type upserver struct {
-	Server upstream.Server
-	online int32
-}
-
-func newUpServer(server upstream.Server) *upserver {
-	return &upserver{Server: server, online: 1}
-}
-
-func (s *upserver) IsOnline() bool {
-	return atomic.LoadInt32(&s.online) == 1
-}
-
-func (s *upserver) SetOnline(online bool) (ok bool) {
-	if online {
-		ok = atomic.CompareAndSwapInt32(&s.online, 0, 1)
-	} else {
-		ok = atomic.CompareAndSwapInt32(&s.online, 1, 0)
-	}
-	return
-}
-
-var _ healthcheck.Updater = &LoadBalancer{}
+// ErrorHandler is used to handle the error of forwarding the request.
+type ErrorHandler func(*LoadBalancer, http.ResponseWriter, *http.Request, error)
 
 // LoadBalancer is used to forward the http request to one of the backend servers.
 type LoadBalancer struct {
 	name      string
+	timeout   int64
 	balancer  atomic.Value
 	discovery atomic.Value
-	timeout   int64
 
-	slock   sync.RWMutex
-	servers map[string]*upserver
-	server  atomic.Value // For serversWrapper
-
-	handleResult ResultHandler
+	svrManager  *serversManager
+	handleError ErrorHandler
 }
 
 // NewLoadBalancer returns a new LoadBalancer to forward the http request.
@@ -88,11 +55,10 @@ func NewLoadBalancer(name string, balancer balancer.Balancer) *LoadBalancer {
 		panic("the balancer is nil")
 	}
 
-	lb := &LoadBalancer{name: name, servers: make(map[string]*upserver, 8)}
-	lb.server.Store(serversWrapper{})
+	lb := &LoadBalancer{name: name, svrManager: newServersManager()}
 	lb.balancer.Store(balancerWrapper{balancer})
 	lb.discovery.Store(discoveryWrapper{})
-	lb.SetResultHandler(nil)
+	lb.SetErrorHandler(nil)
 	return lb
 }
 
@@ -125,7 +91,7 @@ func (lb *LoadBalancer) SetTimeout(timeout time.Duration) {
 // GetServerDiscovery returns the server discovery.
 //
 // If not set the server discovery, return nil.
-func (lb *LoadBalancer) GetServerDiscovery() (sd ServerDiscovery) {
+func (lb *LoadBalancer) GetServerDiscovery() (sd upstream.ServerDiscovery) {
 	return lb.discovery.Load().(discoveryWrapper).ServerDiscovery
 }
 
@@ -133,26 +99,26 @@ func (lb *LoadBalancer) GetServerDiscovery() (sd ServerDiscovery) {
 // and returns the old one.
 //
 // If sd is equal to nil, it will cancel the server discovery.
-// Or use the server discovery instead of the direct servers.
-func (lb *LoadBalancer) SwapServerDiscovery(new ServerDiscovery) (old ServerDiscovery) {
+// Or, use the server discovery instead of the direct servers.
+func (lb *LoadBalancer) SwapServerDiscovery(new upstream.ServerDiscovery) (old upstream.ServerDiscovery) {
 	old = lb.discovery.Swap(discoveryWrapper{new}).(discoveryWrapper).ServerDiscovery
-	lb.ResetServers()
+	// lb.ResetServers() // We need to clear all the servers??
 	return
 }
 
-// SetResultHandler sets the result handler to handle the result of forwarding
+// SetErrorHandler sets the error handler to handle the error of forwarding
 // the request, so it may be used to log the request.
 //
 // If handler is equal to nil, reset it to the default.
-func (lb *LoadBalancer) SetResultHandler(handler ResultHandler) {
+func (lb *LoadBalancer) SetErrorHandler(handler ErrorHandler) {
 	if handler == nil {
-		lb.handleResult = handleResult
+		lb.handleError = handleError
 	} else {
-		lb.handleResult = handler
+		lb.handleError = handler
 	}
 }
 
-func handleResult(lb *LoadBalancer, w http.ResponseWriter, r *http.Request, err error) {
+func handleError(lb *LoadBalancer, w http.ResponseWriter, r *http.Request, err error) {
 	switch err {
 	case nil:
 		if log.Enabled(log.LvlTrace) {
@@ -187,16 +153,19 @@ func handleResult(lb *LoadBalancer, w http.ResponseWriter, r *http.Request, err 
 		"err", err)
 }
 
+// ServeHTTP implements the interface http.Handler.
+func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	lb.handleError(lb, w, r, lb.HandleHTTP(w, r))
+}
+
 // HandleHTTP implements the interface Server.
 func (lb *LoadBalancer) HandleHTTP(w http.ResponseWriter, r *http.Request) error {
-	var servers upstream.Servers
-	if sd := lb.GetServerDiscovery(); sd != nil {
-		servers = sd.Servers()
-	} else {
-		servers = lb.server.Load().(serversWrapper).Servers
+	sd := lb.GetServerDiscovery()
+	if sd == nil {
+		sd = lb.svrManager
 	}
 
-	if len(servers) == 0 {
+	if sd.OnlineNum() <= 0 {
 		return upstream.ErrNoAvailableServers
 	}
 
@@ -206,145 +175,92 @@ func (lb *LoadBalancer) HandleHTTP(w http.ResponseWriter, r *http.Request) error
 		defer cancel()
 	}
 
-	return lb.GetBalancer().Forward(w, r, servers)
+	return lb.GetBalancer().Forward(w, r, sd.OnServers)
 }
 
-// ServeHTTP implements the interface http.Handler.
-func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	lb.handleResult(lb, w, r, lb.HandleHTTP(w, r))
-}
-
-// SetServerOnline sets the online status of the server by its id.
-//
-// If the server does not exist, do nothing.
+// SetServerOnline implements the interface healthcheck.Updater#SetServerOnline
+// to set the status of the server to ServerStatusOnline or ServerStatusOffline.
 func (lb *LoadBalancer) SetServerOnline(serverID string, online bool) {
-	lb.slock.RLock()
-	if upserver, ok := lb.servers[serverID]; ok {
-		if upserver.SetOnline(online) {
-			lb.updateServers()
-		}
+	if online {
+		lb.SetServerStatus(serverID, upstream.ServerStatusOnline)
+	} else {
+		lb.SetServerStatus(serverID, upstream.ServerStatusOffline)
 	}
-	lb.slock.RUnlock()
 }
 
-// SetServerOnlines sets the online statuses of a set of the servers.
+// SetServerStatus sets the status of the server,
+// which does nothing if the server does not exist.
 //
-// If the server does not exist, do nothing.
-func (lb *LoadBalancer) SetServerOnlines(onlines map[string]bool) {
-	lb.slock.RLock()
-	var changed bool
-	for serverID, online := range onlines {
-		if upserver, ok := lb.servers[serverID]; ok {
-			if upserver.SetOnline(online) && !changed {
-				changed = true
-			}
-		}
-	}
-	if changed {
-		lb.updateServers()
-	}
-	lb.slock.RUnlock()
-	return
+// This is the inner server management of loadbalancer.
+func (lb *LoadBalancer) SetServerStatus(serverID string, status upstream.ServerStatus) {
+	lb.svrManager.SetServerStatus(serverID, status)
 }
 
-// ServerIsOnline reports whether the server is online.
+// SetServerStatuses sets the statuses of a set of servers,
+// which does nothing if the server does not exist.
 //
-// If the server does not exist, return (false, false).
-func (lb *LoadBalancer) ServerIsOnline(serverID string) (online, ok bool) {
-	lb.slock.RLock()
-	upserver, ok := lb.servers[serverID]
-	lb.slock.RUnlock()
-
-	if ok {
-		online = upserver.IsOnline()
-	}
-
-	return
+// This is the inner server management of loadbalancer.
+func (lb *LoadBalancer) SetServerStatuses(statuses map[string]upstream.ServerStatus) {
+	lb.svrManager.SetServerStatuses(statuses)
 }
 
-func (lb *LoadBalancer) updateServers() {
-	servers := upstream.DefaultServersPool.Acquire()
-	for _, server := range lb.servers {
-		if server.IsOnline() {
-			servers = append(servers, server.Server)
-		}
-	}
-	sort.Stable(servers)
-
-	old := lb.server.Swap(serversWrapper{servers})
-	upstream.DefaultServersPool.Release(old.(serversWrapper).Servers)
-}
-
-// ResetServers resets all the servers.
+// ResetServers resets all the servers to servers with the status ServerStatusOnline.
 //
-// Notice: the online statuses of all the given servers are online.
+// This is the inner server management of loadbalancer.
 func (lb *LoadBalancer) ResetServers(servers ...upstream.Server) {
-	lb.slock.Lock()
-	defer lb.slock.Unlock()
-
-	servermaps := make(map[string]*upserver, len(servers))
-	for _len := len(servers) - 1; _len >= 0; _len-- {
-		server := servers[_len]
-		servermaps[server.ID()] = newUpServer(server)
-	}
-
-	lb.servers = servermaps
-	lb.updateServers()
+	lb.svrManager.ResetServers(servers...)
 }
 
 // UpsertServers adds or updates the servers.
 //
-// Notice: the online statuses of all the given new servers are online.
-func (lb *LoadBalancer) UpsertServers(servers ...upstream.Server) {
-	lb.slock.Lock()
-	defer lb.slock.Unlock()
-
-	for _len := len(servers) - 1; _len >= 0; _len-- {
-		server := servers[_len]
-		lb.servers[server.ID()] = newUpServer(server)
-	}
-	lb.updateServers()
-}
-
-// UpsertServer adds or updates the given server with the online status.
-func (lb *LoadBalancer) UpsertServer(server upstream.Server) {
-	lb.UpsertServers(server)
-}
-
-// RemoveServer removes the server by the server id.
+// Notice: the statuses of all the given new servers are ServerStatusOnline.
 //
-// If the server does not exist, do nothing..
-func (lb *LoadBalancer) RemoveServer(id string) {
-	lb.slock.Lock()
-	if _, ok := lb.servers[id]; ok {
-		delete(lb.servers, id)
-		lb.updateServers()
-	}
-	lb.slock.Unlock()
-	return
+// This is the inner server management of loadbalancer.
+func (lb *LoadBalancer) UpsertServers(servers ...upstream.Server) {
+	lb.svrManager.UpsertServers(servers...)
+}
+
+// UpsertServer adds or updates the given server with the status ServerStatusOnline.
+//
+// This is the inner server management of loadbalancer,
+// which implements the interface healthcheck.Updater#UpsertServer.
+func (lb *LoadBalancer) UpsertServer(server upstream.Server) {
+	lb.svrManager.UpsertServers(server)
+}
+
+// RemoveServer removes the server by the server id,
+// which does nothing if the server does not exist.
+//
+// This is the inner server management of loadbalancer,
+// which implements the interface healthcheck.Updater#RemoveServer.
+func (lb *LoadBalancer) RemoveServer(serverID string) {
+	lb.svrManager.RemoveServer(serverID)
 }
 
 // GetServer returns the server by the server id.
-func (lb *LoadBalancer) GetServer(id string) (server upstream.Server, online, ok bool) {
-	lb.slock.RLock()
-	upserver, ok := lb.servers[id]
-	lb.slock.RUnlock()
-
-	if ok {
-		server = upserver.Server
-		online = upserver.IsOnline()
-	}
-
-	return
+//
+// This is the inner server management of loadbalancer.
+func (lb *LoadBalancer) GetServer(serverID string) (server upstream.Server, ok bool) {
+	return lb.svrManager.GetServer(serverID)
 }
 
-// GetServers returns all the servers with the online status.
-func (lb *LoadBalancer) GetServers() (onlines map[upstream.Server]bool) {
-	lb.slock.RLock()
-	onlines = make(map[upstream.Server]bool, len(lb.servers))
-	for _, upserver := range lb.servers {
-		onlines[upserver.Server] = upserver.IsOnline()
-	}
-	lb.slock.RUnlock()
-	return
+// GetOnServers only returns all the online servers.
+//
+// This is the inner server management of loadbalancer.
+func (lb *LoadBalancer) GetOnServers() upstream.Servers {
+	return lb.svrManager.OnServers()
+}
+
+// GetOffServers only returns all the offline servers.
+//
+// This is the inner server management of loadbalancer.
+func (lb *LoadBalancer) GetOffServers() upstream.Servers {
+	return lb.svrManager.OffServers()
+}
+
+// GetAllServers returns all the servers.
+//
+// This is the inner server management of loadbalancer.
+func (lb *LoadBalancer) GetAllServers() upstream.Servers {
+	return lb.svrManager.AllServers()
 }

@@ -33,7 +33,8 @@ func init() {
 func SourceIPHash() Balancer {
 	random := newRandom()
 	return NewBalancer("source_ip_hash",
-		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
+		func(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) error {
+			ss := f()
 			_len := len(ss)
 			if _len == 1 {
 				return ss[0].HandleHTTP(w, r)

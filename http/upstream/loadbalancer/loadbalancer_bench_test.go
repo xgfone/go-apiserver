@@ -35,7 +35,8 @@ type testServer struct{ url upstream.URL }
 func (s testServer) ID() string                                          { return s.url.IP }
 func (s testServer) URL() upstream.URL                                   { return s.url }
 func (s testServer) Check(context.Context, upstream.URL) error           { return nil }
-func (s testServer) State() (rs nets.RuntimeState)                       { return rs }
+func (s testServer) Status() upstream.ServerStatus                       { return upstream.ServerStatusOnline }
+func (s testServer) RuntimeState() (rs nets.RuntimeState)                { return rs }
 func (s testServer) HandleHTTP(http.ResponseWriter, *http.Request) error { return nil }
 
 func newTestServer(ip string) testServer { return testServer{url: upstream.URL{IP: ip}} }

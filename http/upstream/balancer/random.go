@@ -45,7 +45,8 @@ func init() {
 func Random() Balancer {
 	random := newRandom()
 	return NewBalancer("random",
-		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
+		func(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) error {
+			ss := f()
 			_len := len(ss)
 			if _len == 1 {
 				return ss[0].HandleHTTP(w, r)
@@ -60,7 +61,8 @@ func Random() Balancer {
 func WeightedRandom() Balancer {
 	random := newRandom()
 	return NewBalancer("weight_random",
-		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) error {
+		func(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) error {
+			ss := f()
 			_len := len(ss)
 			if _len == 1 {
 				return ss[0].HandleHTTP(w, r)

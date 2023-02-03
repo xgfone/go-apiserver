@@ -34,7 +34,8 @@ func (s *testServer) Weight() int                               { return s.weigh
 func (s *testServer) ID() string                                { return s.url.IP }
 func (s *testServer) URL() upstream.URL                         { return s.url }
 func (s *testServer) Check(context.Context, upstream.URL) error { return nil }
-func (s *testServer) State() nets.RuntimeState {
+func (s *testServer) Status() upstream.ServerStatus             { return upstream.ServerStatusOnline }
+func (s *testServer) RuntimeState() nets.RuntimeState {
 	state := s.state.Clone()
 	if s.current > 0 {
 		state.Current = s.current

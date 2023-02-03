@@ -42,7 +42,7 @@ func benchmarkBalancer(b *testing.B, balancer Balancer) {
 	b.ReportAllocs()
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			balancer.Forward(rec, req, servers)
+			balancer.Forward(rec, req, servers.OnServers)
 		}
 	})
 }

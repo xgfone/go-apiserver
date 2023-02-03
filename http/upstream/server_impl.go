@@ -49,6 +49,11 @@ type ServerConfig struct {
 	// Optional
 	DynamicWeight func() int
 	StaticWeight  int // Default: 1
+
+	// GetServerStatus is used to check the server status dynamically.
+	//
+	// If nil, use ServerStatusOnline instead.
+	GetServerStatus func(Server) ServerStatus
 }
 
 // NewServer returns a new server supporting the weight.
@@ -94,12 +99,16 @@ func NewServer(conf ServerConfig) (WeightedServer, error) {
 		host:           host,
 		conf:           conf,
 		getWeight:      conf.DynamicWeight,
+		getStatus:      conf.GetServerStatus,
 		handleRequest:  conf.HandleRequest,
 		handleResponse: conf.HandleResponse,
 	}
 
 	if s.getWeight == nil {
 		s.getWeight = s.getStaticWeight
+	}
+	if s.getStatus == nil {
+		s.getStatus = s.getStaticStatus
 	}
 
 	if s.handleRequest == nil {
@@ -141,14 +150,16 @@ type httpServer struct {
 	state    nets.RuntimeState
 
 	getWeight      func() int
+	getStatus      func(Server) ServerStatus
 	handleRequest  func(*http.Client, *http.Request) (*http.Response, error)
 	handleResponse func(http.ResponseWriter, *http.Response) error
 }
 
-func (s *httpServer) ID() string               { return s.id }
-func (s *httpServer) URL() URL                 { return s.conf.URL }
-func (s *httpServer) Weight() int              { return s.getWeight() }
-func (s *httpServer) State() nets.RuntimeState { return s.state.Clone() }
+func (s *httpServer) ID() string                      { return s.id }
+func (s *httpServer) URL() URL                        { return s.conf.URL }
+func (s *httpServer) Weight() int                     { return s.getWeight() }
+func (s *httpServer) Status() ServerStatus            { return s.getStatus(s) }
+func (s *httpServer) RuntimeState() nets.RuntimeState { return s.state.Clone() }
 func (s *httpServer) HandleHTTP(w http.ResponseWriter, r *http.Request) (err error) {
 	s.state.Inc()
 	defer func() {
@@ -216,7 +227,8 @@ func (s *httpServer) HandleHTTP(w http.ResponseWriter, r *http.Request) (err err
 	return err
 }
 
-func (s *httpServer) getStaticWeight() int { return s.conf.StaticWeight }
+func (s *httpServer) getStaticWeight() int                { return s.conf.StaticWeight }
+func (s *httpServer) getStaticStatus(Server) ServerStatus { return ServerStatusOnline }
 
 func handleRequest(c *http.Client, r *http.Request) (*http.Response, error) {
 	return c.Do(r)

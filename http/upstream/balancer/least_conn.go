@@ -30,7 +30,8 @@ func init() {
 // The policy name is "least_conn".
 func LeastConn() Balancer {
 	return NewBalancer("least_conn",
-		func(w http.ResponseWriter, r *http.Request, ss upstream.Servers) (err error) {
+		func(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) (err error) {
+			ss := f()
 			if len(ss) == 1 {
 				return ss[0].HandleHTTP(w, r)
 			}
@@ -48,5 +49,5 @@ type leastConnServers upstream.Servers
 func (ss leastConnServers) Len() int      { return len(ss) }
 func (ss leastConnServers) Swap(i, j int) { ss[i], ss[j] = ss[j], ss[i] }
 func (ss leastConnServers) Less(i, j int) bool {
-	return ss[i].State().Current < ss[j].State().Current
+	return ss[i].RuntimeState().Current < ss[j].RuntimeState().Current
 }

@@ -99,7 +99,7 @@ func TestLoadBalancer(t *testing.T) {
 		}
 	}
 
-	state := server1.State()
+	state := server1.RuntimeState()
 	if state.Total != 2 {
 		t.Errorf("expect %d total requests, but got %d", 4, state.Total)
 	}
@@ -110,11 +110,11 @@ func TestLoadBalancer(t *testing.T) {
 	/// ------------------------------------------------------------------ ///
 
 	lb.SetServerOnline(server1.ID(), false)
-	if online, ok := lb.ServerIsOnline(server1.ID()); !ok || online {
-		t.Errorf("invalid the server1 online status: online=%v, ok=%v", online, ok)
+	if server, ok := lb.GetServer(server1.ID()); !ok || server.Status().IsOnline() {
+		t.Errorf("invalid the server1 online status: online=%v, ok=%v", server.Status().IsOnline(), ok)
 	}
-	if online, ok := lb.ServerIsOnline(server2.ID()); !ok || !online {
-		t.Errorf("invalid the server2 online status: online=%v, ok=%v", online, ok)
+	if server, ok := lb.GetServer(server2.ID()); !ok || !server.Status().IsOnline() {
+		t.Errorf("invalid the server2 online status: online=%v, ok=%v", server.Status().IsOnline(), ok)
 	}
 
 	rec.Body.Reset()
@@ -138,16 +138,16 @@ func TestLoadBalancer(t *testing.T) {
 
 	/// ------------------------------------------------------------------ ///
 
-	lb.SetServerOnlines(map[string]bool{server2.ID(): false})
-	if online, ok := lb.ServerIsOnline(server2.ID()); !ok || online {
-		t.Errorf("invalid the server2 online status: online=%v, ok=%v", online, ok)
+	lb.SetServerOnline(server2.ID(), false)
+	if server, ok := lb.GetServer(server2.ID()); !ok || server.Status().IsOnline() {
+		t.Errorf("invalid the server2 online status: online=%v, ok=%v", server.Status().IsOnline(), ok)
 	}
 
-	servers := lb.GetServers()
+	servers := lb.GetAllServers()
 	if len(servers) != 2 {
 		t.Errorf("expect %d servers, but got %d", 2, len(servers))
 	}
-	for server, online := range servers {
+	for _, server := range servers {
 		id := server.ID()
 		switch id {
 		case server1.ID(), server2.ID():
@@ -155,7 +155,7 @@ func TestLoadBalancer(t *testing.T) {
 			t.Errorf("unknown server id '%s'", id)
 		}
 
-		if online {
+		if server.Status().IsOnline() {
 			t.Errorf("expect server '%s' online is false, but got true", id)
 		}
 	}

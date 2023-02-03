@@ -31,7 +31,8 @@ func newServer(id string) testServer { return testServer{id: id} }
 
 func (s testServer) ID() string                                          { return s.id }
 func (s testServer) URL() (url upstream.URL)                             { return }
-func (s testServer) State() (rs nets.RuntimeState)                       { return }
+func (s testServer) Status() upstream.ServerStatus                       { return upstream.ServerStatusOnline }
+func (s testServer) RuntimeState() (rs nets.RuntimeState)                { return }
 func (s testServer) HandleHTTP(http.ResponseWriter, *http.Request) error { return nil }
 func (s testServer) Check(context.Context, upstream.URL) error {
 	return nil
