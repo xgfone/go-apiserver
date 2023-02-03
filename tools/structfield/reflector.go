@@ -105,7 +105,8 @@ func (r *Reflector) RegisterFunc(name string, handler handler.HandlerFunc) {
 	r.Register(name, handler)
 }
 
-// RegisterSimpleFunc is the simplified RegisterFunc.
+// RegisterSimpleFunc is the simplified RegisterFunc,
+// which only cares about the field value and the tag value.
 func (r *Reflector) RegisterSimpleFunc(name string, handler func(reflect.Value, interface{}) error) {
 	r.RegisterFunc(name, func(_ interface{}, _, v reflect.Value, _ reflect.StructField, a interface{}) error {
 		return handler(v, a)
@@ -152,34 +153,34 @@ func (r *Reflector) ReflectValue(ctx interface{}, structValue reflect.Value) err
 	return r.reflectStruct(ctx, structValue, structValue)
 }
 
-func (r *Reflector) reflectStruct(c interface{}, root, v reflect.Value) (err error) {
+func (r *Reflector) reflectStruct(ctx interface{}, root, v reflect.Value) (err error) {
 	t := v.Type()
 	for i, _len := 0, v.NumField(); i < _len; i++ {
-		if err = r.reflectField(c, root, v.Field(i), t.Field(i)); err != nil {
+		if err = r.reflectField(ctx, root, v.Field(i), t.Field(i)); err != nil {
 			return err
 		}
 	}
 	return
 }
 
-func (r *Reflector) reflectField(c interface{}, root, v reflect.Value, t reflect.StructField) (err error) {
-	notpropagate, err := r.walkTag(c, root, v, t, string(t.Tag))
+func (r *Reflector) reflectField(ctx interface{}, root, v reflect.Value, t reflect.StructField) (err error) {
+	notpropagate, err := r.walkTag(ctx, root, v, t, string(t.Tag))
 	if err == nil && !notpropagate {
 		switch v.Kind() {
 		case reflect.Struct:
-			err = r.reflectStruct(c, root, v)
+			err = r.reflectStruct(ctx, root, v)
 
 		case reflect.Pointer:
 			if !v.IsNil() {
 				if v = v.Elem(); v.Kind() == reflect.Struct {
-					err = r.reflectStruct(c, root, v)
+					err = r.reflectStruct(ctx, root, v)
 				}
 			}
 
 		case reflect.Array, reflect.Slice:
 			for i, _len := 0, v.Len(); i < _len; i++ {
 				if vf := v.Index(i); vf.Kind() == reflect.Struct {
-					if err = r.reflectStruct(c, root, vf); err != nil {
+					if err = r.reflectStruct(ctx, root, vf); err != nil {
 						break
 					}
 				}
@@ -233,7 +234,7 @@ func (r *Reflector) getTagArg(handler handler.Handler, name, qvalue string) tagV
 	return tvalue
 }
 
-func (r *Reflector) do(c interface{}, root, v reflect.Value, t reflect.StructField, name, value string, notpropagate *bool) (err error) {
+func (r *Reflector) do(ctx interface{}, root, v reflect.Value, t reflect.StructField, name, value string, notpropagate *bool) (err error) {
 	if name == "propagate" {
 		if value, err = strconv.Unquote(value); err == nil {
 			var v bool
@@ -245,14 +246,14 @@ func (r *Reflector) do(c interface{}, root, v reflect.Value, t reflect.StructFie
 	}
 
 	if h, ok := r.handlers[name]; ok {
-		err = h.Run(c, root, v, t, r.getTagArg(h, name, value).Arg)
+		err = h.Run(ctx, root, v, t, r.getTagArg(h, name, value).Arg)
 	}
 
 	return
 }
 
 // copy and modify from https://github.com/golang/go/blob/go1.18.4/src/reflect/type.go
-func (r *Reflector) walkTag(c interface{}, root, v reflect.Value, t reflect.StructField, tag string) (notpropagate bool, err error) {
+func (r *Reflector) walkTag(ctx interface{}, root, v reflect.Value, t reflect.StructField, tag string) (notpropagate bool, err error) {
 	for tag != "" {
 		// Skip leading space.
 		i := 0
@@ -293,7 +294,7 @@ func (r *Reflector) walkTag(c interface{}, root, v reflect.Value, t reflect.Stru
 		tag = tag[i+1:]
 
 		// (xgfone): Poll the key-value tag.
-		if err = r.do(c, root, v, t, name, qvalue, &notpropagate); err != nil {
+		if err = r.do(ctx, root, v, t, name, qvalue, &notpropagate); err != nil {
 			break
 		}
 	}

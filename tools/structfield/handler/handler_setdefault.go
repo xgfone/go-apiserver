@@ -23,27 +23,63 @@ import (
 	"github.com/xgfone/go-apiserver/helper"
 )
 
+// DefaultSetter is an interface to set the default value to d.
+type DefaultSetter interface {
+	SetDefault(d interface{}) error
+}
+
 // NewSetDefaultHandler returns a handler to set the default value
-// of the struct field, which is registered into DefaultReflector
+// of the struct field if it is ZERO, which is registered into DefaultReflector
 // with the tag name "default" by default.
 //
+// For the type of the field, it only supports some base types as follow:
+//
+//	bool
+//	string
+//	float32
+//	float64
+//	int
+//	int8
+//	int16
+//	int32
+//	int64
+//	uint
+//	uint8
+//	uint16
+//	uint32
+//	uint64
+//	struct
+//	struct slice
+//	DefaultSetter
+//	time.Time      // Format: A. Integer(UTC); B. String(RFC3339)
+//	time.Duration  // Format: A. Integer(ms);  B. String(time.ParseDuration)
+//	pointer to the types above
+//
 // If the field type is string or int64, and the tag value is like "now()"
-// or "now(layout)", set the default value of the field to the current time by helper.Now().
+// or "now(layout)", set the default value of the field to the current time
+// by helper.Now(). For example,
+//
+//	type T struct {
+//	    StartTime string `default:"now()"`
+//	    EndTime   int64  `default:"now()"`
+//	}
+//
+// Notice: If the tag value starts with ".", it represents a field name and
+// the default value of current field is set to the value of that field.
+// But their types must be consistent, or panic.
 func NewSetDefaultHandler() Handler { return setdefault{} }
 
 type setdefault struct{}
 
 func (h setdefault) Parse(s string) (interface{}, error) { return s, nil }
-func (h setdefault) Run(c interface{}, r, v reflect.Value, t reflect.StructField, a interface{}) error {
+func (h setdefault) Run(ctx interface{}, r, v reflect.Value, t reflect.StructField, a interface{}) error {
 	if !v.CanSet() {
 		return fmt.Errorf("the field '%s' cannnot be set", t.Name)
 	}
 
 	var p reflect.Value
+	v = helper.FillNilPtr(v)
 	if helper.IsPointer(v) {
-		if v.IsNil() {
-			v.Set(reflect.New(v.Type().Elem()))
-		}
 		p, v = v, v.Elem()
 	} else {
 		p = v.Addr()
@@ -54,6 +90,27 @@ func (h setdefault) Run(c interface{}, r, v reflect.Value, t reflect.StructField
 	}
 
 	s := a.(string)
+	if len(s) > 0 && s[0] == '.' {
+		if s = s[1:]; s == "" {
+			return fmt.Errorf("%s: invalid default value", t.Name)
+		}
+
+		fieldv, ok := helper.GetStructFieldByName(r, s)
+		if !ok {
+			panic(fmt.Errorf("not found the struct field '%s'", s))
+		}
+
+		if helper.IsPointer(fieldv) {
+			fieldv = fieldv.Elem()
+		}
+		v.Set(fieldv)
+		return nil
+	}
+
+	if i, ok := p.Interface().(DefaultSetter); ok {
+		return i.SetDefault(s)
+	}
+
 	switch v.Kind() {
 	case reflect.String:
 		if strings.HasPrefix(s, "now(") && strings.HasSuffix(s, ")") {
@@ -76,13 +133,12 @@ func (h setdefault) Run(c interface{}, r, v reflect.Value, t reflect.StructField
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return helper.Set(p.Interface(), s)
 
-	default:
+	case reflect.Struct:
 		if _, ok := v.Interface().(time.Time); ok {
 			return helper.Set(p.Interface(), s)
 		}
-		if i, ok := p.Interface().(helper.DefaultSetter); ok {
-			return i.SetDefault(s)
-		}
+
+	default:
 		return fmt.Errorf("%s: unsupported type %T", t.Name, v.Interface())
 	}
 

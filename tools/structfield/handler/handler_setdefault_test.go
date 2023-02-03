@@ -60,11 +60,15 @@ func ExampleNewSetDefaultHandler() {
 		Struct  Struct
 		Structs []Struct
 
+		StructField int `default:".Struct.InnerInt"`
+
 		TimeNowStr string `default:"now(2006-01-02T15:04:05Z)"`
 		TimeNowInt int64  `default:"now()"`
 
 		Setter      defaultSetter `default:"xyz"` // The type implementing helper.DefaultSetter
+		DurationInt time.Duration `default:"1000"`
 		DurationStr time.Duration `default:"2s"`
+		TimeInt     time.Time     `default:"1658703387"` // 2022-07-24T22:56:27Z
 		TimeStr     time.Time     `default:"2022-07-24T22:56:28Z"`
 
 		IntPtr      *int           `default:"456"`
@@ -99,10 +103,13 @@ func ExampleNewSetDefaultHandler() {
 	fmt.Println(s.Struct.InnerInt)
 	fmt.Println(s.Structs[0].InnerInt)
 	fmt.Println(s.Structs[1].InnerInt)
+	fmt.Println(s.StructField)
 	fmt.Println(s.TimeNowStr)
 	fmt.Println(s.TimeNowInt)
 	fmt.Println(s.Setter)
+	fmt.Println(s.DurationInt)
 	fmt.Println(s.DurationStr)
+	fmt.Println(s.TimeInt.UTC().Format(time.RFC3339))
 	fmt.Println(s.TimeStr.UTC().Format(time.RFC3339))
 	fmt.Println(*s.IntPtr)
 	fmt.Println(s.TimePtr.UTC().Format(time.RFC3339))
@@ -128,10 +135,13 @@ func ExampleNewSetDefaultHandler() {
 	// 123
 	// 123
 	// 123
+	// 123
 	// 2022-08-10T14:15:28Z
 	// 1660140928
 	// xyz
+	// 1s
 	// 2s
+	// 2022-07-24T22:56:27Z
 	// 2022-07-24T22:56:28Z
 	// 123
 	// 2022-07-24T22:56:29Z
