@@ -24,10 +24,11 @@ import (
 // ExitSignals is the set of the signals to let the program exit.
 //
 // For Unix/Linux or Windows, it contains the signals as follow:
-//   syscall.SIGTERM
-//   syscall.SIGQUIT
-//   syscall.SIGABRT
-//   syscall.SIGINT
+//
+//	syscall.SIGTERM
+//	syscall.SIGQUIT
+//	syscall.SIGABRT
+//	syscall.SIGINT
 var ExitSignals = []os.Signal{os.Interrupt}
 
 // WaitExit monitors the exit signals and call the callback function

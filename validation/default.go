@@ -89,8 +89,6 @@ func RegisterDefaults(b *Builder) {
 	b.RegisterFunction(NewFunctionWithValidators("mapv", validator.MapV))
 	b.RegisterFunction(NewFunctionWithValidators("mapkv", validator.MapKV))
 
-	// We use "structure" instead of "struct" because "struct" is the keyword in Go.
-	b.RegisterValidatorFunc("structure", b.ValidateStruct)
 	b.RegisterFunction(NewFunctionWithOneString("ltf", validator.StructFieldLess))
 	b.RegisterFunction(NewFunctionWithOneString("lef", validator.StructFieldLessEqual))
 	b.RegisterFunction(NewFunctionWithOneString("gtf", validator.StructFieldGreater))

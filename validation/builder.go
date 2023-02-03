@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,25 +15,15 @@
 package validation
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
-	"strings"
 	"sync"
 	"sync/atomic"
 
-	"github.com/xgfone/go-apiserver/helper"
-	"github.com/xgfone/go-apiserver/tools/structfield/formatter"
 	"github.com/xgfone/go-apiserver/validation/internal"
 	"github.com/xgfone/go-apiserver/validation/validator"
 	"github.com/xgfone/predicate"
 )
-
-// StructFieldTag is the tag name to get the validation rule.
-//
-// If empty, use "validate" instead.
-var StructFieldTag = "validate"
 
 // DefaultBuilder is the global default validation rule builder,
 // which will register some default validator building functions.
@@ -99,26 +89,11 @@ func Validate(ctx, v interface{}, rule string) error {
 	return DefaultBuilder.Validate(ctx, v, rule)
 }
 
-// ValidateStruct is equal to DefaultBuilder.ValidateStruct(ctx, s).
-func ValidateStruct(ctx, s interface{}) error {
-	return DefaultBuilder.ValidateStruct(ctx, s)
-}
-
 // Builder is used to build the validator based on the rule.
 type Builder struct {
-	// FormatStructFieldName is used to format the name of the struct field.
-	//
-	// If nil, use formatter.DefaultNameFormatter instead.
-	FormatStructFieldName formatter.NameFormatter
-
 	// Symbols is used to define the global symbols,
 	// which is used by the default of GetIdentifier.
 	Symbols map[string]interface{}
-
-	// StructFieldTag is the tag name to get the validation rule.
-	//
-	// If empty, use the global variable StructFieldTag instead.
-	StructFieldTag string
 
 	*predicate.Builder
 	validators atomic.Value
@@ -206,14 +181,9 @@ func (b *Builder) RegisterFunction(function Function) {
 // function with the name as a builder function to be registered, which
 // is equal to
 //
-//	b.RegisterFunction(NewFunctionWithoutArgs(name, func() validator.Validator {
-//	    return NewValidator(name, f)
-//	}))
+//	b.RegisterFunction(ValidatorFunction(name, validator.NewValidator(name, f)))
 func (b *Builder) RegisterValidatorFunc(name string, f validator.ValidatorFunc) {
-	v := validator.NewValidator(name, f)
-	b.RegisterFunction(NewFunctionWithoutArgs(name, func() validator.Validator {
-		return v
-	}))
+	b.RegisterFunction(ValidatorFunction(name, validator.NewValidator(name, f)))
 }
 
 // RegisterValidatorFuncBool is a convenient method to treat the bool
@@ -291,8 +261,6 @@ func (b *Builder) updateValidators() {
 	b.validators.Store(validators)
 }
 
-type validatorWrapper struct{ validator.Validator }
-
 // Validate validates whether the value v is valid by the rule.
 //
 // If failing to build the rule to the validator, panic with the error.
@@ -306,133 +274,4 @@ func (b *Builder) Validate(ctx, v interface{}, rule string) (err error) {
 		panic(err)
 	}
 	return validator.Validate(ctx, v)
-}
-
-// ValidateStruct validates whether the struct value is valid,
-// which extracts the validation rule from the field tag "validate"
-// validate the field value with the extracted rule.
-func (b *Builder) ValidateStruct(ctx, s interface{}) error {
-	v := reflect.ValueOf(s)
-	if helper.IsPointer(v) {
-		v = v.Elem()
-	}
-
-	if v.Kind() != reflect.Struct {
-		return fmt.Errorf("the value is %T, not a struct", v.Interface())
-	}
-
-	if ctx == nil {
-		ctx = v
-	}
-
-	errs := b.validateStruct(ctx, "", v, nil)
-	if len(errs) > 0 {
-		return errs
-	}
-	return nil
-}
-
-var validatorImpl = reflect.TypeOf((*validator.ValueValidator)(nil)).Elem()
-
-func (b *Builder) validateStruct(c interface{}, prefix string, v reflect.Value, errs NamedErrors) NamedErrors {
-	tag := b.StructFieldTag
-	if len(tag) == 0 {
-		if tag = StructFieldTag; len(tag) == 0 {
-			tag = "validate"
-		}
-	}
-
-	t := v.Type()
-	for i, _len := 0, v.NumField(); i < _len; i++ {
-		ft := t.Field(i)
-		fv := v.Field(i)
-
-		// Validate the fields of the sub-struct recursively.
-		if ft.Type.Kind() == reflect.Struct {
-			name := b.getStructFieldName(prefix, ft)
-			errs = b.validateStruct(c, name, fv, errs)
-			if errs == nil {
-				if ft.Type.Implements(validatorImpl) {
-					err := fv.Interface().(validator.ValueValidator).Validate(c)
-					errs = addError(errs, name, err)
-				}
-			}
-			continue
-		}
-
-		rule := ft.Tag.Get(tag)
-		if rule == "" {
-			continue
-		}
-
-		err := b.Validate(c, fv.Interface(), rule)
-		if err != nil {
-			errs = addError(errs, b.getStructFieldName(prefix, ft), err)
-		}
-	}
-
-	return errs
-}
-
-func (b *Builder) getStructFieldName(prefix string, ft reflect.StructField) (name string) {
-	if b.FormatStructFieldName == nil {
-		name = formatter.DefaultNameFormatter(ft)
-	} else {
-		name = b.FormatStructFieldName(ft)
-	}
-
-	if name == "" {
-		name = ft.Name
-	}
-
-	if prefix != "" {
-		name = strings.Join([]string{prefix, name}, ".")
-	}
-
-	return
-}
-
-func addError(errs NamedErrors, name string, err error) NamedErrors {
-	if err != nil {
-		if errs == nil {
-			errs = make(NamedErrors, 4)
-		}
-		errs[name] = err
-	}
-
-	return errs
-}
-
-// NamedErrors represents a set of errors with the names.
-type NamedErrors map[string]error
-
-// Error implements the interface error.
-func (es NamedErrors) Error() string {
-	var b strings.Builder
-	b.Grow(len(es) * 64)
-
-	var count int
-	for name, err := range es {
-		if count++; count > 1 {
-			b.WriteString("; ")
-		}
-
-		b.WriteString(name)
-		b.WriteString(": ")
-		b.WriteString(err.Error())
-	}
-
-	return b.String()
-}
-
-// Add adds the error with the name.
-func (es NamedErrors) Add(name string, err error) { es[name] = err }
-
-// MarshalJSON implements the interface json.Marshaler.
-func (es NamedErrors) MarshalJSON() ([]byte, error) {
-	maps := make(map[string]string, len(es))
-	for name, err := range es {
-		maps[name] = err.Error()
-	}
-	return json.Marshal(maps)
 }

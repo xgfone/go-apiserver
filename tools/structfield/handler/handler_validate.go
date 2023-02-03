@@ -53,15 +53,9 @@ func (h validator) Run(c interface{}, r, v reflect.Value, t reflect.StructField,
 }
 
 func getStructFieldName(b *validation.Builder, ft reflect.StructField) (name string) {
-	if b.FormatStructFieldName == nil {
-		name = formatter.DefaultNameFormatter(ft)
-	} else {
-		name = b.FormatStructFieldName(ft)
-	}
-
+	name = formatter.DefaultNameFormatter(ft)
 	if name == "" {
 		name = ft.Name
 	}
-
 	return
 }

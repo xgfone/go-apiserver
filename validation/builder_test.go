@@ -34,37 +34,6 @@ func (t testT2) Validate(interface{}) error {
 	return nil
 }
 
-func TestBuilderValidateStruct(t *testing.T) {
-	var s struct {
-		F testT2
-	}
-
-	s.F.F1 = "abc"
-	if err := ValidateStruct(nil, s); err != nil {
-		t.Error(err)
-	}
-
-	s.F.F2 = 3
-	if err := ValidateStruct(nil, s); err == nil {
-		t.Errorf("expect an error, but got nil")
-	} else if s := "F.F2: the integer is less than 5"; err.Error() != s {
-		t.Errorf("expect the error '%s', but got '%s'", s, err.Error())
-	}
-
-	s.F.F2 = 5
-	if err := ValidateStruct(nil, s); err == nil {
-		t.Errorf("expect an error, but got nil")
-	} else if s := "F: F2 is not equal to the length of F1"; err.Error() != s {
-		t.Errorf("expect the error '%s', but got '%s'", s, err.Error())
-	}
-
-	s.F.F1 = "abcde"
-	s.F.F2 = len(s.F.F1)
-	if err := ValidateStruct(nil, s); err != nil {
-		t.Errorf("unexpected error '%s'", err.Error())
-	}
-}
-
 func TestRuleRanger(t *testing.T) {
 	expectErrMsg := "the integer is not in range [1, 10]"
 
@@ -253,61 +222,7 @@ func ExampleBuilder() {
 	fmt.Println(Validate(nil, map[string]int16{"a": 10}, rule4))
 	fmt.Println(Validate(nil, map[string]int32{"abcd": 123}, rule4))
 
-	// Exampe 6: Validate the struct
-	fmt.Println("\n--- Struct ---")
-	type s struct {
-		F1 string `validate:"zero || max(8)"`    // General Type
-		F2 *int64 `validate:"min(1) && max==10"` // Pointer Type
-
-		F3 struct { // Embedded Struct
-			F4 string `validate:"oneof(\"a\", \"b\")"`
-			F5 *[]int `validate:"array(min(1))"`
-			F6 int
-			F7 int `validate:"gtf(\"F3.F6\")"` // => F7 > F6
-		}
-	}
-	var v s
-	v.F2 = new(int64)
-	v.F3.F5 = &[]int{1, 2}
-	v.F3.F4 = "a"
-	v.F3.F6 = 123
-	v.F3.F7 = 456
-
-	*v.F2 = 1
-	fmt.Println(ValidateStruct(nil, v))
-
-	v.F1 = "abc"
-	fmt.Println(ValidateStruct(nil, v))
-
-	v.F1 = "abcdefgxyz"
-	fmt.Println(ValidateStruct(nil, v))
-
-	v.F1 = ""
-	v.F3.F4 = "c"
-	fmt.Println(ValidateStruct(nil, v))
-
-	v.F3.F4 = "a"
-	(*v.F3.F5)[0] = 0
-	fmt.Println(ValidateStruct(nil, v))
-
-	v.F3.F6 = 789
-	(*v.F3.F5)[0] = 1
-	fmt.Println(ValidateStruct(nil, v))
-
-	type s1 struct {
-		F int `validate:"min(10)"`
-	}
-	type s2 struct {
-		Fs []s1 `validate:"array(structure)"`
-	}
-
-	v2 := s2{Fs: make([]s1, 1)}
-	fmt.Println(ValidateStruct(nil, v2))
-
-	v2.Fs[0].F = 10
-	fmt.Println(ValidateStruct(nil, v2))
-
-	// Example 7: Others
+	// Example 6: Others
 	fmt.Println("\n--- Others ---")
 	const oneof = `oneof(v1, v2, "c")`
 	fmt.Println(Validate(nil, "a", oneof))
@@ -347,16 +262,6 @@ func ExampleBuilder() {
 	// mapv(min(10) && max(100)) <nil>
 	// <nil>
 	// map value '123' is invalid: the integer is greater than 100
-	//
-	// --- Struct ---
-	// <nil>
-	// <nil>
-	// F1: the string length is greater than 8
-	// F3.F4: the string 'c' is not one of [a b]
-	// F3.F5: 0th element is invalid: the integer is less than 1
-	// F3.F7: the value is not greater than the field named 'F3.F6'
-	// Fs: 0th element is invalid: F: the integer is less than 10
-	// <nil>
 	//
 	// --- Others ---
 	// <nil>
