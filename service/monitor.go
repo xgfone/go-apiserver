@@ -64,6 +64,7 @@ type Monitor struct {
 	cconfig atomic.Value
 	checker atomic2.Value
 	service atomic2.Value
+	setsvc  chan struct{}
 }
 
 // NewMonitor returns a new service monitor.
@@ -89,6 +90,7 @@ func NewMonitor(svc Service, checker Checker, cconf *CheckConfig) *Monitor {
 	m.SetService(svc)
 	m.SetChecker(checker)
 	m.SetCheckConfig(config)
+	m.setsvc = make(chan struct{}, 1)
 	return m
 }
 
@@ -129,6 +131,10 @@ func (m *Monitor) SetService(s Service) {
 		panic("service.Monitor: the service must not be nil")
 	}
 	m.service.Store(s)
+	select {
+	case m.setsvc <- struct{}{}:
+	default:
+	}
 }
 
 // IsActive reports whether the monitor is active, that's,
@@ -181,6 +187,13 @@ func (m *Monitor) run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 
+		case <-m.setsvc:
+			if m.IsActive() {
+				safeRun(m.GetService().Activate)
+			} else {
+				safeRun(m.GetService().Deactivate)
+			}
+
 		case <-ticker.C:
 			newconf := m.GetCheckConfig()
 			if newconf.Interval != conf.Interval {
@@ -190,6 +203,11 @@ func (m *Monitor) run(ctx context.Context) {
 			m.check(ctx, newconf)
 		}
 	}
+}
+
+func safeRun(f func()) {
+	defer log.WrapPanic()
+	f()
 }
 
 func (m *Monitor) check(ctx context.Context, cconfig CheckConfig) {
