@@ -19,7 +19,7 @@ import (
 	"reflect"
 
 	"github.com/xgfone/go-apiserver/tools/structfield/formatter"
-	"github.com/xgfone/go-apiserver/validation"
+	"github.com/xgfone/go-apiserver/tools/validation"
 )
 
 // NewValidatorHandler returns a handler to validate whether the field value

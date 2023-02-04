@@ -17,8 +17,8 @@ package validation
 import (
 	"fmt"
 
-	"github.com/xgfone/go-apiserver/validation/validator"
-	"github.com/xgfone/go-apiserver/validation/validator/str"
+	"github.com/xgfone/go-apiserver/tools/validation/validator"
+	"github.com/xgfone/go-apiserver/tools/validation/validator/str"
 )
 
 func init() { RegisterDefaults(DefaultBuilder) }

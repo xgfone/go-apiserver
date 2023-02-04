@@ -20,7 +20,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/xgfone/go-apiserver/helper"
-	"github.com/xgfone/go-apiserver/validation/internal"
+	"github.com/xgfone/go-apiserver/tools/validation/internal"
 )
 
 // CountString is used to count the number of the characters in the string.

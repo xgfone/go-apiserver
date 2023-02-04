@@ -15,7 +15,7 @@
 package validation
 
 import (
-	"github.com/xgfone/go-apiserver/validation/validator"
+	"github.com/xgfone/go-apiserver/tools/validation/validator"
 	"github.com/xgfone/predicate"
 )
 

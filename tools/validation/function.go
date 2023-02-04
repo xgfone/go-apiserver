@@ -17,7 +17,7 @@ package validation
 import (
 	"fmt"
 
-	"github.com/xgfone/go-apiserver/validation/validator"
+	"github.com/xgfone/go-apiserver/tools/validation/validator"
 	"github.com/xgfone/predicate"
 )
 
@@ -50,7 +50,8 @@ func NewFunction(name string, call func(*Context, ...interface{}) error) Functio
 
 // ValidatorFunction converts a validator to a Function with the name,
 // which is equal to
-//   NewFunctionWithoutArgs(name, func() validator.Validator { return v })
+//
+//	NewFunctionWithoutArgs(name, func() validator.Validator { return v })
 func ValidatorFunction(name string, v validator.Validator) Function {
 	return NewFunctionWithoutArgs(name, func() validator.Validator { return v })
 }

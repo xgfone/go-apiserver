@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/validation/validator"
+	"github.com/xgfone/go-apiserver/tools/validation/validator"
 )
 
 type testT2 struct {

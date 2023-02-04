@@ -20,8 +20,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/xgfone/go-apiserver/validation/internal"
-	"github.com/xgfone/go-apiserver/validation/validator"
+	"github.com/xgfone/go-apiserver/tools/validation/internal"
+	"github.com/xgfone/go-apiserver/tools/validation/validator"
 	"github.com/xgfone/predicate"
 )
 
