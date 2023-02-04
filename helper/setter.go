@@ -23,8 +23,8 @@ import (
 
 // Set does the best to set the value of dst to src.
 //
-// Notice: dst must be a pointer to a variable. For the current implementation,
-// it only supports time.Time, time.Duration and the built-in types.
+// Notice: dst must be a pointer to a variable of the built-in types,
+// time.Time, time.Duration, or sql.Scanner.
 func Set(dst, src interface{}) (err error) {
 	src = Indirect(src)
 	switch d := dst.(type) {
