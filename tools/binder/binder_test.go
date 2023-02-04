@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helper
+package binder
 
 import (
 	"net/url"
@@ -66,26 +66,26 @@ type AnonymousStruct struct {
 
 func TestBindURLValues(t *testing.T) {
 	type T struct {
-		Bool       bool            `query:"bool"`
-		Int        int             `query:"int"`
-		Int8       int8            `query:"int8"`
-		Int16      int16           `query:"int16"`
-		Int32      int32           `query:"int32"`
-		Int64      int64           `query:"int64"`
-		Uint       uint            `query:"uint"`
-		Uint8      uint8           `query:"uint8"`
-		Uint16     uint16          `query:"uint16"`
-		Uint32     uint32          `query:"uint32"`
-		Uint64     uint64          `query:"uint64"`
-		String     string          `query:"string"`
-		Float32    float32         `query:"float32"`
-		Float64    float64         `query:"float64"`
-		Duration   time.Duration   `query:"duration"`
-		Time       time.Time       `query:"time"`
-		Interface1 paramBinder     `query:"interface1"`
-		Interface2 BindUnmarshaler `query:"interface2"`
+		Bool       bool          `query:"bool"`
+		Int        int           `query:"int"`
+		Int8       int8          `query:"int8"`
+		Int16      int16         `query:"int16"`
+		Int32      int32         `query:"int32"`
+		Int64      int64         `query:"int64"`
+		Uint       uint          `query:"uint"`
+		Uint8      uint8         `query:"uint8"`
+		Uint16     uint16        `query:"uint16"`
+		Uint32     uint32        `query:"uint32"`
+		Uint64     uint64        `query:"uint64"`
+		String     string        `query:"string"`
+		Float32    float32       `query:"float32"`
+		Float64    float64       `query:"float64"`
+		Duration   time.Duration `query:"duration"`
+		Time       time.Time     `query:"time"`
+		Interface1 paramBinder   `query:"interface1"`
+		Interface2 Unmarshaler   `query:"interface2"`
 
-		BindUnmarshaler `query:"anonymous1"`
+		Unmarshaler     `query:"anonymous1"`
 		paramBinder     `query:"anonymous2"`
 		AnonymousStruct `query:"anonymous3"`
 		AnonymousString `query:"anonymous4"`
@@ -94,7 +94,7 @@ func TestBindURLValues(t *testing.T) {
 		Ptr    *int
 		Slice1 []*int
 		Slice2 []int
-		// Slice3 []BindUnmarshaler // Not Support
+		// Slice3 []Unmarshaler // Not Support
 	}
 
 	data := url.Values{
@@ -148,7 +148,7 @@ func TestBindURLValues(t *testing.T) {
 
 		Interface1:      paramBinder{41},
 		Interface2:      &paramBinder{42},
-		BindUnmarshaler: &paramBinder{43},
+		Unmarshaler:     &paramBinder{43},
 		AnonymousString: "44",
 		AnonymousStruct: AnonymousStruct{Embed: "45"},
 
@@ -158,7 +158,7 @@ func TestBindURLValues(t *testing.T) {
 		Slice2:      []int{55, 56},
 	}
 
-	v := T{Interface2: &paramBinder{}, BindUnmarshaler: &paramBinder{}}
+	v := T{Interface2: &paramBinder{}, Unmarshaler: &paramBinder{}}
 	if err := BindStructFromURLValues(&v, "query", data); err != nil {
 		t.Fatal(err)
 	} else if !reflect.DeepEqual(v, result) {

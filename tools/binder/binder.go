@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helper
+// Package binder provides a common struct binder.
+package binder
 
 import (
 	"fmt"
@@ -22,13 +23,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/xgfone/go-apiserver/helper"
 )
 
-// BindUnmarshaler is the interface used to wrap the UnmarshalParam method
-// to unmarshal itself from the string parameter.
-type BindUnmarshaler interface {
-	// Unmarshal decodes the argument param and assigns to itself.
-	UnmarshalBind(param string) error
+// Unmarshaler is an interface to unmarshal itself from the string parameter.
+type Unmarshaler interface {
+	UnmarshalBind(string) error
 }
 
 // BindStruct binds the fields of the pointer struct to the values got
@@ -64,7 +65,7 @@ type BindUnmarshaler interface {
 //   - []*multipart.FileHeader
 func BindStruct(structptr interface{}, tag string, get func(name string) interface{}) error {
 	pvalue := reflect.ValueOf(structptr)
-	if !IsPointer(pvalue) {
+	if !helper.IsPointer(pvalue) {
 		return fmt.Errorf("%T is not a pointer to struct", structptr)
 	}
 
@@ -170,7 +171,7 @@ func bindValues(val reflect.Value, tag string, get func(string) interface{}) (er
 	return
 }
 
-var binderType = reflect.TypeOf((*BindUnmarshaler)(nil)).Elem()
+var binderType = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
 
 func bindUnmarshaler(kind reflect.Kind, val reflect.Value, value string) (ok bool, err error) {
 	if kind != reflect.Pointer && kind != reflect.Interface {
@@ -178,7 +179,7 @@ func bindUnmarshaler(kind reflect.Kind, val reflect.Value, value string) (ok boo
 	}
 
 	if val.Type().Implements(binderType) {
-		if unmarshaler, ok := val.Interface().(BindUnmarshaler); ok {
+		if unmarshaler, ok := val.Interface().(Unmarshaler); ok {
 			return true, unmarshaler.UnmarshalBind(value)
 		}
 	}

@@ -23,9 +23,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
+	"github.com/xgfone/go-apiserver/tools/binder"
 	"github.com/xgfone/go-apiserver/tools/structfield"
 )
 
@@ -34,11 +34,11 @@ var (
 	DefaultMuxBinder = NewMuxBinder()
 
 	DefaultQueryBinder Binder = BinderFunc(func(dst interface{}, r *http.Request) error {
-		return helper.BindStructFromURLValues(dst, "query", r.URL.Query())
+		return binder.BindStructFromURLValues(dst, "query", r.URL.Query())
 	})
 
 	DefaultHeaderBinder Binder = BinderFunc(func(dst interface{}, r *http.Request) error {
-		return helper.BindStructFromURLValues(dst, "header", url.Values(r.Header))
+		return binder.BindStructFromURLValues(dst, "header", url.Values(r.Header))
 	})
 
 	DefaultValidateFunc = func(v interface{}, r *http.Request) error {
@@ -114,7 +114,7 @@ func FormBinder(maxMemory int64) Binder {
 				fhs = r.MultipartForm.File
 			}
 
-			err = helper.BindStruct(v, "form", func(name string) interface{} {
+			err = binder.BindStruct(v, "form", func(name string) interface{} {
 				if values, ok := r.Form[name]; ok {
 					return values
 				}
