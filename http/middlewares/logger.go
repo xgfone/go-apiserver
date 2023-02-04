@@ -27,7 +27,6 @@ import (
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/middleware/logger"
-	"github.com/xgfone/go-apiserver/tools/rawjson"
 )
 
 // LogKvsAppender is used to append the extra log key-value contexts.
@@ -144,7 +143,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				if reqBodyLen <= logReqBodyLen {
 					if header.ContentType(r.Header) == header.MIMEApplicationJSON {
 						// (xgfone): We needs to check whether reqbody is a valid raw json string??
-						kvs = append(kvs, "reqbodydata", rawjson.RawString(reqBodyData))
+						kvs = append(kvs, "reqbodydata", rawString(reqBodyData))
 					} else {
 						kvs = append(kvs, "reqbodydata", reqBodyData)
 					}
@@ -160,7 +159,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				if respBuf.Len() <= logRespBodyLen {
 					if header.ContentType(w.Header()) == header.MIMEApplicationJSON {
 						// (xgfone): We needs to check whether respbody is a valid raw json string??
-						kvs = append(kvs, "respbodydata", rawjson.RawString(respBuf.String()))
+						kvs = append(kvs, "respbodydata", rawString(respBuf.String()))
 					} else {
 						kvs = append(kvs, "respbodydata", respBuf.String())
 					}

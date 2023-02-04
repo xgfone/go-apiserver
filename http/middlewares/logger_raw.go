@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,54 +12,48 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rawjson
+package middlewares
 
 import (
+	"encoding"
 	"encoding/json"
-	"io"
 	"strings"
 
 	"github.com/xgfone/go-apiserver/internal/pools"
-	"github.com/xgfone/go-apiserver/log"
 )
 
 var emptyString = []byte(`""`)
 
-// RawString represent a raw json string.
-type RawString string
+// rawString represent a raw json string.
+type rawString string
+
+var (
+	_ json.Marshaler         = rawString("")
+	_ encoding.TextMarshaler = rawString("")
+)
 
 // MarshalJSON implements the interface json.Marshaler, which will returns
 // the original string without the leading and trailing whitespace as []byte
 // if not empty, else []byte(`""`) instead.
-func (s RawString) MarshalJSON() ([]byte, error) {
+func (s rawString) MarshalJSON() ([]byte, error) {
 	if js := strings.TrimSpace(string(s)); len(js) > 0 {
 		return []byte(js), nil
 	}
 	return emptyString, nil
 }
 
-// WriteTo implements the interface io.WriterTo, which compacts and writes
-// the string s as the raw json string into w.
-func (s RawString) WriteTo(w io.Writer) (n int64, err error) {
-	var m int
+func (s rawString) MarshalText() ([]byte, error) {
+	js, err := s.compact()
+	return []byte(js), err
+}
 
-	if js := strings.TrimSpace(string(s)); len(js) == 0 {
-		m, err = w.Write(emptyString)
-	} else {
+func (s rawString) compact() (js string, err error) {
+	if js = strings.TrimSpace(string(s)); len(js) > 0 {
 		pool, buf := pools.GetBuffer(len(js))
 		if err = json.Compact(buf, []byte(js)); err == nil {
-			m, err = w.Write(buf.Bytes())
+			js = buf.String()
 		}
 		pools.PutBuffer(pool, buf)
 	}
-
-	n = int64(m)
 	return
-}
-
-// WriteJSON is the same as WriteTo, but returns nothing.
-func (s RawString) WriteJSON(w io.Writer) {
-	if n, err := s.WriteTo(w); err != nil {
-		log.Error("fail to write raw json string", "rawjson", string(s), "wrote", n, "err", err)
-	}
 }
