@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helper
+package slice
 
 import "fmt"
 
-func ExampleSliceEqual() {
+func ExampleEqual() {
 	s1 := []string{"a", "b", "c"}
 	s2 := []string{"b", "c", "a"}
 	s3 := []string{"a", "b", "b"}
-	if SliceEqual(s1, s2) {
+	if Equal(s1, s2) {
 		fmt.Printf("%v is equal to %v\n", s1, s2)
 	} else {
 		fmt.Printf("%v is not equal to %v\n", s1, s2)
 	}
 
-	if SliceEqual(s1, s3) {
+	if Equal(s1, s3) {
 		fmt.Printf("%v is equal to %v\n", s1, s3)
 	} else {
 		fmt.Printf("%v is not equal to %v\n", s1, s3)

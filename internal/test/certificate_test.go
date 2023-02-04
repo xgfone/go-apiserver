@@ -19,7 +19,7 @@ import (
 	"crypto/x509"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-apiserver/tools/slice"
 )
 
 func TestCertificate(t *testing.T) {
@@ -41,7 +41,7 @@ func TestCertificate(t *testing.T) {
 		t.Errorf("expect CN '%s', but got '%s'", CertCN, cn)
 	}
 
-	if !helper.SliceEqual(cert.DNSNames, CertDNSNames) {
+	if !slice.Equal(cert.DNSNames, CertDNSNames) {
 		t.Errorf("expect DNS '%v', but got '%v'", CertDNSNames, cert.DNSNames)
 	}
 
@@ -49,7 +49,7 @@ func TestCertificate(t *testing.T) {
 		t.Errorf("expect %d ips, but got %d: %v", len1, len2, cert.IPAddresses)
 	} else {
 		for _, ip := range cert.IPAddresses {
-			if !helper.Contains(CertIPAddresses, ip.String()) {
+			if !slice.Contains(CertIPAddresses, ip.String()) {
 				t.Errorf("unexpected ip '%s'", ip.String())
 			}
 		}

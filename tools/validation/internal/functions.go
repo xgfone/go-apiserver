@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-apiserver/tools/slice"
 )
 
 // OneOf is used to check whether a value is one of the values.
@@ -53,12 +54,12 @@ func (o OneOf) String() string { return o.desc }
 func (o OneOf) Validate(_, i interface{}) error {
 	switch v := helper.Indirect(i).(type) {
 	case string:
-		if !helper.Contains(o.values, v) {
+		if !slice.Contains(o.values, v) {
 			return fmt.Errorf("the string '%s' is not one of %v", v, o.values)
 		}
 
 	case fmt.Stringer:
-		if s := v.String(); !helper.Contains(o.values, s) {
+		if s := v.String(); !slice.Contains(o.values, s) {
 			return fmt.Errorf("the string '%s' is not one of %v", s, o.values)
 		}
 

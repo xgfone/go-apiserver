@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helper
+// Package slice provides some convenient slice functions.
+package slice
 
-// SliceEqual reports whether the element set of the two slices are equal.
-func SliceEqual[E comparable](vs1, vs2 []E) bool {
+// Equal reports whether the element set of the two slices are equal.
+func Equal[E comparable](vs1, vs2 []E) bool {
 	len1 := len(vs1)
 	if len1 != len(vs2) {
 		return false
