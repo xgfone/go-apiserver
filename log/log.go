@@ -17,11 +17,13 @@ package log
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 
 	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-apiserver/internal/writer"
 	"github.com/xgfone/go-atexit"
 	"golang.org/x/exp/slog"
 )
@@ -36,23 +38,51 @@ const (
 	LevelFatal = slog.LevelError + 4
 )
 
-// Level is the log level.
-type Level = slog.Level
+type (
+	// Level is the log level.
+	Level = slog.Level
+
+	// Leveler is an level interface to get the level.
+	Leveler = slog.Leveler
+
+	// LevelVar is used to manage the level atomically, which implements the interface Leveler.
+	LevelVar = slog.LevelVar
+)
+
+// NewFileWriter returns a new file writer that rotates the log files
+// based on the file size.
+//
+// filesize is parsed as the log file size, which maybe have a unit suffix,
+// such as "123", "123M, 123G". Valid size units contain "b", "B", "k", "K",
+// "m", "M", "g", "G", "t", "T", "p", "P", "e", "E". The lower units are 1000x,
+// and the upper units are 1024x.
+func NewFileWriter(filepath, filesize string, filenum int) (io.WriteCloser, error) {
+	if filepath == "" {
+		return nil, errors.New("the log filepath must not be empty")
+	}
+
+	size, err := writer.ParseSize(filesize)
+	if err != nil {
+		return nil, err
+	}
+
+	return writer.NewSizedRotatingFile(filepath, int(size), filenum), nil
+}
+
+// NewJSONHandler returns a new json handler.
+func NewJSONHandler(w io.Writer, level Leveler) slog.Handler {
+	return slog.HandlerOptions{
+		Level:       level,
+		AddSource:   true,
+		ReplaceAttr: replaceSourceAttr,
+	}.NewJSONHandler(w)
+}
 
 func replaceSourceAttr(groups []string, a slog.Attr) slog.Attr {
 	if a.Key == slog.SourceKey {
 		a.Value = slog.StringValue(helper.TrimPkgFile(a.Value.String()))
 	}
 	return a
-}
-
-// NewJSONHandler returns a new json handler.
-func NewJSONHandler(w io.Writer, level slog.Leveler) slog.Handler {
-	return slog.HandlerOptions{
-		Level:       level,
-		AddSource:   true,
-		ReplaceAttr: replaceSourceAttr,
-	}.NewJSONHandler(w)
 }
 
 // SetDefault is used to set default global logger with the handler.
