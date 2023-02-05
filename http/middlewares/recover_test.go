@@ -15,48 +15,40 @@
 package middlewares
 
 import (
-	"bytes"
-	stdlog "log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/log"
+	"github.com/xgfone/go-apiserver/helper"
 )
 
 func TestRecover(t *testing.T) {
-	buf := bytes.NewBuffer(nil)
-	log.DefaultLogger = log.NewLogger(buf, "", stdlog.Lshortfile, log.LvlTrace)
-
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic("test")
 	})
+
+	var stacks []string
+	DefaultPanicHandler = func(w http.ResponseWriter, r *http.Request, recover interface{}) (done bool) {
+		for _, stack := range helper.GetCallStack(4) {
+			if strings.HasPrefix(stack, "testing/") {
+				break
+			} else if strings.HasPrefix(stack, "net/http/") || strings.HasPrefix(stack, "runtime/") {
+				continue
+			}
+			stacks = append(stacks, stack)
+		}
+		return true
+	}
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "http://127.0.0.1", nil)
 	Recover(0).Handler(handler).(http.Handler).ServeHTTP(rec, req)
 
-	mark := "; stacks=["
-	result := buf.String()
-	if index := strings.Index(result, mark); index > 0 {
-		result = result[index+len(mark) : len(result)-1]
-	}
-
-	var stacks []string
-	for _, stack := range strings.Fields(result) {
-		if strings.HasPrefix(stack, "testing/") {
-			break
-		} else if strings.HasPrefix(stack, "net/http/") {
-			continue
-		}
-		stacks = append(stacks, stack)
-	}
-
 	expects := []string{
-		"github.com/xgfone/go-apiserver/http/middlewares/recover_test.go:func1:33",
+		"github.com/xgfone/go-apiserver/http/middlewares/recover_test.go:func1:28",
 		"github.com/xgfone/go-apiserver/http/middlewares/recover.go:1:52",
-		"github.com/xgfone/go-apiserver/http/middlewares/recover_test.go:TestRecover:38",
+		"github.com/xgfone/go-apiserver/http/middlewares/recover_test.go:TestRecover:46",
 	}
 
 	if len(expects) != len(stacks) {

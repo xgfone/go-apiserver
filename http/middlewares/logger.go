@@ -44,8 +44,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 
 	return middleware.NewMiddleware("logger", priority, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			logLevel := config.GetLogLevel()
-			if !log.Enabled(logLevel) {
+			if !log.Enabled(log.LevelInfo) {
 				h.(http.Handler).ServeHTTP(w, r)
 				return
 			}
@@ -170,7 +169,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				kvs = append(kvs, "err", err)
 			}
 
-			log.Log(logLevel, 0, "log http request", kvs...)
+			log.Info("log http request", kvs...)
 			ikvs.Interfaces = kvs
 			pools.PutInterfaces(ipool, ikvs)
 		})

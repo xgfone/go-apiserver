@@ -121,8 +121,8 @@ func (lb *LoadBalancer) SetErrorHandler(handler ErrorHandler) {
 func handleError(lb *LoadBalancer, w http.ResponseWriter, r *http.Request, err error) {
 	switch err {
 	case nil:
-		if log.Enabled(log.LvlTrace) {
-			log.Trace("forward the http request",
+		if log.Enabled(log.LevelDebug) {
+			log.Debug("forward the http request",
 				"upstream", lb.name,
 				"balancer", lb.GetBalancer().Policy(),
 				"clientaddr", r.RemoteAddr,

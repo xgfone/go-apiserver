@@ -44,7 +44,7 @@ func NewHTTPServerHandler(localAddr net.Addr, handler http.Handler) *HTTPServerH
 	}
 
 	prefix := fmt.Sprintf("HTTPServer(%s): ", localAddr.String())
-	logger := log.StdLogger(prefix, log.LvlError)
+	logger := log.StdLogger(prefix, log.LevelError)
 
 	h := new(HTTPServerHandler)
 	h.handler.Set(handler)

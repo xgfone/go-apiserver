@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,52 +15,42 @@
 package log
 
 import (
-	"fmt"
-	"io"
 	"log"
-	"os"
-	"strings"
+	"runtime"
+	"time"
+
+	"golang.org/x/exp/slog"
 )
 
-// NewLogger returns a new Logger with the default implementation.
-func NewLogger(out io.Writer, prefix string, flag, levelThreshold int) Logger {
-	return stdLogger{
-		flag:   flag,
-		level:  levelThreshold,
-		logger: log.New(out, prefix, flag),
-	}
+// StdLogger returns a stdlib log logger.
+func StdLogger(prefix string, level slog.Level) *log.Logger {
+	writer := &handlerWriter{handler: slog.Default().Handler(), level: level}
+	return log.New(writer, prefix, 0)
 }
 
-func init() {
-	DefaultLogger = NewLogger(os.Stderr, "", log.LstdFlags|log.Lshortfile, LvlTrace)
+type handlerWriter struct {
+	handler slog.Handler
+	level   slog.Level
 }
 
-type stdLogger struct {
-	flag   int
-	level  int
-	logger *log.Logger
-}
-
-func (l stdLogger) Enabled(level int) bool { return level >= l.level }
-
-func (l stdLogger) StdLogger(prefix string, level int) *log.Logger {
-	return log.New(l.logger.Writer(), prefix, l.flag)
-}
-
-func (l stdLogger) Log(level, depth int, msg string, kvs ...interface{}) {
-	if level < l.level {
-		return
+func (w *handlerWriter) Write(buf []byte) (int, error) {
+	if !w.handler.Enabled(nil, w.level) {
+		return 0, nil
 	}
 
-	var builder strings.Builder
-	builder.Grow(128)
-	builder.WriteString(msg)
-
-	builder.WriteString("; level=")
-	builder.WriteString(FormatLevel(level))
-
-	for i, _len := 0, len(kvs); i < _len; i += 2 {
-		fmt.Fprintf(&builder, "; %s=%v", kvs[i], kvs[i+1])
+	// Remove final newline.
+	origLen := len(buf)
+	if len(buf) > 0 && buf[len(buf)-1] == '\n' {
+		buf = buf[:len(buf)-1]
 	}
-	l.logger.Output(depth+2, builder.String())
+
+	r := slog.NewRecord(time.Now(), w.level, string(buf), callerPC(5), nil)
+	return origLen, w.handler.Handle(r)
+}
+
+// callerPC returns the program counter at the given stack depth.
+func callerPC(depth int) uintptr {
+	var pcs [1]uintptr
+	runtime.Callers(depth, pcs[:])
+	return pcs[0]
 }

@@ -14,12 +14,8 @@
 
 package logger
 
-import "github.com/xgfone/go-apiserver/log"
-
 // Define the global logger option config.
 var (
-	LogLevel func() int
-
 	LogReqBodyLen  func() int
 	LogRespBodyLen func() int
 
@@ -29,26 +25,11 @@ var (
 
 // Config is used to configure the logger middleware.
 type Config struct {
-	LogLevel func() int
-
 	LogReqBodyLen  func() int
 	LogRespBodyLen func() int
 
 	LogReqHeaders  func() bool
 	LogRespHeaders func() bool
-}
-
-// GetLogLevel returns the log level.
-//
-// If the field LogLevel is nil, call the global function LogLevel instead.
-// If it's also nil, return log.LvlInfo instead.
-func (c Config) GetLogLevel() int {
-	if c.LogLevel != nil {
-		return c.LogLevel()
-	} else if LogLevel != nil {
-		return LogLevel()
-	}
-	return log.LvlInfo
 }
 
 // GetLogReqBodyLen returns the maximum length of the request body to be logged.
@@ -113,11 +94,6 @@ func (c Config) GetLogRespHeaders() bool {
 
 // Option is the logger option to update the logger config.
 type Option func(*Config)
-
-// SetLogLevel returns a logger option to set the field LogLevel.
-func SetLogLevel(f func() int) Option {
-	return func(lc *Config) { lc.LogLevel = f }
-}
 
 // SetLogReqBodyLen returns a logger option to set the field LogReqBodyLen.
 func SetLogReqBodyLen(f func() int) Option {

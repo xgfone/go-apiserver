@@ -22,6 +22,17 @@ import (
 
 var trimPrefixes = []string{"/pkg/mod/", "/src/"}
 
+// TrimPkgFile trims the "src/" or "pkg/mod/" prefix path of the package file.
+func TrimPkgFile(file string) string {
+	for _, mark := range trimPrefixes {
+		if index := strings.Index(file, mark); index > -1 {
+			file = file[index+len(mark):]
+			break
+		}
+	}
+	return file
+}
+
 // GetCallStack returns the most 64 call stacks.
 func GetCallStack(skip int) []string {
 	var pcs [64]uintptr
@@ -38,13 +49,7 @@ func GetCallStack(skip int) []string {
 			break
 		}
 
-		for _, mark := range trimPrefixes {
-			if index := strings.Index(frame.File, mark); index > -1 {
-				frame.File = frame.File[index+len(mark):]
-				break
-			}
-		}
-
+		frame.File = TrimPkgFile(frame.File)
 		if frame.Function == "" {
 			stacks = append(stacks, fmt.Sprintf("%s:%d", frame.File, frame.Line))
 		} else {

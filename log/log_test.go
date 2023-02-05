@@ -14,32 +14,33 @@
 
 package log
 
-import "os"
+import (
+	"fmt"
+	"os"
+
+	"golang.org/x/exp/slog"
+)
 
 func ExampleLogger() {
 	// Set the default global logger.
-	DefaultLogger = NewLogger(os.Stdout, "myapp: ", 0, LvlInfo)
-
-	// Log the message by DefaultLogger
-	DefaultLogger.Log(LvlDebug, 0, "log msg")
-	DefaultLogger.Log(LvlInfo, 0, "log msg", "key1", "value1")
-	DefaultLogger.Log(LvlWarn, 0, "log msg", "key1", "value1", "key2", "value2")
+	SetDefault(nil, NewJSONHandler(os.Stdout, nil), slog.String("ctxkey", "ctxvalue"))
 
 	// Log the message by the key-value log functions.
 	Debug("log msg")
 	Info("log msg", "key1", "value1")
 	Warn("log msg", "key1", "value1", "key2", "value2")
 
+	fmt.Println()
+
 	// Log the message by the format log functions.
 	Debugf("log msg")
 	Infof("log msg: %s=%s", "key1", "value1")
 	Warnf("log msg: %s=%s, %s=%s", "key1", "value1", "key2", "value2")
 
-	// Output:
-	// myapp: log msg; level=info; key1=value1
-	// myapp: log msg; level=warn; key1=value1; key2=value2
-	// myapp: log msg; level=info; key1=value1
-	// myapp: log msg; level=warn; key1=value1; key2=value2
-	// myapp: log msg: key1=value1; level=info
-	// myapp: log msg: key1=value1, key2=value2; level=warn
+	// Maybe Output:
+	// {"time":"2023-02-05T15:10:37.1311093+08:00","level":"INFO","source":"github.com/xgfone/go-apiserver/log/log_test.go:30","msg":"log msg","ctxkey":"ctxvalue","key1":"value1"}
+	// {"time":"2023-02-05T15:10:37.1352461+08:00","level":"WARN","source":"github.com/xgfone/go-apiserver/log/log_test.go:31","msg":"log msg","ctxkey":"ctxvalue","key1":"value1","key2":"value2"}
+	//
+	// {"time":"2023-02-05T15:10:37.1352461+08:00","level":"INFO","source":"github.com/xgfone/go-apiserver/log/log_test.go:37","msg":"log msg: key1=value1","ctxkey":"ctxvalue"}
+	// {"time":"2023-02-05T15:10:37.1352461+08:00","level":"WARN","source":"github.com/xgfone/go-apiserver/log/log_test.go:38","msg":"log msg: key1=value1, key2=value2","ctxkey":"ctxvalue"}
 }

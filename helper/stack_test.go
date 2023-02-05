@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -29,8 +30,8 @@ func TestGetCallStack(t *testing.T) {
 	}
 
 	expects := []string{
-		"github.com/xgfone/go-apiserver/helper/stack.go:GetCallStack:28",
-		"github.com/xgfone/go-apiserver/helper/stack_test.go:TestGetCallStack:23",
+		"github.com/xgfone/go-apiserver/helper/stack.go:GetCallStack:39",
+		"github.com/xgfone/go-apiserver/helper/stack_test.go:TestGetCallStack:24",
 	}
 
 	if len(expects) != len(stacks) {
@@ -42,4 +43,19 @@ func TestGetCallStack(t *testing.T) {
 			t.Errorf("%d: expect '%s', but got '%s'", i, line, stacks[i])
 		}
 	}
+}
+
+func ExampleTrimPkgFile() {
+	srcfile := TrimPkgFile("/path/to/src/github.com/xgfone/go-apiserver/srcfile.go")
+	modfile := TrimPkgFile("/path/to/pkg/mod/github.com/xgfone/go-apiserver/modfile.go")
+	origfile := TrimPkgFile("/path/to/github.com/xgfone/go-apiserver/modfile.go")
+
+	fmt.Println(srcfile)
+	fmt.Println(modfile)
+	fmt.Println(origfile)
+
+	// Output:
+	// github.com/xgfone/go-apiserver/srcfile.go
+	// github.com/xgfone/go-apiserver/modfile.go
+	// /path/to/github.com/xgfone/go-apiserver/modfile.go
 }

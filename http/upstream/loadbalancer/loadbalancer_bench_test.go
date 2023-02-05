@@ -42,7 +42,7 @@ func (s testServer) HandleHTTP(http.ResponseWriter, *http.Request) error { retur
 func newTestServer(ip string) testServer { return testServer{url: upstream.URL{IP: ip}} }
 
 func BenchmarkLoadBalancer(b *testing.B) {
-	log.DefaultLogger = log.NewLogger(discardWriter{}, "", 0, log.LvlAlert)
+	log.SetDefault(nil, log.NewJSONHandler(discardWriter{}, nil))
 	lb := NewLoadBalancer("test", balancer.Random())
 	lb.ResetServers(newTestServer("127.0.0.1"), newTestServer("127.0.0.2"))
 

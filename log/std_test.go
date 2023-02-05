@@ -16,99 +16,39 @@ package log
 
 import (
 	"bytes"
-	"errors"
-	"log"
-	"strings"
+	"encoding/json"
 	"testing"
+
+	"golang.org/x/exp/slog"
 )
 
 func TestStdLogger(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	DefaultLogger = NewLogger(buf, "prefix: ", log.Lshortfile, LvlTrace)
+	SetDefault(nil, NewJSONHandler(buf, nil), slog.String("ctxkey", "ctxvalue"))
 
-	Info("msg1", "k1", "v1")
-	Log(LvlInfo, 0, "msg2", "k2", "v2")
-	StdLogger("stdlog: ", LvlDebug).Print("msg3")
-	Infof("msg4: %s=%s", "k3", "v3")
-	IfErr(errors.New("error"), "msg5")
+	// Emit the log by the std log.Logger
+	StdLogger("stdlog: ", slog.LevelError).Printf("msg")
 
-	expects := []string{
-		`prefix: std_test.go:29: msg1; level=info; k1=v1`,
-		`prefix: std_test.go:30: msg2; level=info; k2=v2`,
-		`stdlog: std_test.go:31: msg3`,
-		`prefix: std_test.go:32: msg4: k3=v3; level=info`,
-		`prefix: std_test.go:33: msg5; level=error; err=error`,
-		``,
-	}
-	results := strings.Split(buf.String(), "\n")
-	if len(expects) != len(results) {
-		t.Errorf("expect %d line logs, but got %d", len(expects), len(results))
-	} else {
-		for i, line := range expects {
-			if results[i] != line {
-				t.Errorf("%d: expect '%s', but got '%s'", i, line, results[i])
-			}
-		}
-	}
-}
-
-func handleBusiness() {
-	func(s string) {
-		panic(s)
-	}("test")
-}
-
-func testHandleBusiness() {
-	defer WrapPanic()
-	handleBusiness()
-}
-
-func TestWrapPanic(t *testing.T) {
-	buf := bytes.NewBuffer(nil)
-	DefaultLogger = NewLogger(buf, "", log.Lshortfile, LvlTrace)
-
-	testHandleBusiness()
-
-	results := strings.Split(buf.String(), "\n")
-	if len(results) != 2 {
-		t.Errorf("expect %d line logs, but got %d", 2, len(results))
-		return
+	type Result struct {
+		Level  string `json:"level"`
+		Source string `json:"source"`
+		Msg    string `json:"msg"`
+		CtxKey string `json:"ctxkey"`
 	}
 
-	prefix := "std_test.go:57: wrap a panic; level=error; stacks=["
-	if !strings.HasPrefix(results[0], prefix) {
-		t.Errorf("unexpected line: %s", results[0])
-		return
+	expect := Result{
+		Level:  "ERROR",
+		Source: "github.com/xgfone/go-apiserver/log/std_test.go:30",
+		Msg:    "stdlog: msg",
+		CtxKey: "ctxvalue",
 	}
 
-	stack := results[0][len(prefix):]
-	if index := strings.IndexByte(stack, ']'); index > -1 {
-		stack = stack[:index]
+	var result Result
+	if err := json.NewDecoder(buf).Decode(&result); err != nil {
+		t.Fatal(err)
 	}
 
-	expects := []string{
-		"github.com/xgfone/go-apiserver/log/std_test.go:func1:57",
-		"github.com/xgfone/go-apiserver/log/std_test.go:handleBusiness:58",
-		"github.com/xgfone/go-apiserver/log/std_test.go:testHandleBusiness:63",
-		"github.com/xgfone/go-apiserver/log/std_test.go:TestWrapPanic:70",
+	if result != expect {
+		t.Errorf("expect %+v, but got %+v", expect, result)
 	}
-
-	stacks := strings.Fields(stack)
-	for i, stack := range stacks { // Remove the testing.go.
-		if strings.HasPrefix(stack, "testing/testing.go:") {
-			stacks = stacks[:i]
-			break
-		}
-	}
-
-	if len(expects) != len(stacks) {
-		t.Errorf("expect %d stacks, but got %d", len(expects), len(stacks))
-	} else {
-		for i, line := range expects {
-			if stacks[i] != line {
-				t.Errorf("%d: expect stack '%s', but got '%s'", i, line, stacks[i])
-			}
-		}
-	}
-
 }
