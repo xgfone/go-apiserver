@@ -21,9 +21,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/internal/writer"
+	"github.com/xgfone/go-apiserver/tools/io2"
 	"github.com/xgfone/go-atexit"
 	"golang.org/x/exp/slog"
 )
@@ -37,6 +39,9 @@ const (
 	LevelError = slog.LevelError
 	LevelFatal = slog.LevelError + 4
 )
+
+// Writer is the default global writer.
+var Writer = io2.NewSwitchWriter(os.Stdout)
 
 type (
 	// Level is the log level.
@@ -70,6 +75,8 @@ func NewFileWriter(filepath, filesize string, filenum int) (io.WriteCloser, erro
 }
 
 // NewJSONHandler returns a new json handler.
+//
+// If w is nil, use Writer instead.
 func NewJSONHandler(w io.Writer, level Leveler) slog.Handler {
 	return slog.HandlerOptions{
 		Level:       level,
