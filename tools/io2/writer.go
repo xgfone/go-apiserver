@@ -19,7 +19,7 @@ import (
 	"sync/atomic"
 )
 
-var _ io.Writer = new(SwitchWriter)
+var _ io.WriteCloser = new(SwitchWriter)
 
 type wrappedWriter struct{ io.Writer }
 
@@ -39,6 +39,11 @@ func NewSwitchWriter(w io.Writer) *SwitchWriter {
 // Write implements the interface io.Writer.
 func (w *SwitchWriter) Write(b []byte) (int, error) {
 	return w.Get().Write(b)
+}
+
+// Close implements the interface io.Closer.
+func (w *SwitchWriter) Close() error {
+	return Close(w.w)
 }
 
 // Get returns the wrapped writer.
