@@ -40,8 +40,13 @@ const (
 	LevelFatal = slog.LevelError + 4
 )
 
-// Writer is the default global writer.
-var Writer = io2.NewSwitchWriter(os.Stdout)
+var (
+	// Writer is the default global writer.
+	Writer = io2.NewSwitchWriter(os.Stdout)
+
+	// String is a convenient function to new a key-value pair based on string.
+	String = slog.String
+)
 
 type (
 	// Level is the log level.
@@ -52,6 +57,9 @@ type (
 
 	// LevelVar is used to manage the level atomically, which implements the interface Leveler.
 	LevelVar = slog.LevelVar
+
+	// Attr represents a key-value pair.
+	Attr = slog.Attr
 )
 
 // NewFileWriter returns a new file writer that rotates the log files
