@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,22 +18,22 @@ import "github.com/xgfone/go-apiserver/log"
 
 // LogService returns a new log Service, which will log the activated
 // or deactivated event.
-func LogService(logLevel int, serviceName string, service Service) Service {
+func LogService(logLevel log.Level, serviceName string, service Service) Service {
 	return logService{service: service, level: logLevel, sname: serviceName}
 }
 
 type logService struct {
 	service Service
 	sname   string
-	level   int
+	level   log.Level
 }
 
 func (s logService) Activate() {
-	log.Log(s.level, 0, "the service is activated", "service", s.sname)
+	log.Log(0, s.level, "the service is activated", "service", s.sname)
 	s.service.Activate()
 }
 
 func (s logService) Deactivate() {
-	log.Log(s.level, 0, "the service is deactivated", "service", s.sname)
+	log.Log(0, s.level, "the service is deactivated", "service", s.sname)
 	s.service.Deactivate()
 }
