@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,54 +14,52 @@
 
 package middleware
 
-import (
-	"fmt"
-)
+import "fmt"
 
 var builders = make(map[string]Builder, 16)
 
 // Builder is used to build a new middleware with the middleware config.
 type Builder func(name string, config map[string]interface{}) (Middleware, error)
 
-// RegisterBuilder registers a new middleware builder typed typ.
-func RegisterBuilder(typ string, builder Builder) (err error) {
-	if typ == "" {
-		panic("the middleware builder type is emtpy")
+// RegisterBuilder registers a new middleware builder named name.
+func RegisterBuilder(name string, builder Builder) (err error) {
+	if name == "" {
+		panic("the middleware builder name is emtpy")
 	} else if builder == nil {
 		panic("the middleware builder is nil")
 	}
 
-	if _, ok := builders[typ]; ok {
-		err = fmt.Errorf("the middleware builder typed '%s' has existed", typ)
+	if _, ok := builders[name]; ok {
+		err = fmt.Errorf("the middleware builder named '%s' has existed", name)
 	} else {
-		builders[typ] = builder
+		builders[name] = builder
 	}
 
 	return
 }
 
-// UnregisterBuilder unregisters the middleware builder by the type.
-func UnregisterBuilder(typ string) { delete(builders, typ) }
+// UnregisterBuilder unregisters the middleware builder by the name.
+func UnregisterBuilder(name string) { delete(builders, name) }
 
-// GetBuilder returns the middleware builder by the type.
+// GetBuilder returns the middleware builder by the name.
 //
 // If the middleware builder does not exist, return nil.
-func GetBuilder(typ string) Builder { return builders[typ] }
+func GetBuilder(name string) Builder { return builders[name] }
 
-// GetBuilderTypes returns the types of all the middleware builders.
-func GetBuilderTypes() (types []string) {
-	types = make([]string, 0, len(builders))
-	for _type := range builders {
-		types = append(types, _type)
+// GetBuilderNames returns the names of all the middleware builders.
+func GetBuilderNames() (names []string) {
+	names = make([]string, 0, len(builders))
+	for name := range builders {
+		names = append(names, name)
 	}
 	return
 }
 
-// Build uses the builder typed typ to build a middleware named name
+// Build uses the builder named name to build a middleware named name
 // with the config.
-func Build(typ, name string, config map[string]interface{}) (Middleware, error) {
-	if builder := GetBuilder(typ); builder != nil {
+func Build(name string, config map[string]interface{}) (Middleware, error) {
+	if builder := GetBuilder(name); builder != nil {
 		return builder(name, config)
 	}
-	return nil, fmt.Errorf("no the middleware builder typed '%s'", typ)
+	return nil, fmt.Errorf("no the middleware builder named '%s'", name)
 }
