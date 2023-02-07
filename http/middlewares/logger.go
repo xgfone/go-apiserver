@@ -122,7 +122,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				"uri", r.RequestURI,
 				"code", code,
 				"start", start.Unix(),
-				"cost", cost,
+				"cost", cost.String(),
 			)
 
 			if ctx != nil && ctx.Action != "" {
