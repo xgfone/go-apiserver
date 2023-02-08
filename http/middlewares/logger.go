@@ -53,7 +53,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 
 			var reqBodyLen int
 			var reqBodyData string
-			logReqBodyLen := config.GetLogReqBodyLen()
+			logReqBodyLen := config.GetLogReqBodyLen(r.Context())
 			if logReqBodyLen > 0 {
 				if r.ContentLength < 0 || r.ContentLength > int64(logReqBodyLen) {
 					logReqBodyLen = -1
@@ -80,7 +80,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 			}
 
 			var respBuf *bytes.Buffer
-			logRespBodyLen := config.GetLogRespBodyLen()
+			logRespBodyLen := config.GetLogRespBodyLen(r.Context())
 			if logRespBodyLen > 0 {
 				var pool *sync.Pool
 				pool, respBuf = pools.GetBuffer(logRespBodyLen)
@@ -133,7 +133,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				kvs = appender(w, r, kvs)
 			}
 
-			if config.GetLogReqHeaders() {
+			if config.GetLogReqHeaders(r.Context()) {
 				kvs = append(kvs, "reqheaders", r.Header)
 			}
 
@@ -149,7 +149,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				}
 			}
 
-			if config.GetLogRespHeaders() {
+			if config.GetLogRespHeaders(r.Context()) {
 				kvs = append(kvs, "respheaders", w.Header())
 			}
 

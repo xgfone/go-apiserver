@@ -14,22 +14,30 @@
 
 package logger
 
+import "context"
+
 // Define the global logger option config.
 var (
-	LogReqBodyLen  func() int
-	LogRespBodyLen func() int
+	LogReqBodyLen  func(context.Context) int
+	LogRespBodyLen func(context.Context) int
 
-	LogReqHeaders  func() bool
-	LogRespHeaders func() bool
+	LogReqHeaders  func(context.Context) bool
+	LogRespHeaders func(context.Context) bool
 )
 
 // Config is used to configure the logger middleware.
 type Config struct {
-	LogReqBodyLen  func() int
-	LogRespBodyLen func() int
+	// For Common
+	LogReqBodyLen  func(context.Context) int
+	LogRespBodyLen func(context.Context) int
+	LogReqHeaders  func(context.Context) bool
+	LogRespHeaders func(context.Context) bool
 
-	LogReqHeaders  func() bool
-	LogRespHeaders func() bool
+	// For HTTP
+	LogHTTPReqBodyLen  func(context.Context) int
+	LogHTTPRespBodyLen func(context.Context) int
+	LogHTTPReqHeaders  func(context.Context) bool
+	LogHTTPRespHeaders func(context.Context) bool
 }
 
 // GetLogReqBodyLen returns the maximum length of the request body to be logged.
@@ -40,11 +48,11 @@ type Config struct {
 //
 // If the field LogReqBody is nil, call the global function LogReqBody instead.
 // If it's also nil, return 0 instead.
-func (c Config) GetLogReqBodyLen() int {
+func (c Config) GetLogReqBodyLen(ctx context.Context) int {
 	if c.LogReqBodyLen != nil {
-		return c.LogReqBodyLen()
+		return c.LogReqBodyLen(ctx)
 	} else if LogReqBodyLen != nil {
-		return LogReqBodyLen()
+		return LogReqBodyLen(ctx)
 	}
 	return 0
 }
@@ -57,11 +65,11 @@ func (c Config) GetLogReqBodyLen() int {
 //
 // If the field LogRespBodyLen is nil, call the global function LogRespBodyLen
 // instead. If it's also nil, return 0 instead.
-func (c Config) GetLogRespBodyLen() int {
+func (c Config) GetLogRespBodyLen(ctx context.Context) int {
 	if c.LogRespBodyLen != nil {
-		return c.LogRespBodyLen()
+		return c.LogRespBodyLen(ctx)
 	} else if LogRespBodyLen != nil {
-		return LogRespBodyLen()
+		return LogRespBodyLen(ctx)
 	}
 	return 0
 }
@@ -70,11 +78,11 @@ func (c Config) GetLogRespBodyLen() int {
 //
 // If the field LogReqHeaders is nil, call the global function LogReqHeaders
 // instead. If it's also nil, return false instead.
-func (c Config) GetLogReqHeaders() bool {
+func (c Config) GetLogReqHeaders(ctx context.Context) bool {
 	if c.LogReqHeaders != nil {
-		return c.LogReqHeaders()
+		return c.LogReqHeaders(ctx)
 	} else if LogReqHeaders != nil {
-		return LogReqHeaders()
+		return LogReqHeaders(ctx)
 	}
 	return false
 }
@@ -83,11 +91,11 @@ func (c Config) GetLogReqHeaders() bool {
 //
 // If the field LogRespHeaders is nil, call the global function LogRespHeaders
 // instead. If it's also nil, return 0 instead.
-func (c Config) GetLogRespHeaders() bool {
+func (c Config) GetLogRespHeaders(ctx context.Context) bool {
 	if c.LogRespHeaders != nil {
-		return c.LogRespHeaders()
+		return c.LogRespHeaders(ctx)
 	} else if LogRespHeaders != nil {
-		return LogRespHeaders()
+		return LogRespHeaders(ctx)
 	}
 	return false
 }
@@ -96,21 +104,21 @@ func (c Config) GetLogRespHeaders() bool {
 type Option func(*Config)
 
 // SetLogReqBodyLen returns a logger option to set the field LogReqBodyLen.
-func SetLogReqBodyLen(f func() int) Option {
+func SetLogReqBodyLen(f func(context.Context) int) Option {
 	return func(lc *Config) { lc.LogReqBodyLen = f }
 }
 
 // SetLogRespBodyLen returns a logger option to set the field LogRespBodyLen.
-func SetLogRespBodyLen(f func() int) Option {
+func SetLogRespBodyLen(f func(context.Context) int) Option {
 	return func(lc *Config) { lc.LogRespBodyLen = f }
 }
 
 // SetLogRespHeaders returns a logger option to set the field LogRespHeaders.
-func SetLogRespHeaders(f func() bool) Option {
+func SetLogRespHeaders(f func(context.Context) bool) Option {
 	return func(lc *Config) { lc.LogRespHeaders = f }
 }
 
 // SetLogReqHeaders returns a logger option to set the field LogReqHeaders.
-func SetLogReqHeaders(f func() bool) Option {
+func SetLogReqHeaders(f func(context.Context) bool) Option {
 	return func(lc *Config) { lc.LogReqHeaders = f }
 }
