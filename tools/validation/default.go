@@ -21,9 +21,9 @@ import (
 	"github.com/xgfone/go-apiserver/tools/validation/validator/str"
 )
 
-func init() { RegisterDefaults(DefaultBuilder) }
+func init() { RegisterDefaultsForBuilder(DefaultBuilder) }
 
-// RegisterDefaults registers the default symbols and validators
+// RegisterDefaultsForBuilder registers the default symbols and validators
 // building functions into the builder.
 //
 // The registered default symbols:
@@ -57,7 +57,7 @@ func init() { RegisterDefaults(DefaultBuilder) }
 //	timeformat() or timeformat => time(timelayout)
 //	dateformat() or dateformat => time(datelayout)
 //	datetimeformat() or datetimeformat => time(datetimelayout)
-func RegisterDefaults(b *Builder) {
+func RegisterDefaultsForBuilder(b *Builder) {
 	b.RegisterSymbol("timelayout", "15:04:05")
 	b.RegisterSymbol("datelayout", "2006-01-02")
 	b.RegisterSymbol("datetimelayout", "2006-01-02 15:04:05")
@@ -101,7 +101,7 @@ func registerTimeValidator(b *Builder, name, layout string) {
 	}))
 }
 
-// RegisterStringIsValidators registers some string validators,
+// RegisterStringValidatorsForBuilder registers some string validators,
 // that's, the value is a specific string.
 //
 //	isascii
@@ -166,7 +166,7 @@ func registerTimeValidator(b *Builder, name, layout string) {
 //	isuuid4
 //	isuuid5
 //	isuppercase
-func RegisterStringIsValidators(b *Builder) {
+func RegisterStringValidatorsForBuilder(b *Builder) {
 	registerStrValidator(b, str.IsASCII, "ascii")
 	registerStrValidator(b, str.IsAlpha, "alpha")
 	registerStrValidator(b, str.IsAlphanumeric, "alphanumeric")
