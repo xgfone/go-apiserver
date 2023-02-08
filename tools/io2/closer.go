@@ -16,8 +16,8 @@ package io2
 
 import "io"
 
-// Close closes the closer if it has implemented the interface io.Closer
-// or interface{ Close() }.
+// Close closes the closer if it has implemented the interface io.Closer,
+// interface{ Close() } or interface{ Stop() }.
 func Close(closer interface{}) (err error) {
 	switch v := closer.(type) {
 	case io.Closer:
@@ -26,8 +26,8 @@ func Close(closer interface{}) (err error) {
 	case interface{ Close() }:
 		v.Close()
 
-	case interface{ Unwrap() error }:
-		err = Close(v.Unwrap())
+	case interface{ Stop() }:
+		v.Stop()
 	}
 
 	return
