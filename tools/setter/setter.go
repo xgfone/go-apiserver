@@ -12,21 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helper
+package setter
 
 import (
 	"database/sql"
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/xgfone/go-apiserver/helper"
 )
+
+// Setter is an interface to set itself to a value.
+type Setter interface {
+	Set(interface{}) error
+}
 
 // Set does the best to set the value of dst to src.
 //
 // Notice: dst must be a pointer to a variable of the built-in types,
-// time.Time, time.Duration, or sql.Scanner.
+// time.Time, time.Duration, Setter or sql.Scanner.
 func Set(dst, src interface{}) (err error) {
-	src = Indirect(src)
+	src = helper.Indirect(src)
 	switch d := dst.(type) {
 	case nil:
 		return
@@ -126,6 +133,9 @@ func Set(dst, src interface{}) (err error) {
 		if v, err = convertToTime(src); err == nil {
 			*d = v
 		}
+
+	case Setter:
+		err = d.Set(src)
 
 	case sql.Scanner:
 		err = d.Scan(src)
@@ -347,7 +357,7 @@ func convertToDuration(i interface{}) (dst time.Duration, err error) {
 	switch src := i.(type) {
 	case nil:
 	case string:
-		if IsIntegerString(src) {
+		if helper.IsIntegerString(src) {
 			var i int64
 			i, err = strconv.ParseInt(src, 10, 64)
 			dst = time.Duration(i) * time.Millisecond
@@ -418,7 +428,7 @@ func convertToTime(i interface{}) (dst time.Time, err error) {
 func convertStringToTime(s string) (time.Time, error) {
 	if s == "" || s == "0000-00-00 00:00:00" {
 		return time.Time{}, nil
-	} else if IsIntegerString(s) {
+	} else if helper.IsIntegerString(s) {
 		i, err := strconv.ParseInt(s, 10, 64)
 		return time.Unix(i, 0), err
 	}
