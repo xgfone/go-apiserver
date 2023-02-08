@@ -22,16 +22,13 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/header"
-)
-
-// Some non-HTTP errors
-var (
-	ErrMissingContentType  = errors.New("missing the header 'Content-Type'")
-	ErrInvalidRedirectCode = errors.New("invalid redirect status code")
+	"github.com/xgfone/go-apiserver/result"
 )
 
 // Some HTTP errors.
 var (
+	ErrMissingContentType = NewError(http.StatusBadRequest).WithMsg("missing the header Content-Type")
+
 	ErrBadRequest                    = NewError(http.StatusBadRequest)
 	ErrUnauthorized                  = NewError(http.StatusUnauthorized)
 	ErrForbidden                     = NewError(http.StatusForbidden)
@@ -64,6 +61,76 @@ func NewError(code int) Error { return Error{Code: code} }
 
 // StatusCode implements the interface to return the status code.
 func (e Error) StatusCode() int { return e.Code }
+
+// CodeError implements the interface result.CodeError
+// to convert itself to result.Error.
+func (e Error) CodeError() result.Error {
+	if e == ErrMissingContentType {
+		return result.ErrMissingContentType
+	}
+
+	err := result.Error{Message: e.Error(), WrappedErr: e}
+	switch e.Code {
+	case http.StatusBadRequest:
+		err.Code = result.CodeInvalidParams
+
+	case http.StatusUnauthorized:
+		err.Code = result.CodeUnauthorizedOperation
+
+	case http.StatusForbidden:
+		err.Code = result.CodeUnallowedOperation
+
+	case http.StatusNotFound:
+		err.Code = result.CodeInstanceNotFound
+
+	case http.StatusMethodNotAllowed:
+		err.Code = result.CodeUnallowedOperation
+
+	case http.StatusNotAcceptable:
+		err.Code = result.CodeUnsupportedOperation
+
+	case http.StatusRequestTimeout:
+		err.Code = result.CodeGatewayTimeout
+
+	case http.StatusConflict:
+		err.Code = result.CodeFailedOperation
+
+	case http.StatusGone:
+		err.Code = result.CodeInstanceUnavailable
+
+	case http.StatusRequestEntityTooLarge:
+		err.Code = result.CodeInvalidParams
+
+	case http.StatusUnsupportedMediaType:
+		err.Code = result.CodeUnsupportedMediaType
+
+	case http.StatusTooManyRequests:
+		err.Code = result.CodeRequestLimitExceeded
+
+	case http.StatusInternalServerError:
+		err.Code = result.CodeInternalServerError
+
+	case http.StatusNotImplemented:
+		err.Code = result.CodeUnsupportedOperation
+
+	case http.StatusBadGateway:
+		err.Code = result.CodeServiceUnavailable
+
+	case http.StatusServiceUnavailable:
+		err.Code = result.CodeServiceUnavailable
+
+	case http.StatusGatewayTimeout:
+		err.Code = result.CodeGatewayTimeout
+
+	case http.StatusHTTPVersionNotSupported:
+		err.Code = result.CodeUnsupportedProtocol
+
+	default:
+		err.Code = result.CodeInternalServerError
+	}
+
+	return err
+}
 
 // Error implements the interface error.
 func (e Error) Error() string {

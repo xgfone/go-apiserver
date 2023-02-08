@@ -24,6 +24,7 @@ const (
 	CodeUnsupportedProtocol  = "UnsupportedProtocol"
 	CodeUnsupportedOperation = "UnsupportedOperation"
 	CodeUnsupportedMediaType = "UnsupportedMediaType"
+	CodeMissingContentType   = "MissingContentType"
 
 	CodeUnauthorizedOperation = "UnauthorizedOperation"
 	CodeUnallowedOperation    = "UnallowedOperation"
@@ -58,6 +59,7 @@ var (
 	ErrUnsupportedProtocol  = NewError(CodeUnsupportedProtocol, "protocol is unsupported")
 	ErrUnsupportedOperation = NewError(CodeUnsupportedOperation, "operation is unsupported")
 	ErrUnsupportedMediaType = NewError(CodeUnsupportedMediaType, "media type is unsupported")
+	ErrMissingContentType   = NewError(CodeMissingContentType, "missing the header Content-Type")
 
 	ErrUnauthorizedOperation = NewError(CodeUnauthorizedOperation, "operation is unauthorized")
 	ErrUnallowedOperation    = NewError(CodeUnallowedOperation, "operation is not allowed")
