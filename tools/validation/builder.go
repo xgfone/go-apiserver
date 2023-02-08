@@ -30,58 +30,16 @@ import (
 // See RegisterDefaults.
 var DefaultBuilder = NewBuilder()
 
-// RegisterSymbol is equal to DefaultBuilder.RegisterSymbol(name, value).
-func RegisterSymbol(name string, value interface{}) {
-	DefaultBuilder.RegisterSymbol(name, value)
-}
-
-// RegisterSymbols is equal to DefaultBuilder.RegisterSymbols(maps).
-func RegisterSymbols(maps map[string]interface{}) {
-	DefaultBuilder.RegisterSymbols(maps)
-}
-
-// RegisterSymbolNames is equal to DefaultBuilder.RegisterSymbolNames(names...).
-func RegisterSymbolNames(names ...string) {
-	DefaultBuilder.RegisterSymbolNames(names...)
-}
-
-// RegisterFunction is eqaul to DefaultBuilder.RegisterFunction(function).
-func RegisterFunction(function Function) {
-	DefaultBuilder.RegisterFunction(function)
-}
-
 // RegisterValidatorFunc is equal to
 // DefaultBuilder.RegisterValidatorFunc(name, f).
 func RegisterValidatorFunc(name string, f validator.ValidatorFunc) {
 	DefaultBuilder.RegisterValidatorFunc(name, f)
 }
 
-// RegisterValidatorFuncBool is equal to
-// DefaultBuilder.RegisterValidatorFuncBool(name, f, err).
-func RegisterValidatorFuncBool(name string, f func(interface{}) bool, err error) {
-	DefaultBuilder.RegisterValidatorFuncBool(name, f, err)
-}
-
-// RegisterValidatorFuncBoolString is equal to
-// DefaultBuilder.RegisterValidatorFuncBoolString(name, f, err).
-func RegisterValidatorFuncBoolString(name string, f func(string) bool, err error) {
-	DefaultBuilder.RegisterValidatorFuncBoolString(name, f, err)
-}
-
 // RegisterValidatorOneof is equal to
 // DefaultBuilder.RegisterValidatorOneof(name,values...).
 func RegisterValidatorOneof(name string, values ...string) {
 	DefaultBuilder.RegisterValidatorOneof(name, values...)
-}
-
-// Build is equal to DefaultBuilder.Build(c, rule).
-func Build(c *Context, rule string) error {
-	return DefaultBuilder.Build(c, rule)
-}
-
-// BuildValidator is equal to DefaultBuilder.BuildValidator(rule).
-func BuildValidator(rule string) (validator.Validator, error) {
-	return DefaultBuilder.BuildValidator(rule)
 }
 
 // Validate is equal to DefaultBuilder.Validate(ctx, v, rule).
@@ -153,13 +111,6 @@ func (b *Builder) RegisterSymbol(name string, value interface{}) {
 		panic("the symbol value must not be nil")
 	}
 	b.Symbols[name] = value
-}
-
-// RegisterSymbols registers a set of symbols from a map.
-func (b *Builder) RegisterSymbols(maps map[string]interface{}) {
-	for name, value := range maps {
-		b.RegisterSymbol(name, value)
-	}
 }
 
 // RegisterSymbolNames registers a set of symbols with the names,

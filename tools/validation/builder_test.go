@@ -157,14 +157,14 @@ func ExampleBuilder() {
 	// RegisterValidatorFunc("structure", ValidateStruct)
 
 	// Add the global symbols.
-	RegisterSymbol("v1", "a")
-	RegisterSymbol("v2", "b")
+	DefaultBuilder.RegisterSymbol("v1", "a")
+	DefaultBuilder.RegisterSymbol("v2", "b")
 
 	// Example 1: function mode
 	fmt.Println("\n--- Function Mode ---")
 
 	c := NewContext()
-	err := Build(c, "min(1) && max(10)")
+	err := DefaultBuilder.Build(c, "min(1) && max(10)")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -182,7 +182,7 @@ func ExampleBuilder() {
 	fmt.Println("\n--- Identifier+Operator Mode ---")
 
 	c = NewContext()
-	err = Build(c, "zero || (min==3 && max==10)")
+	err = DefaultBuilder.Build(c, "zero || (min==3 && max==10)")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -218,7 +218,7 @@ func ExampleBuilder() {
 	fmt.Println(Validate(nil, map[string]int8{"abcd": 123}, rule3))
 
 	const rule4 = `mapv(min==10 && max==100)`
-	fmt.Println(BuildValidator(rule4))
+	fmt.Println(DefaultBuilder.BuildValidator(rule4))
 	fmt.Println(Validate(nil, map[string]int16{"a": 10}, rule4))
 	fmt.Println(Validate(nil, map[string]int32{"abcd": 123}, rule4))
 
