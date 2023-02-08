@@ -82,10 +82,12 @@ func (r *Router) Route(rw http.ResponseWriter, req *http.Request, notFound http.
 		defer reqresp.DefaultContextAllocator.Release(ctx)
 	}
 
-	if r.GetAction != nil {
-		ctx.Action = r.GetAction(req)
-	} else {
-		ctx.Action = req.Header.Get(HeaderAction)
+	if len(ctx.Action) == 0 {
+		if r.GetAction == nil {
+			ctx.Action = req.Header.Get(HeaderAction)
+		} else {
+			ctx.Action = r.GetAction(req)
+		}
 	}
 
 	var ok bool
