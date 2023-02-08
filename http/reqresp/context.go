@@ -112,9 +112,7 @@ func SetContext(req *http.Request, c *Context) (newreq *http.Request) {
 	if c == nil {
 		return req
 	}
-
-	c.Request = req.WithContext(context.WithValue(req.Context(), reqParam(255), c))
-	return c.Request
+	return req.WithContext(SetContextIntoCtx(req.Context(), c))
 }
 
 // GetContext returns a *Context, which (1) checks whether http.ResponseWriter
@@ -131,9 +129,21 @@ func GetContext(w http.ResponseWriter, r *http.Request) *Context {
 		return c.GetContext(w, r)
 
 	default:
-		ctx, _ := r.Context().Value(reqParam(255)).(*Context)
-		return ctx
+		return GetContextFromCtx(r.Context())
 	}
+}
+
+// SetContextIntoCtx sets *Context into context.Context and returns the new one.
+func SetContextIntoCtx(ctx context.Context, c *Context) context.Context {
+	return context.WithValue(ctx, reqParam(255), c)
+}
+
+// GetContextFromCtx returns a *Context from the context.
+//
+// If the request context does not exist, reutrn nil.
+func GetContextFromCtx(ctx context.Context) *Context {
+	c, _ := ctx.Value(reqParam(255)).(*Context)
+	return c
 }
 
 func handleContextResult(c *Context) {
