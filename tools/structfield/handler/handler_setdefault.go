@@ -21,12 +21,8 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-apiserver/tools/setter"
 )
-
-// DefaultSetter is an interface to set the default value to d.
-type DefaultSetter interface {
-	SetDefault(d interface{}) error
-}
 
 // NewSetDefaultHandler returns a handler to set the default value
 // of the struct field if it is ZERO, which is registered into DefaultReflector
@@ -50,7 +46,7 @@ type DefaultSetter interface {
 //	uint64
 //	struct
 //	struct slice
-//	DefaultSetter
+//	setter.Setter
 //	time.Time      // Format: A. Integer(UTC); B. String(RFC3339)
 //	time.Duration  // Format: A. Integer(ms);  B. String(time.ParseDuration)
 //	pointer to the types above
@@ -107,8 +103,8 @@ func (h setdefault) Run(ctx interface{}, r, v reflect.Value, t reflect.StructFie
 		return nil
 	}
 
-	if i, ok := p.Interface().(DefaultSetter); ok {
-		return i.SetDefault(s)
+	if i, ok := p.Interface().(setter.Setter); ok {
+		return i.Set(s)
 	}
 
 	switch v.Kind() {
@@ -124,18 +120,18 @@ func (h setdefault) Run(ctx interface{}, r, v reflect.Value, t reflect.StructFie
 
 	case reflect.Int64:
 		if strings.HasPrefix(s, "now(") && strings.HasSuffix(s, ")") {
-			return helper.Set(p.Interface(), helper.Now().Unix())
+			return setter.Set(p.Interface(), helper.Now().Unix())
 		}
-		return helper.Set(p.Interface(), s)
+		return setter.Set(p.Interface(), s)
 
 	case reflect.Bool, reflect.Float32, reflect.Float64,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return helper.Set(p.Interface(), s)
+		return setter.Set(p.Interface(), s)
 
 	case reflect.Struct:
 		if _, ok := v.Interface().(time.Time); ok {
-			return helper.Set(p.Interface(), s)
+			return setter.Set(p.Interface(), s)
 		}
 
 	default:
