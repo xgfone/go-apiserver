@@ -29,3 +29,47 @@ func StopTicker(ticker *time.Ticker) {
 		}
 	}
 }
+
+// TimeAdd adds a duration to t and returns a new time.Time.
+func TimeAdd(t time.Time, years, months, days, hours, minutes, seconds int) time.Time {
+	if years > 0 || months > 0 || days > 0 {
+		t = t.AddDate(years, months, days)
+	}
+
+	var duration time.Duration
+	if hours > 0 {
+		duration += time.Hour * time.Duration(hours)
+	}
+	if minutes > 0 {
+		duration += time.Minute * time.Duration(minutes)
+	}
+	if seconds > 0 {
+		duration += time.Second * time.Duration(seconds)
+	}
+	if duration > 0 {
+		t = t.Add(duration)
+	}
+
+	return t
+}
+
+// MustParseTime is the same as time.ParseInLocation, but panics if failed.
+//
+// If layout is empty, use time.RFC3339 instead.
+// If loc is nil, use time.UTC instead.
+func MustParseTime(layout, value string, loc *time.Location) time.Time {
+	if layout == "" {
+		layout = time.RFC3339
+	}
+
+	if loc == nil {
+		loc = time.UTC
+	}
+
+	t, err := time.ParseInLocation(layout, value, loc)
+	if err != nil {
+		panic(err)
+	}
+
+	return t
+}
