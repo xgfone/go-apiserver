@@ -82,9 +82,24 @@ func BindStructFromMap(structptr interface{}, tag string, data map[string]interf
 	return BindStruct(structptr, tag, func(name string) interface{} { return data[name] })
 }
 
+// BindStructFromStringMap is the same BindStruct, but use a string map instead of a function.
+func BindStructFromStringMap(structptr interface{}, tag string, data map[string]string) error {
+	return BindStruct(structptr, tag, func(name string) interface{} {
+		if value, ok := data[name]; ok {
+			return value
+		}
+		return nil
+	})
+}
+
 // BindStructFromURLValues is the same BindStruct, but use a map instead of a url.Values.
 func BindStructFromURLValues(structptr interface{}, tag string, data url.Values) error {
-	return BindStruct(structptr, tag, func(name string) interface{} { return data[name] })
+	return BindStruct(structptr, tag, func(name string) interface{} {
+		if value, ok := data[name]; ok {
+			return value
+		}
+		return nil
+	})
 }
 
 func bindValues(val reflect.Value, tag string, get func(string) interface{}) (err error) {
