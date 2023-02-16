@@ -165,6 +165,10 @@ func (r *Reflector) reflectStruct(ctx interface{}, root, v reflect.Value) (err e
 }
 
 func (r *Reflector) reflectField(ctx interface{}, root, v reflect.Value, t reflect.StructField) (err error) {
+	if !t.IsExported() {
+		return
+	}
+
 	stop, err := r.walkTag(ctx, root, v, t, string(t.Tag))
 	if err == nil && !stop {
 		switch v.Kind() {

@@ -95,6 +95,7 @@ func ExampleReflector() {
 		Username string `datamask:"username"`
 		Password string `datamask:"password"`
 
+		request Request
 		Request Request `reflect:"-"` // Stop to reflect struct recursively.
 	}
 	type Response struct {
@@ -110,6 +111,8 @@ func ExampleReflector() {
 		fmt.Printf("Response.Password: %s\n", response.Persons[0].Password)
 		fmt.Printf("Response.Request.Page: %d\n", response.Persons[0].Request.Page)
 		fmt.Printf("Response.Request.PageSize: %d\n", response.Persons[0].Request.PageSize)
+		fmt.Printf("Response.request.Page: %d\n", response.Persons[0].request.Page)
+		fmt.Printf("Response.request.PageSize: %d\n", response.Persons[0].request.PageSize)
 	}
 
 	// Output:
@@ -119,4 +122,6 @@ func ExampleReflector() {
 	// Response.Password: ******
 	// Response.Request.Page: 0
 	// Response.Request.PageSize: 0
+	// Response.request.Page: 0
+	// Response.request.PageSize: 0
 }
