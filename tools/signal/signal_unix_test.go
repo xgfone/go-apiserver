@@ -17,6 +17,7 @@
 package signal
 
 import (
+	"context"
 	"os"
 	"sync/atomic"
 	"syscall"
