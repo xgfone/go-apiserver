@@ -153,6 +153,8 @@ func handleContextResult(c *Context) {
 			c.WriteHeader(200)
 		case herrors.Error:
 			c.BlobText(e.Code, e.CT, c.Err.Error())
+		case http.Handler:
+			e.ServeHTTP(c.ResponseWriter, c.Request)
 		default:
 			c.Text(500, c.Err.Error())
 		}
