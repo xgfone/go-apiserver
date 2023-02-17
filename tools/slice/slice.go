@@ -16,7 +16,7 @@
 package slice
 
 // Equal reports whether the element set of the two slices are equal.
-func Equal[E comparable](vs1, vs2 []E) bool {
+func Equal[T ~[]E, E comparable](vs1, vs2 T) bool {
 	len1 := len(vs1)
 	if len1 != len(vs2) {
 		return false
@@ -32,7 +32,7 @@ func Equal[E comparable](vs1, vs2 []E) bool {
 }
 
 // Contains reports whether the slice vs contains the value v.
-func Contains[E comparable](vs []E, v E) bool {
+func Contains[T ~[]E, E comparable](vs T, v E) bool {
 	for i, _len := 0, len(vs); i < _len; i++ {
 		if vs[i] == v {
 			return true
@@ -42,7 +42,7 @@ func Contains[E comparable](vs []E, v E) bool {
 }
 
 // Reverse reverses the elements in the slice.
-func Reverse[E any](vs []E) {
+func Reverse[T ~[]E, E any](vs T) {
 	_len := len(vs) - 1
 	if _len <= 0 {
 		return
@@ -55,7 +55,7 @@ func Reverse[E any](vs []E) {
 }
 
 // ToInterfaces converts []any to []interface{}.
-func ToInterfaces[T any](vs []T) []interface{} {
+func ToInterfaces[T ~[]E, E any](vs T) []interface{} {
 	is := make([]interface{}, len(vs))
 	for i, _len := 0, len(vs); i < _len; i++ {
 		is[i] = vs[i]
