@@ -30,7 +30,7 @@ import (
 func init() {
 	Register("validate", handler.NewValidatorHandler(nil))
 	Register("default", handler.NewSetDefaultHandler())
-	Register("inject", handler.NewInjectHandler(nil))
+	Register("set", handler.NewSetterHandler(nil, nil))
 }
 
 // DefaultReflector is the default global struct field reflector.
@@ -42,7 +42,7 @@ func Register(name string, handler handler.Handler) {
 }
 
 // RegisterFunc is equal to DefaultReflector.RegisterFunc(name, handler).
-func RegisterFunc(name string, handler handler.HandlerFunc) {
+func RegisterFunc(name string, handler handler.Runner) {
 	DefaultReflector.RegisterFunc(name, handler)
 }
 
@@ -102,7 +102,7 @@ func (r *Reflector) Register(name string, handler handler.Handler) {
 }
 
 // RegisterFunc is equal to r.Register(name, handler).
-func (r *Reflector) RegisterFunc(name string, handler handler.HandlerFunc) {
+func (r *Reflector) RegisterFunc(name string, handler handler.Runner) {
 	r.Register(name, handler)
 }
 

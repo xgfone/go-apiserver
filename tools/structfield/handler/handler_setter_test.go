@@ -18,40 +18,41 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/xgfone/go-apiserver/tools/setter"
 	"github.com/xgfone/go-apiserver/tools/structfield"
 	"github.com/xgfone/go-apiserver/tools/structfield/handler"
 )
 
 var (
-	_ handler.Injector = new(_Int)
-	_ handler.Injector = new(_Str)
+	_ setter.Setter = new(_Int)
+	_ setter.Setter = new(_Str)
 )
 
 type _Int int
 
-func (i *_Int) Inject(v interface{}) error {
+func (i *_Int) Set(v interface{}) error {
 	*i = _Int(v.(int))
 	return nil
 }
 
 type _Str string
 
-func (s *_Str) Inject(v interface{}) error {
+func (s *_Str) Set(v interface{}) error {
 	*s = _Str(v.(string))
 	return nil
 }
 
-func ExampleNewInjectHandler() {
-	// "inject" is registered by default. Now, we register the customized
-	// "injectint" to pre-parse the tag value to int.
-	structfield.Register("injectint", handler.NewInjectHandler(func(s string) (interface{}, error) {
+func ExampleNewSetterHandler() {
+	// "set" is registered by default. Now, we register the customized
+	// "setint" to pre-parse the tag value to int.
+	structfield.Register("setint", handler.NewSetterHandler(func(s string) (interface{}, error) {
 		i, err := strconv.ParseInt(s, 10, 64)
 		return int(i), err
-	}))
+	}, nil))
 
 	var t struct {
-		Str _Str `inject:"abc"`
-		Int _Int `injectint:"123"`
+		Str _Str `set:"abc"`
+		Int _Int `setint:"123"`
 	}
 
 	if err := structfield.Reflect(nil, &t); err != nil {

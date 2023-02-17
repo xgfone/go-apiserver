@@ -25,7 +25,7 @@ import (
 
 func ExampleReflector() {
 	parseInt := func(s string) (interface{}, error) { return strconv.ParseInt(s, 10, 64) }
-	compareInt := func(isMin bool) handler.HandlerFunc {
+	compareInt := func(isMin bool) handler.Runner {
 		return func(_ interface{}, _, v reflect.Value, t reflect.StructField, a interface{}) error {
 			value := v.Interface().(int64)
 			if isMin {

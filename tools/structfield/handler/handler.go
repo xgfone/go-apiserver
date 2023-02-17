@@ -23,26 +23,29 @@ type Handler interface {
 	Run(ctx interface{}, rootStructValue, fieldValue reflect.Value, fieldType reflect.StructField, arg interface{}) error
 }
 
-// HandlerFunc is a handler function.
-type HandlerFunc func(interface{}, reflect.Value, reflect.Value, reflect.StructField, interface{}) error
+// Parser is the function to pre-parse the field tag value.
+type Parser func(string) (interface{}, error)
+
+// Runner is the function to handle the struct field.
+type Runner func(interface{}, reflect.Value, reflect.Value, reflect.StructField, interface{}) error
 
 // Parse implements the interface Handler, which does nothing
 // and returns the original string input as the parsed result.
-func (f HandlerFunc) Parse(s string) (interface{}, error) { return s, nil }
+func (f Runner) Parse(s string) (interface{}, error) { return s, nil }
 
 // Run implements the interface Handler.
-func (f HandlerFunc) Run(ctx interface{}, r, v reflect.Value, t reflect.StructField, arg interface{}) error {
+func (f Runner) Run(ctx interface{}, r, v reflect.Value, t reflect.StructField, arg interface{}) error {
 	return f(ctx, r, v, t, arg)
 }
 
 // NewHandler returns a new Handler from the parse and run functions.
-func NewHandler(parse func(string) (interface{}, error), run HandlerFunc) Handler {
+func NewHandler(parse Parser, run Runner) Handler {
 	return handler{parse: parse, run: run}
 }
 
 type handler struct {
-	parse func(string) (interface{}, error)
-	run   HandlerFunc
+	parse Parser
+	run   Runner
 }
 
 func (h handler) Parse(s string) (interface{}, error) { return h.parse(s) }
