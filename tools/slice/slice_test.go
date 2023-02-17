@@ -16,6 +16,23 @@ package slice
 
 import "fmt"
 
+func ExampleIndex() {
+	ints1 := []int{2, 3, 1, 4}
+	fmt.Println(Index(ints1, 0))
+	fmt.Println(Index(ints1, 1))
+
+	type Ints []int
+	ints2 := Ints{2, 3, 1, 4}
+	fmt.Println(Index(ints2, 0))
+	fmt.Println(Index(ints2, 1))
+
+	// Output:
+	// -1
+	// 2
+	// -1
+	// 2
+}
+
 func ExampleEqual() {
 	s1 := []string{"a", "b", "c"}
 	s2 := []string{"b", "c", "a"}

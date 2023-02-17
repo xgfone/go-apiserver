@@ -15,6 +15,16 @@
 // Package slice provides some convenient slice functions.
 package slice
 
+// Index returns the index where v is in vs, else -1.
+func Index[T ~[]E, E comparable](vs T, v E) int {
+	for i, e := range vs {
+		if e == v {
+			return i
+		}
+	}
+	return -1
+}
+
 // Equal reports whether the element set of the two slices are equal.
 func Equal[T ~[]E, E comparable](vs1, vs2 T) bool {
 	len1 := len(vs1)
