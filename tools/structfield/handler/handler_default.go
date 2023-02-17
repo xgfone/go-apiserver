@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 	"github.com/xgfone/go-apiserver/tools/setter"
 )
 
-// NewSetDefaultHandler returns a handler to set the default value
+// NewDefaultHandler returns a handler to set the default value
 // of the struct field if it is ZERO, which is registered into DefaultReflector
 // with the tag name "default" by default.
 //
@@ -63,35 +63,23 @@ import (
 // Notice: If the tag value starts with ".", it represents a field name and
 // the default value of current field is set to the value of that field.
 // But their types must be consistent, or panic.
-func NewSetDefaultHandler() Handler { return setdefault{} }
+func NewDefaultHandler() Handler {
+	return NewSetterHandler(nil, setdefault)
+}
 
-type setdefault struct{}
-
-func (h setdefault) Parse(s string) (interface{}, error) { return s, nil }
-func (h setdefault) Run(ctx interface{}, r, v reflect.Value, t reflect.StructField, a interface{}) error {
-	if !v.CanSet() {
-		return fmt.Errorf("the field '%s' cannnot be set", t.Name)
-	}
-
-	var p reflect.Value
-	v = helper.FillNilPtr(v)
-	if helper.IsPointer(v) {
-		p, v = v, v.Elem()
-	} else {
-		p = v.Addr()
-	}
-
+func setdefault(_ interface{}, root, fieldptr reflect.Value, sf reflect.StructField, arg interface{}) error {
+	v := fieldptr.Elem()
 	if !v.IsZero() {
 		return nil
 	}
 
-	s := a.(string)
+	s := arg.(string)
 	if len(s) > 0 && s[0] == '.' {
 		if s = s[1:]; s == "" {
-			return fmt.Errorf("%s: invalid default value", t.Name)
+			return fmt.Errorf("%s: invalid default value", sf.Name)
 		}
 
-		fieldv, ok := helper.GetStructFieldByName(r, s)
+		fieldv, ok := helper.GetStructFieldByName(root, s)
 		if !ok {
 			panic(fmt.Errorf("not found the struct field '%s'", s))
 		}
@@ -103,7 +91,7 @@ func (h setdefault) Run(ctx interface{}, r, v reflect.Value, t reflect.StructFie
 		return nil
 	}
 
-	if i, ok := p.Interface().(setter.Setter); ok {
+	if i, ok := fieldptr.Interface().(setter.Setter); ok {
 		return i.Set(s)
 	}
 
@@ -120,22 +108,22 @@ func (h setdefault) Run(ctx interface{}, r, v reflect.Value, t reflect.StructFie
 
 	case reflect.Int64:
 		if strings.HasPrefix(s, "now(") && strings.HasSuffix(s, ")") {
-			return setter.Set(p.Interface(), helper.Now().Unix())
+			return setter.Set(fieldptr.Interface(), helper.Now().Unix())
 		}
-		return setter.Set(p.Interface(), s)
+		return setter.Set(fieldptr.Interface(), s)
 
 	case reflect.Bool, reflect.Float32, reflect.Float64,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return setter.Set(p.Interface(), s)
+		return setter.Set(fieldptr.Interface(), s)
 
 	case reflect.Struct:
 		if _, ok := v.Interface().(time.Time); ok {
-			return setter.Set(p.Interface(), s)
+			return setter.Set(fieldptr.Interface(), s)
 		}
 
 	default:
-		return fmt.Errorf("%s: unsupported type %T", t.Name, v.Interface())
+		return fmt.Errorf("%s: unsupported type %T", sf.Name, v.Interface())
 	}
 
 	return nil

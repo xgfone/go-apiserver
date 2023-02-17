@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ func (d *defaultSetter) SetDefault(src interface{}) error {
 	return nil
 }
 
-func ExampleNewSetDefaultHandler() {
+func ExampleNewDefaultHandler() {
 	// For test
 	oldNow := helper.Now
 	helper.Now = func() time.Time { return time.Unix(1660140928, 0).UTC() }
