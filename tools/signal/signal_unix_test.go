@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build aix || darwin || dragonfly || freebsd || linux || netbsd || openbsd || solaris
-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
+//go:build unix
 
 package signal
 
@@ -27,7 +26,7 @@ import (
 
 func TestSignal(t *testing.T) {
 	var i int32
-	go Once(Callback(func() { atomic.StoreInt32(&i, 1) }), syscall.SIGHUP)
+	go Once(context.Background(), Callback(func() { atomic.StoreInt32(&i, 1) }), syscall.SIGHUP)
 
 	time.Sleep(time.Millisecond * 50)
 	Kill(os.Getpid(), syscall.SIGHUP)
