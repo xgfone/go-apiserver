@@ -34,7 +34,7 @@ func NewSetterHandler(parser Parser, set Runner) Handler {
 		set = usesetter
 	}
 	if parser == nil {
-		parser = func(s string) (interface{}, error) { return s, nil }
+		parser = notparser
 	}
 	return setHandler{parser: parser, setter: set}
 }
@@ -60,6 +60,7 @@ func (h setHandler) Run(c interface{}, root, value reflect.Value, sf reflect.Str
 	return h.setter(c, root, ptr, sf, arg)
 }
 
+func notparser(s string) (interface{}, error) { return s, nil }
 func usesetter(_ interface{}, root, fieldptr reflect.Value, sf reflect.StructField, arg interface{}) error {
 	if setter, ok := fieldptr.Interface().(setter.Setter); ok {
 		return setter.Set(arg)
