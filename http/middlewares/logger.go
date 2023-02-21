@@ -1,4 +1,4 @@
-// Copyright 2021~2022 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/middleware/logger"
+	"github.com/xgfone/go-apiserver/upstream"
 )
 
 // LogKvsAppender is used to append the extra log key-value contexts.
@@ -127,6 +128,10 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 
 			if ctx != nil && ctx.Action != "" {
 				kvs = append(kvs, "action", ctx.Action)
+			}
+
+			if reqid := upstream.GetRequestID(r.Context(), r); reqid != "" {
+				kvs = append(kvs, "reqid", reqid)
 			}
 
 			if appender != nil {
