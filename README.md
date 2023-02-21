@@ -250,6 +250,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
 	"github.com/xgfone/go-apiserver/upstream"
 	"github.com/xgfone/go-apiserver/upstream/balancer"
+	"github.com/xgfone/go-apiserver/upstream/healthcheck"
 	"github.com/xgfone/go-apiserver/upstream/httpserver"
 	"github.com/xgfone/go-apiserver/upstream/loadbalancer"
 )
@@ -264,6 +265,8 @@ func main() {
 
 	routeManager := ruler.NewRouter()
 	initAdminManageAPI(routeManager)
+	healthcheck.DefaultHealthChecker.Start()
+	defer healthcheck.DefaultHealthChecker.Stop()
 
 	router := router.NewRouter(routeManager)
 	router.Middlewares.Use(middlewares.DefaultMiddlewares...)
@@ -279,8 +282,9 @@ func initAdminManageAPI(router *ruler.Router) {
 			var req struct {
 				Rule     string `json:"rule" validate:"required"`
 				Upstream struct {
-					ForwardPolicy string         `json:"forwardPolicy" default:"weight_random"`
-					ForwardURL    httpserver.URL `json:"forwardUrl"`
+					ForwardPolicy string                  `json:"forwardPolicy" default:"weight_random"`
+					ForwardURL    httpserver.URL          `json:"forwardUrl"`
+					HealthCheck   healthcheck.CheckConfig `json:"healthCheck"`
 
 					Servers []struct {
 						IP     string `json:"ip" validate:"ip"`
@@ -315,7 +319,9 @@ func initAdminManageAPI(router *ruler.Router) {
 			// Build the loadbalancer forwarder.
 			balancer, _ := balancer.Build(req.Upstream.ForwardPolicy, nil)
 			lb := loadbalancer.NewLoadBalancer(req.Rule, balancer)
-			lb.UpsertServers(servers...)
+
+			healthcheck.DefaultHealthChecker.AddUpdater(lb.Name(), lb)
+			healthcheck.DefaultHealthChecker.UpsertServers(servers, req.Upstream.HealthCheck)
 
 			// Build the route and forward the request to loadbalancer.
 			err := router.Rule(req.Rule).HandlerFunc(lb.ServeHTTP)
