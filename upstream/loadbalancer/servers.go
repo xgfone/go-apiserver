@@ -19,8 +19,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/xgfone/go-apiserver/http/upstream"
+	"github.com/xgfone/go-apiserver/upstream"
 )
+
+var _ upstream.ServerWrapper = new(upserver)
 
 type upserver struct {
 	upstream.Server
@@ -31,6 +33,10 @@ func newUpServer(server upstream.Server) *upserver {
 	s := &upserver{Server: server}
 	s.status.Store(upstream.ServerStatusOnline)
 	return s
+}
+
+func (s *upserver) Unwrap() upstream.Server {
+	return s.Server
 }
 
 func (s *upserver) Status() upstream.ServerStatus {
@@ -131,7 +137,7 @@ func (m *serversManager) UpsertServers(servers ...upstream.Server) {
 	defer m.slock.Unlock()
 
 	for i, _len := 0, len(servers); i < _len; i++ {
-		server := servers[_len]
+		server := servers[i]
 		m.servers[server.ID()] = newUpServer(server)
 	}
 	m.updateServers()
@@ -150,49 +156,49 @@ func (m *serversManager) RemoveServer(id string) {
 }
 
 func (m *serversManager) updateServers() {
-	onservers := upstream.DefaultServersPool.Acquire()
-	offservers := upstream.DefaultServersPool.Acquire()
-	allservers := upstream.DefaultServersPool.Acquire()
+	onservers := upstream.AcquireServers(len(m.servers))
+	allservers := upstream.AcquireServers(len(m.servers))
+	offservers := upstream.AcquireServers(0)
 	for _, server := range m.servers {
 		allservers = append(allservers, server)
 		switch server.Status() {
 		case upstream.ServerStatusOnline:
-			onservers = append(onservers, server)
+			onservers = append(onservers, server.Server)
 		case upstream.ServerStatusOffline:
-			offservers = append(offservers, server)
+			offservers = append(offservers, server.Server)
 		}
 	}
 
 	// For online
 	if len(onservers) == 0 {
 		oldservers := m.onservers.Swap(upstream.Servers{}).(upstream.Servers)
-		upstream.DefaultServersPool.Release(oldservers)
-		upstream.DefaultServersPool.Release(onservers)
+		upstream.ReleaseServers(oldservers)
+		upstream.ReleaseServers(onservers)
 	} else {
 		sort.Stable(onservers)
 		oldservers := m.onservers.Swap(onservers).(upstream.Servers)
-		upstream.DefaultServersPool.Release(oldservers)
+		upstream.ReleaseServers(oldservers)
 	}
 
 	// For offline
 	if len(offservers) == 0 {
 		oldservers := m.offservers.Swap(upstream.Servers{}).(upstream.Servers)
-		upstream.DefaultServersPool.Release(oldservers)
-		upstream.DefaultServersPool.Release(offservers)
+		upstream.ReleaseServers(oldservers)
+		upstream.ReleaseServers(offservers)
 	} else {
 		sort.Stable(offservers)
 		oldservers := m.offservers.Swap(offservers).(upstream.Servers)
-		upstream.DefaultServersPool.Release(oldservers)
+		upstream.ReleaseServers(oldservers)
 	}
 
 	// For all
 	if len(allservers) == 0 {
 		oldservers := m.allservers.Swap(upstream.Servers{}).(upstream.Servers)
-		upstream.DefaultServersPool.Release(oldservers)
-		upstream.DefaultServersPool.Release(allservers)
+		upstream.ReleaseServers(oldservers)
+		upstream.ReleaseServers(allservers)
 	} else {
 		sort.Stable(allservers)
 		oldservers := m.allservers.Swap(allservers).(upstream.Servers)
-		upstream.DefaultServersPool.Release(oldservers)
+		upstream.ReleaseServers(oldservers)
 	}
 }

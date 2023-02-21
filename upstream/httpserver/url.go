@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package upstream
+package httpserver
 
 import (
 	"context"
@@ -28,14 +28,55 @@ import (
 
 // URL is the metadata information of the http endpoint.
 type URL struct {
-	Method   string            `json:"method,omitempty" yaml:"method,omitempty"`     // Such as "GET"
-	Scheme   string            `json:"scheme,omitempty" yaml:"scheme,omitempty"`     // Such as "http" or "https"
-	Hostname string            `json:"hostname,omitempty" yaml:"hostname,omitempty"` // Such as "www.example.com"
-	IP       string            `json:"ip,omitempty" yaml:"ip,omitempty"`             // Such as "1.2.3.4"
-	Port     uint16            `json:"port,omitempty" yaml:"port,omitempty"`         // Such as 80 or 443
-	Path     string            `json:"path,omitempty" yaml:"path,omitempty"`         // Such as "/"
-	Queries  map[string]string `json:"queries,omitempty" yaml:"queries,omitempty"`
-	Headers  map[string]string `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Method   string            `json:"method,omitempty"`   // Such as "GET"
+	Scheme   string            `json:"scheme,omitempty"`   // Such as "http" or "https"
+	Hostname string            `json:"hostname,omitempty"` // Such as "www.example.com"
+	IP       string            `json:"ip,omitempty"`       // Such as "1.2.3.4"
+	Port     uint16            `json:"port,omitempty"`     // Such as 80 or 443
+	Path     string            `json:"path,omitempty"`     // Such as "/"
+	Queries  map[string]string `json:"queries,omitempty"`
+	Headers  map[string]string `json:"headers,omitempty"`
+}
+
+func clonemap(ms map[string]string) map[string]string {
+	_ms := make(map[string]string)
+	for k, v := range ms {
+		_ms[k] = v
+	}
+	return _ms
+}
+
+func map2urlvalues(ms map[string]string) url.Values {
+	if len(ms) == 0 {
+		return nil
+	}
+
+	values := make(url.Values, len(ms))
+	for key, value := range ms {
+		values[key] = []string{value}
+	}
+
+	return values
+}
+
+func map2httpheader(ms map[string]string) http.Header {
+	if len(ms) == 0 {
+		return nil
+	}
+
+	header := make(http.Header, len(ms))
+	for key, value := range ms {
+		header.Set(key, value)
+	}
+
+	return header
+}
+
+// Clone clones itself and returns a new one.
+func (u URL) Clone() URL {
+	u.Queries = clonemap(u.Queries)
+	u.Headers = clonemap(u.Headers)
+	return u
 }
 
 // ID returns the unique identity, for example,
@@ -104,29 +145,21 @@ func (u URL) URL() url.URL {
 		panic(fmt.Errorf("no url host: %+v", u))
 	}
 
-	if _len := len(u.Queries); _len > 0 {
-		queries := make(url.Values, _len)
-		for key, value := range u.Queries {
-			queries[key] = []string{value}
-		}
-		_url.RawQuery = queries.Encode()
-	}
-
+	_url.RawQuery = map2urlvalues(u.Queries).Encode()
 	return _url
 }
 
 // Request converts the URL to a http request with the GET method.
-func (u URL) Request(ctx context.Context) (*http.Request, error) {
-	u.SetDefault()
-	return http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+func (u URL) Request(ctx context.Context, method string) (*http.Request, error) {
+	return http.NewRequestWithContext(ctx, method, u.Default().String(), nil)
 }
 
-// SetDefault sets the url information to the default if not set.
+// Default sets the url information to the default if not set and returns the new.
 //
 //	Path: "/"
 //	Method: "GET"
 //	Scheme: "http"
-func (u *URL) SetDefault() {
+func (u URL) Default() URL {
 	if u.Path == "" {
 		u.Path = "/"
 	}
@@ -136,4 +169,5 @@ func (u *URL) SetDefault() {
 	if u.Scheme == "" {
 		u.Scheme = "http"
 	}
+	return u
 }

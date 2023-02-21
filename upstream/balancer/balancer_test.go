@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,25 +16,28 @@ package balancer
 
 import (
 	"context"
-	"net/http"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/http/upstream"
 	"github.com/xgfone/go-apiserver/nets"
+	"github.com/xgfone/go-apiserver/upstream"
 )
 
+var _ upstream.Server = new(testServer)
+
 type testServer struct {
-	url     upstream.URL
+	ip      string
 	state   nets.RuntimeState
 	weight  int
 	current uint64
 }
 
-func (s *testServer) Weight() int                               { return s.weight }
-func (s *testServer) ID() string                                { return s.url.IP }
-func (s *testServer) URL() upstream.URL                         { return s.url }
-func (s *testServer) Check(context.Context, upstream.URL) error { return nil }
-func (s *testServer) Status() upstream.ServerStatus             { return upstream.ServerStatusOnline }
+func (s *testServer) Weight() int                   { return s.weight }
+func (s *testServer) ID() string                    { return s.ip }
+func (s *testServer) Type() string                  { return "" }
+func (s *testServer) Info() interface{}             { return nil }
+func (s *testServer) Check(context.Context) error   { return nil }
+func (s *testServer) Update(info interface{}) error { return nil }
+func (s *testServer) Status() upstream.ServerStatus { return upstream.ServerStatusOnline }
 func (s *testServer) RuntimeState() nets.RuntimeState {
 	state := s.state.Clone()
 	if s.current > 0 {
@@ -42,18 +45,14 @@ func (s *testServer) RuntimeState() nets.RuntimeState {
 	}
 	return state
 }
-func (s *testServer) HandleHTTP(http.ResponseWriter, *http.Request) error {
+func (s *testServer) Serve(c context.Context, r interface{}) error {
 	s.state.Inc()
 	s.state.Dec()
 	return nil
 }
 
 func newTestServer(ip string, weight int) *testServer {
-	return &testServer{
-		url:     upstream.URL{IP: ip},
-		weight:  weight,
-		current: uint64(weight),
-	}
+	return &testServer{ip: ip, weight: weight, current: uint64(weight)}
 }
 
 func TestRegisteredBuiltinBuidler(t *testing.T) {

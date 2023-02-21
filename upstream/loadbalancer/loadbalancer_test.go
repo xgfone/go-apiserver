@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xgfone/go-apiserver/http/upstream"
-	"github.com/xgfone/go-apiserver/http/upstream/balancer"
+	"github.com/xgfone/go-apiserver/upstream/balancer"
+	"github.com/xgfone/go-apiserver/upstream/httpserver"
 )
 
 func testHandler(key string) http.Handler {
@@ -35,7 +35,7 @@ func testHandler(key string) http.Handler {
 
 func TestLoadBalancer(t *testing.T) {
 	lb := NewLoadBalancer("test", balancer.RoundRobin())
-	lb.SwapBalancer(balancer.Retry(balancer.RoundRobin(), 0))
+	lb.SwapBalancer(balancer.NewRetry(balancer.RoundRobin(), 0))
 
 	go func() {
 		server := http.Server{Addr: "127.0.0.1:8101", Handler: testHandler("8101")}
@@ -49,26 +49,26 @@ func TestLoadBalancer(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	server1, err := upstream.NewServer(upstream.ServerConfig{
-		URL:          upstream.URL{Hostname: "www.example.com", IP: "127.0.0.1", Port: 8101},
+	server1, err := httpserver.Config{
+		URL:          httpserver.URL{Hostname: "www.example.com", IP: "127.0.0.1", Port: 8101},
 		StaticWeight: 1,
-	})
+	}.NewServer()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	server2, err := upstream.NewServer(upstream.ServerConfig{
-		URL:          upstream.URL{Hostname: "www.example.com", IP: "127.0.0.1", Port: 8102},
+	server2, err := httpserver.Config{
+		URL:          httpserver.URL{Hostname: "www.example.com", IP: "127.0.0.1", Port: 8102},
 		StaticWeight: 2,
-	})
+	}.NewServer()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if url := server1.URL().String(); url != "http://127.0.0.1:8101" {
+	if url := server1.Info().(httpserver.Config).URL.String(); url != "http://127.0.0.1:8101" {
 		t.Errorf("expect url '%s', but got '%s'", "http://127.0.0.1:8101", url)
 	}
-	if err := server1.Check(context.Background(), upstream.URL{}); err != nil {
+	if err := server1.Check(context.Background()); err != nil {
 		t.Errorf("health check failed: %s", err)
 	}
 

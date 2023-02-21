@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@
 package balancer
 
 import (
+	"context"
 	"math/rand"
-	"net/http"
 	"sync"
 	"time"
 
-	"github.com/xgfone/go-apiserver/http/upstream"
+	"github.com/xgfone/go-apiserver/upstream"
 )
 
 func newRandom() func(int) int {
@@ -45,13 +45,13 @@ func init() {
 func Random() Balancer {
 	random := newRandom()
 	return NewBalancer("random",
-		func(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) error {
-			ss := f()
+		func(c context.Context, r interface{}, sd upstream.ServerDiscovery) error {
+			ss := sd.OnServers()
 			_len := len(ss)
 			if _len == 1 {
-				return ss[0].HandleHTTP(w, r)
+				return ss[0].Serve(c, r)
 			}
-			return ss[random(_len)].HandleHTTP(w, r)
+			return ss[random(_len)].Serve(c, r)
 		})
 }
 
@@ -61,11 +61,11 @@ func Random() Balancer {
 func WeightedRandom() Balancer {
 	random := newRandom()
 	return NewBalancer("weight_random",
-		func(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) error {
-			ss := f()
+		func(c context.Context, r interface{}, sd upstream.ServerDiscovery) error {
+			ss := sd.OnServers()
 			_len := len(ss)
 			if _len == 1 {
-				return ss[0].HandleHTTP(w, r)
+				return ss[0].Serve(c, r)
 			}
 
 			var total int
@@ -79,7 +79,7 @@ func WeightedRandom() Balancer {
 				for i := 0; i < _len; i++ {
 					total += upstream.GetServerWeight(ss[i])
 					if pos <= total {
-						return ss[i].HandleHTTP(w, r)
+						return ss[i].Serve(c, r)
 					}
 				}
 				pos %= total

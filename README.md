@@ -1,6 +1,6 @@
 # go-apiserver [![Build Status](https://github.com/xgfone/go-apiserver/actions/workflows/go.yml/badge.svg)](https://github.com/xgfone/go-apiserver/actions/workflows/go.yml) [![GoDoc](https://pkg.go.dev/badge/github.com/xgfone/go-apiserver)](https://pkg.go.dev/github.com/xgfone/go-apiserver) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://raw.githubusercontent.com/xgfone/go-apiserver/master/LICENSE)
 
-The library to build an API server, such as `API Gateway`, based on `Go1.18+`.
+The library to build an API server, such as `API Gateway`, based on `Go1.19+`.
 
 
 ## Features
@@ -248,9 +248,10 @@ import (
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
 	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
-	"github.com/xgfone/go-apiserver/http/upstream"
-	"github.com/xgfone/go-apiserver/http/upstream/balancer"
-	"github.com/xgfone/go-apiserver/http/upstream/loadbalancer"
+	"github.com/xgfone/go-apiserver/upstream"
+	"github.com/xgfone/go-apiserver/upstream/balancer"
+	"github.com/xgfone/go-apiserver/upstream/httpserver"
+	"github.com/xgfone/go-apiserver/upstream/loadbalancer"
 )
 
 var (
@@ -278,8 +279,8 @@ func initAdminManageAPI(router *ruler.Router) {
 			var req struct {
 				Rule     string `json:"rule" validate:"required"`
 				Upstream struct {
-					ForwardPolicy string       `json:"forwardPolicy" default:"weight_random"`
-					ForwardURL    upstream.URL `json:"forwardUrl"`
+					ForwardPolicy string         `json:"forwardPolicy" default:"weight_random"`
+					ForwardURL    httpserver.URL `json:"forwardUrl"`
 
 					Servers []struct {
 						IP     string `json:"ip" validate:"ip"`
@@ -297,12 +298,12 @@ func initAdminManageAPI(router *ruler.Router) {
 			// Build the upstream servers.
 			servers := make(upstream.Servers, len(req.Upstream.Servers))
 			for i, server := range req.Upstream.Servers {
-				config := upstream.ServerConfig{URL: req.Upstream.ForwardURL}
+				config := httpserver.Config{URL: req.Upstream.ForwardURL}
 				config.StaticWeight = server.Weight
-				config.Port = server.Port
-				config.IP = server.IP
+				config.URL.Port = server.Port
+				config.URL.IP = server.IP
 
-				wserver, err := upstream.NewServer(config)
+				wserver, err := config.NewServer()
 				if err != nil {
 					ctx.Text(400, "fail to build the upstream server: %s", err.Error())
 					return

@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,16 +15,38 @@
 package balancer
 
 import (
+	"context"
 	"encoding/binary"
+	"fmt"
 	"net"
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/http/upstream"
+	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/nets"
+	"github.com/xgfone/go-apiserver/upstream"
 )
 
 func init() {
 	registerBuiltinBuidler("source_ip_hash", SourceIPHash)
+}
+
+// GetSourceAddr is used to get the source addr, which is used by SourceIPHash.
+var GetSourceAddr = getSourceAddr
+
+func getSourceAddr(req interface{}) string {
+	switch v := req.(type) {
+	case *reqresp.Context:
+		return v.RemoteAddr
+
+	case *http.Request:
+		return v.RemoteAddr
+
+	case interface{ RemoteAddr() net.Addr }:
+		return v.RemoteAddr().String()
+
+	default:
+		panic(fmt.Errorf("GetSourceAddr: unknown type %T", req))
+	}
 }
 
 // SourceIPHash returns a new balancer based on the source-ip hash.
@@ -33,15 +55,15 @@ func init() {
 func SourceIPHash() Balancer {
 	random := newRandom()
 	return NewBalancer("source_ip_hash",
-		func(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) error {
-			ss := f()
+		func(c context.Context, r interface{}, sd upstream.ServerDiscovery) error {
+			ss := sd.OnServers()
 			_len := len(ss)
 			if _len == 1 {
-				return ss[0].HandleHTTP(w, r)
+				return ss[0].Serve(c, r)
 			}
 
 			var value uint64
-			host, _ := nets.SplitHostPort(r.RemoteAddr)
+			host, _ := nets.SplitHostPort(GetSourceAddr(r))
 			switch ip := net.ParseIP(host); len(ip) {
 			case net.IPv4len:
 				value = uint64(binary.BigEndian.Uint32(ip))
@@ -51,6 +73,6 @@ func SourceIPHash() Balancer {
 				value = uint64(random(_len))
 			}
 
-			return ss[value%uint64(_len)].HandleHTTP(w, r)
+			return ss[value%uint64(_len)].Serve(c, r)
 		})
 }

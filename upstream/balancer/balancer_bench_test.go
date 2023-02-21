@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,11 +15,11 @@
 package balancer
 
 import (
+	"context"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/http/upstream"
+	"github.com/xgfone/go-apiserver/upstream"
 )
 
 func benchmarkBalancer(b *testing.B, balancer Balancer) {
@@ -34,7 +34,6 @@ func benchmarkBalancer(b *testing.B, balancer Balancer) {
 		newTestServer("127.0.0.8", 8),
 	}
 
-	rec := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1", nil)
 	req.RemoteAddr = "127.0.0.1"
 
@@ -42,7 +41,7 @@ func benchmarkBalancer(b *testing.B, balancer Balancer) {
 	b.ReportAllocs()
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			balancer.Forward(rec, req, servers.OnServers)
+			balancer.Forward(context.Background(), req, servers)
 		}
 	})
 }

@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,63 +23,44 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/xgfone/go-apiserver/http/upstream"
 	"github.com/xgfone/go-apiserver/log"
+	"github.com/xgfone/go-apiserver/upstream"
 )
 
 var (
 	// DefaultHealthChecker is the default global health checker.
-	DefaultHealthChecker = NewHealthChecker(time.Second * 2)
+	DefaultHealthChecker = NewHealthChecker()
 
-	// DefaultHealthCheckInfo is the default healthcheck information.
-	DefaultHealthCheckInfo = Info{Failure: 1, Timeout: time.Second, Interval: time.Second * 10}
+	// DefaultInterval is the default healthcheck interval.
+	DefaultInterval = time.Second * 10
+
+	// DefaultCheckConfig is the default health check configuration.
+	DefaultCheckConfig = CheckConfig{Failure: 1, Timeout: time.Second, Interval: DefaultInterval}
 )
 
-// Updater is used to update the server status.
-type Updater interface {
-	UpsertServer(upstream.Server)
-	RemoveServer(serverID string)
-	SetServerOnline(serverID string, online bool)
-}
-
-// Info is the information of the health check.
-type Info struct {
-	upstream.URL `json:"url" yaml:"url"`
-
-	Failure  int           `json:"failure,omitempty" yaml:"failure,omitempty"`
-	Timeout  time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
-	Interval time.Duration `json:"interval,omitempty" yaml:"interval,omitempty"`
-}
-
-// IsZero reports whether the health check information is ZERO.
-func (i Info) IsZero() bool {
-	return i.URL.IsZero() && i.Failure == 0 && i.Timeout == 0 && i.Interval == 0
-}
-
-// Equal reports whether the health check information is equal to other.
-func (i Info) Equal(other Info) bool {
-	return i.Failure == other.Failure &&
-		i.Timeout == other.Timeout &&
-		i.Interval == other.Interval &&
-		i.URL.Equal(other.URL)
+// CheckConfig is the config to check the server health.
+type CheckConfig struct {
+	Failure  int           `json:"failure,omitempty"`
+	Timeout  time.Duration `json:"timeout,omitempty"`
+	Interval time.Duration `json:"interval,omitempty"`
+	Delay    time.Duration `json:"delay,omitempty"`
 }
 
 type serverWrapper struct{ upstream.Server }
 
 type serverContext struct {
-	stop   chan struct{}
-	info   atomic.Value
-	server atomic.Value
-	online int32
-
-	failure  int
-	lasttime time.Time
+	tickch  chan time.Duration
+	stopch  chan struct{}
+	config  atomic.Value
+	server  atomic.Value
+	online  int32
+	failure int
 }
 
-func newServerContext(server upstream.Server, info Info) *serverContext {
-	sc := &serverContext{}
+func newServerContext(server upstream.Server, config CheckConfig) *serverContext {
+	sc := &serverContext{tickch: make(chan time.Duration), stopch: make(chan struct{})}
 	sc.SetServer(server)
-	sc.SetInfo(info)
+	sc.SetConfig(config)
 	return sc
 }
 
@@ -88,9 +69,25 @@ func (s *serverContext) IsOnline() bool {
 	return atomic.LoadInt32(&s.online) == 1
 }
 
-func (s *serverContext) SetInfo(info Info) { s.info.Store(info) }
+func (s *serverContext) SetConfig(config CheckConfig) {
+	if config.Interval <= 0 {
+		if DefaultInterval > 0 {
+			config.Interval = DefaultInterval
+		} else {
+			config.Interval = time.Second * 10
+		}
+	}
 
-func (s *serverContext) GetInfo() Info { return s.info.Load().(Info) }
+	s.config.Store(config)
+	select {
+	case s.tickch <- config.Interval:
+	default:
+	}
+}
+
+func (s *serverContext) GetConfig() CheckConfig {
+	return s.config.Load().(CheckConfig)
+}
 
 func (s *serverContext) GetServer() upstream.Server {
 	return s.server.Load().(serverWrapper).Server
@@ -100,29 +97,42 @@ func (s *serverContext) SetServer(server upstream.Server) {
 	s.server.Store(serverWrapper{server})
 }
 
-func (s *serverContext) Stop() { close(s.stop) }
+func (s *serverContext) Stop() {
+	close(s.stopch)
+}
 
-func (s *serverContext) Start(hc *HealthChecker) {
-	exit := hc.exit
-	s.checkHealth(hc, s.GetInfo())
-	s.stop = make(chan struct{})
+func (s *serverContext) beforeStart(hc *HealthChecker, exit <-chan struct{}) {
+	config := s.GetConfig()
+	if config.Delay > 0 {
+		wait := time.NewTimer(config.Delay)
+		select {
+		case <-wait.C:
+		case <-exit:
+			wait.Stop()
+			return
+		}
+	}
+	s.checkHealth(hc, config)
+}
 
-	tick := time.NewTicker(hc.tick)
-	defer tick.Stop()
+func (s *serverContext) Start(hc *HealthChecker, exit <-chan struct{}) {
+	s.beforeStart(hc, exit)
+	ticker := time.NewTicker(s.GetConfig().Interval)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-exit:
 			return
 
-		case <-s.stop:
+		case <-s.stopch:
 			return
 
-		case now := <-tick.C:
-			info := s.GetInfo()
-			if now.Sub(s.lasttime) > info.Interval {
-				s.checkHealth(hc, info)
-			}
+		case tick := <-s.tickch:
+			ticker.Reset(tick)
+
+		case <-ticker.C:
+			s.checkHealth(hc, s.GetConfig())
 		}
 	}
 }
@@ -134,9 +144,9 @@ func (s *serverContext) wrapPanic() {
 	}
 }
 
-func (s *serverContext) checkHealth(hc *HealthChecker, info Info) {
+func (s *serverContext) checkHealth(hc *HealthChecker, config CheckConfig) {
 	defer s.wrapPanic()
-	if s.updateOnlineStatus(s.checkServer(info), info.Failure) {
+	if s.updateOnlineStatus(s.checkServer(config), config.Failure) {
 		hc.setOnline(s.GetServer().ID(), s.IsOnline())
 	}
 }
@@ -153,14 +163,18 @@ func (s *serverContext) updateOnlineStatus(online bool, failure int) (ok bool) {
 	return
 }
 
-func (s *serverContext) checkServer(info Info) (online bool) {
+func (s *serverContext) checkServer(config CheckConfig) (online bool) {
 	ctx := context.Background()
-	if info.Timeout > 0 {
+	if config.Timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, info.Timeout)
+		ctx, cancel = context.WithTimeout(ctx, config.Timeout)
 		defer cancel()
 	}
-	return s.GetServer().Check(ctx, info.URL) == nil
+
+	server := s.GetServer()
+	online = server.Check(ctx) == nil
+	log.Debug("HealthChecker: check the upstream server", "serverid", server.ID(), "online", online)
+	return
 }
 
 // HealthChecker is a health checker to check whether a set of http servers
@@ -169,19 +183,15 @@ func (s *serverContext) checkServer(info Info) (online bool) {
 // Notice: if there are lots of servers to be checked, you maybe need
 // an external checker.
 type HealthChecker struct {
-	tick     time.Duration
 	exit     chan struct{}
 	slock    sync.RWMutex
 	servers  map[string]*serverContext
 	updaters sync.Map
 }
 
-// NewHealthChecker returns a new health checker with the tick duration.
-func NewHealthChecker(tick time.Duration) *HealthChecker {
-	return &HealthChecker{
-		tick:    tick,
-		servers: make(map[string]*serverContext, 16),
-	}
+// NewHealthChecker returns a new health checker.
+func NewHealthChecker() *HealthChecker {
+	return &HealthChecker{servers: make(map[string]*serverContext, 16)}
 }
 
 func (hc *HealthChecker) setOnline(serverID string, online bool) {
@@ -194,31 +204,34 @@ func (hc *HealthChecker) setOnline(serverID string, online bool) {
 // Stop stops the health checker.
 func (hc *HealthChecker) Stop() {
 	hc.slock.Lock()
+	defer hc.slock.Unlock()
 	if hc.exit != nil {
 		close(hc.exit)
 		hc.exit = nil
 	}
-	hc.slock.Unlock()
 }
 
 // Start starts the health checker.
 func (hc *HealthChecker) Start() {
 	hc.slock.Lock()
+	defer hc.slock.Unlock()
+
 	if hc.exit == nil {
 		hc.exit = make(chan struct{})
 		for _, sc := range hc.servers {
-			go sc.Start(hc)
+			go sc.Start(hc, hc.exit)
 		}
+	} else {
+		panic("HealthChecker: has been started")
 	}
-	hc.slock.Unlock()
 }
 
 // AddUpdater adds the healthcheck updater with the name.
 func (hc *HealthChecker) AddUpdater(name string, updater Updater) (err error) {
 	if name == "" {
-		panic("the healthcheck name is empty")
+		panic("HealthChecker: the name is empty")
 	} else if updater == nil {
-		panic("the healthcheck is nil")
+		panic("HealthChecker: the updater is nil")
 	}
 
 	if _, loaded := hc.updaters.LoadOrStore(name, updater); loaded {
@@ -266,26 +279,35 @@ func (hc *HealthChecker) GetUpdaters() map[string]Updater {
 	return updaters
 }
 
-// UpsertServer adds or updates the server with the healthcheck information.
-func (hc *HealthChecker) UpsertServer(server upstream.Server, healthCheck Info) {
-	id := server.ID()
-
+// UpsertServers adds or updates a set of the servers with the same healthcheck config.
+func (hc *HealthChecker) UpsertServers(servers upstream.Servers, config CheckConfig) {
 	hc.slock.Lock()
+	defer hc.slock.Unlock()
+	for _, server := range servers {
+		hc.upsertServer(server, config)
+	}
+}
+
+// UpsertServer adds or updates the server with the healthcheck config.
+func (hc *HealthChecker) UpsertServer(server upstream.Server, config CheckConfig) {
+	hc.slock.Lock()
+	defer hc.slock.Unlock()
+	hc.upsertServer(server, config)
+}
+
+func (hc *HealthChecker) upsertServer(server upstream.Server, config CheckConfig) {
+	id := server.ID()
 	sc, ok := hc.servers[id]
 	if ok {
 		sc.SetServer(server)
-		sc.SetInfo(healthCheck)
+		sc.SetConfig(config)
 	} else {
-		sc = newServerContext(server, healthCheck)
+		sc = newServerContext(server, config)
 		hc.servers[id] = sc
-
 		if hc.exit != nil { // Has started
-			go sc.Start(hc)
+			go sc.Start(hc, hc.exit)
 		}
-	}
-	hc.slock.Unlock()
 
-	if !ok {
 		hc.updaters.Range(func(_, value interface{}) bool {
 			updater := value.(Updater)
 			updater.UpsertServer(server)
@@ -332,17 +354,34 @@ func (hc *HealthChecker) GetServer(serverID string) (server ServerInfo, ok bool)
 	if ok {
 		server.Online = sc.IsOnline()
 		server.Server = sc.GetServer()
-		server.HealthCheck = sc.GetInfo()
+		server.Config = sc.GetConfig()
 	}
 	return
 }
 
+var (
+	_ upstream.Server        = ServerInfo{}
+	_ upstream.ServerWrapper = ServerInfo{}
+)
+
 // ServerInfo represents the information of the server.
 type ServerInfo struct {
-	HealthCheck Info
-
-	Server upstream.Server
+	upstream.Server
+	Config CheckConfig
 	Online bool
+}
+
+// Unwrap unwraps the inner upstream server.
+func (si ServerInfo) Unwrap() upstream.Server {
+	return si.Server
+}
+
+// Status overrides the interface method upstream.Server#Status.
+func (si ServerInfo) Status() upstream.ServerStatus {
+	if si.Online {
+		return upstream.ServerStatusOnline
+	}
+	return upstream.ServerStatusOffline
 }
 
 // GetServers returns all the servers.
@@ -351,9 +390,9 @@ func (hc *HealthChecker) GetServers() []ServerInfo {
 	servers := make([]ServerInfo, 0, len(hc.servers))
 	for _, sc := range hc.servers {
 		servers = append(servers, ServerInfo{
-			HealthCheck: sc.GetInfo(),
-			Server:      sc.GetServer(),
-			Online:      sc.IsOnline(),
+			Config: sc.GetConfig(),
+			Server: sc.GetServer(),
+			Online: sc.IsOnline(),
 		})
 	}
 	hc.slock.RUnlock()

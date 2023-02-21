@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,19 +16,19 @@
 package balancer
 
 import (
-	"net/http"
+	"context"
 
-	"github.com/xgfone/go-apiserver/http/upstream"
+	"github.com/xgfone/go-apiserver/upstream"
 )
 
 // Balancer is used to forward the request to one of the backend servers.
 type Balancer interface {
-	Forward(http.ResponseWriter, *http.Request, func() upstream.Servers) error
+	Forward(ctx context.Context, req interface{}, sd upstream.ServerDiscovery) error
 	Policy() string
 }
 
 // ForwardFunc is the function to forward the request to one of the servers.
-type ForwardFunc func(http.ResponseWriter, *http.Request, func() upstream.Servers) error
+type ForwardFunc func(context.Context, interface{}, upstream.ServerDiscovery) error
 
 // NewBalancer returns a new balancer with the policy and the forward function.
 func NewBalancer(policy string, forward ForwardFunc) Balancer {
@@ -41,6 +41,6 @@ type balancer struct {
 }
 
 func (b balancer) Policy() string { return b.policy }
-func (b balancer) Forward(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) error {
-	return b.forward(w, r, f)
+func (b balancer) Forward(c context.Context, r interface{}, sd upstream.ServerDiscovery) error {
+	return b.forward(c, r, sd)
 }

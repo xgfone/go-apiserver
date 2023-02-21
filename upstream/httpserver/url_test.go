@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,35 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package upstream
+package httpserver
 
 import (
 	"context"
 	"fmt"
 	"net/http"
-	"sort"
 	"testing"
 	"time"
 )
-
-func TestServers(t *testing.T) {
-	s1, _ := NewServer(ServerConfig{StaticWeight: 1, URL: URL{IP: "127.0.0.1", Port: 8001}})
-	s2, _ := NewServer(ServerConfig{StaticWeight: 1, URL: URL{IP: "127.0.0.1", Port: 8002}})
-	s3, _ := NewServer(ServerConfig{StaticWeight: 3, URL: URL{IP: "127.0.0.1", Port: 8003}})
-	s4, _ := NewServer(ServerConfig{StaticWeight: 3, URL: URL{IP: "127.0.0.1", Port: 8004}})
-	s5, _ := NewServer(ServerConfig{StaticWeight: 2, URL: URL{IP: "127.0.0.1", Port: 8005}})
-	s6, _ := NewServer(ServerConfig{StaticWeight: 2, URL: URL{IP: "127.0.0.1", Port: 8006}})
-
-	servers := Servers{s1, s2, s3, s4, s5, s6}
-	sort.Stable(servers)
-
-	exports := []uint16{8001, 8002, 8005, 8006, 8003, 8004}
-	for i, server := range servers {
-		if port := server.URL().Port; exports[i] != port {
-			t.Errorf("expect the port '%d', but got '%d'", exports[i], port)
-		}
-	}
-}
 
 func ExampleURL_ID() {
 	var url URL
@@ -74,7 +54,7 @@ func ExampleURL_ID() {
 
 func TestURL_Request(t *testing.T) {
 	url := URL{IP: "127.0.0.1", Port: 8200}
-	req, err := url.Request(context.Background())
+	req, err := url.Request(context.Background(), http.MethodGet)
 	if err != nil {
 		t.Fatal(err)
 	}

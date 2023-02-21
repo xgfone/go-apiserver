@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,6 +46,15 @@ func RegisterBuidler(typ string, builder Builder) { builders[typ] = builder }
 //
 // If the balancer builder typed "typ" does not exist, return nil.
 func GetBuilder(typ string) Builder { return builders[typ] }
+
+// GetAllBuilderTypes returns the types of all the balancer builders.
+func GetAllBuilderTypes() []string {
+	types := make([]string, 0, len(builders))
+	for typ := range builders {
+		types = append(types, typ)
+	}
+	return types
+}
 
 // Build is a convenient function to build a new balancer typed "typ".
 func Build(typ string, config interface{}) (balancer Balancer, err error) {

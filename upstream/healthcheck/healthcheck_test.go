@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,27 +16,28 @@ package healthcheck
 
 import (
 	"context"
-	"net/http"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/xgfone/go-apiserver/http/upstream"
 	"github.com/xgfone/go-apiserver/nets"
+	"github.com/xgfone/go-apiserver/upstream"
 )
+
+var _ upstream.Server = testServer{}
 
 type testServer struct{ id string }
 
 func newServer(id string) testServer { return testServer{id: id} }
 
-func (s testServer) ID() string                                          { return s.id }
-func (s testServer) URL() (url upstream.URL)                             { return }
-func (s testServer) Status() upstream.ServerStatus                       { return upstream.ServerStatusOnline }
-func (s testServer) RuntimeState() (rs nets.RuntimeState)                { return }
-func (s testServer) HandleHTTP(http.ResponseWriter, *http.Request) error { return nil }
-func (s testServer) Check(context.Context, upstream.URL) error {
-	return nil
-}
+func (s testServer) ID() string                               { return s.id }
+func (s testServer) Type() string                             { return "" }
+func (s testServer) Info() interface{}                        { return nil }
+func (s testServer) Status() upstream.ServerStatus            { return upstream.ServerStatusOnline }
+func (s testServer) RuntimeState() (rs nets.RuntimeState)     { return }
+func (s testServer) Update(interface{}) error                 { return nil }
+func (s testServer) Serve(context.Context, interface{}) error { return nil }
+func (s testServer) Check(context.Context) error              { return nil }
 
 type testUpdater struct{ servers sync.Map }
 
@@ -58,13 +59,13 @@ func TestHealthCheck(t *testing.T) {
 	updater1 := newUpdater()
 	updater2 := newUpdater()
 
-	hc := NewHealthChecker(time.Millisecond * 100)
+	hc := NewHealthChecker()
 	hc.Start()
 	defer hc.Stop()
 
 	hc.AddUpdater("updater1", updater1)
-	hc.UpsertServer(newServer("id1"), Info{})
-	hc.UpsertServer(newServer("id2"), Info{})
+	hc.UpsertServer(newServer("id1"), CheckConfig{})
+	hc.UpsertServer(newServer("id2"), CheckConfig{})
 	hc.AddUpdater("updater2", updater2)
 
 	time.Sleep(time.Millisecond * 500)

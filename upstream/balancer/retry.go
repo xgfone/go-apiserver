@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,38 +15,36 @@
 package balancer
 
 import (
-	"net/http"
+	"context"
 	"time"
 
-	up "github.com/xgfone/go-apiserver/http/upstream"
+	"github.com/xgfone/go-apiserver/upstream"
 )
 
-// Retry returns a new balancer to retry the rest servers when failing to
-// forward the request.
+var _ Balancer = Retry{}
+
+// Retry is used to retry the rest servers when failing to forward the request.
 //
 // Notice: It will retry the same upstream server for the sourceip or consistent
 // hash balancer.
-func Retry(balancer Balancer, interval time.Duration) Balancer {
-	if balancer == nil {
-		panic("RetryBalancer: the wrapped balancer is nil")
-	}
-	return retry{Balancer: balancer, interval: interval}
-}
-
-type retry struct {
-	interval time.Duration
+type Retry struct {
+	Interval time.Duration
 	Balancer
 }
 
-func (b retry) WrappedBalancer() Balancer { return b.Balancer }
-func (b retry) Forward(w http.ResponseWriter, r *http.Request, f func() up.Servers) (err error) {
-	ss := f()
+// NewRetry returns a new retry balancer.
+func NewRetry(balancer Balancer, interval time.Duration) Retry {
+	return Retry{Balancer: balancer, Interval: interval}
+}
+
+// Forward overrides the Forward method.
+func (b Retry) Forward(c context.Context, r interface{}, sd upstream.ServerDiscovery) (err error) {
+	ss := sd.OnServers()
 	_len := len(ss)
 	if _len == 1 {
-		return ss[0].HandleHTTP(w, r)
+		return ss[0].Serve(c, r)
 	}
 
-	c := r.Context()
 	for ; _len > 0; _len-- {
 		select {
 		case <-c.Done():
@@ -54,12 +52,12 @@ func (b retry) Forward(w http.ResponseWriter, r *http.Request, f func() up.Serve
 		default:
 		}
 
-		if err = b.Balancer.Forward(w, r, f); err == nil {
+		if err = b.Balancer.Forward(c, r, sd.OnServers()); err == nil {
 			break
 		}
 
-		if b.interval > 0 {
-			timer := time.NewTimer(b.interval)
+		if b.Interval > 0 {
+			timer := time.NewTimer(b.Interval)
 			select {
 			case <-timer.C:
 			case <-c.Done():

@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,22 +15,22 @@
 package balancer
 
 import (
-	"net/http"
+	"context"
 
-	"github.com/xgfone/go-apiserver/http/upstream"
+	"github.com/xgfone/go-apiserver/upstream"
 )
 
 // ConsistentHash returns a new balancer based on the consistent hash.
 //
 // The policy name is equal to hashPolicy with the prefix "consistent_hash_".
-func ConsistentHash(hashPolicy string, hash func(*http.Request) int) Balancer {
+func ConsistentHash(hashPolicy string, hash func(req interface{}) int) Balancer {
 	return NewBalancer("consistent_hash_"+hashPolicy,
-		func(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) error {
-			ss := f()
+		func(c context.Context, r interface{}, sd upstream.ServerDiscovery) error {
+			ss := sd.OnServers()
 			_len := len(ss)
 			if _len == 1 {
-				return ss[0].HandleHTTP(w, r)
+				return ss[0].Serve(c, r)
 			}
-			return ss[hash(r)%_len].HandleHTTP(w, r)
+			return ss[hash(r)%_len].Serve(c, r)
 		})
 }

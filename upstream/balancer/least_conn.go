@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
 package balancer
 
 import (
-	"net/http"
+	"context"
 	"sort"
 
-	"github.com/xgfone/go-apiserver/http/upstream"
+	"github.com/xgfone/go-apiserver/upstream"
 )
 
 func init() {
@@ -30,17 +30,18 @@ func init() {
 // The policy name is "least_conn".
 func LeastConn() Balancer {
 	return NewBalancer("least_conn",
-		func(w http.ResponseWriter, r *http.Request, f func() upstream.Servers) (err error) {
-			ss := f()
+		func(c context.Context, r interface{}, sd upstream.ServerDiscovery) (err error) {
+			ss := sd.OnServers()
 			if len(ss) == 1 {
-				return ss[0].HandleHTTP(w, r)
+				return ss[0].Serve(c, r)
 			}
-			servers := upstream.DefaultServersPool.Acquire()
+
+			servers := upstream.AcquireServers(len(ss))
 			servers = append(servers, ss...)
 			sort.Stable(leastConnServers(servers))
 			server := servers[0]
-			upstream.DefaultServersPool.Release(servers)
-			return server.HandleHTTP(w, r)
+			upstream.ReleaseServers(servers)
+			return server.Serve(c, r)
 		})
 }
 

@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package upstream provides some common upstream functions.
 package upstream
 
 import (
 	"context"
 	"errors"
-	"net/http"
 	"sync"
 
 	"github.com/xgfone/go-apiserver/nets"
@@ -43,12 +43,24 @@ func (s ServerStatus) IsOffline() bool { return s == ServerStatusOffline }
 
 // Server represents an upstream http server.
 type Server interface {
+	// Static information
 	ID() string
-	URL() URL
+	Type() string
+	Info() interface{}
+
+	// Dynamic information
 	Status() ServerStatus
 	RuntimeState() nets.RuntimeState
-	HandleHTTP(http.ResponseWriter, *http.Request) error
-	Check(ctx context.Context, healthURL URL) error
+
+	// Handler
+	Update(info interface{}) error
+	Serve(ctx context.Context, req interface{}) error
+	Check(context.Context) error
+}
+
+// ServerWrapper is a wrapper to wrap the upstream server.
+type ServerWrapper interface {
+	Unwrap() Server
 }
 
 // WeightedServer represents an upstream http server with the weight.
@@ -150,34 +162,88 @@ func (ss Servers) Less(i, j int) bool {
 	}
 }
 
-// GetServerWeight returns the weight of the server if it has implements
-// the interface WeightedServer. Or return 1 instead.
-func GetServerWeight(server Server) int {
-	if ws, ok := server.(WeightedServer); ok {
-		return ws.Weight()
+// UnwrapServer unwraps the innest upsteam server.
+func UnwrapServer(server Server) Server {
+	if w, ok := server.(ServerWrapper); ok {
+		UnwrapServer(w.Unwrap())
 	}
-	return 1
+	return server
 }
 
-// DefaultServersPool is the default servers pool.
-var DefaultServersPool = NewServersPool(16)
+// GetServerWeight returns the weight of the server if it has implements
+// the interface WeightedServer. Or, check whether it has implemented
+// the interface ServerWrapper and unwrap it.
+// If still failing, return 1 instead.
+func GetServerWeight(server Server) int {
+	switch s := server.(type) {
+	case WeightedServer:
+		return s.Weight()
 
-// ServersPool is used to allocate and recycle the server slice.
-type ServersPool struct{ pool sync.Pool }
+	case ServerWrapper:
+		return GetServerWeight(s.Unwrap())
 
-// NewServersPool returns a new servers pool.
-func NewServersPool(defaultCap int) *ServersPool {
-	sp := &ServersPool{}
-	sp.pool.New = func() interface{} { return make(Servers, 0, defaultCap) }
-	return sp
+	default:
+		return 1
+	}
 }
 
-// Acquire returns a server slice from the servers pool.
-func (sp *ServersPool) Acquire() Servers { return sp.pool.Get().(Servers) }
+var (
+	serverpool4   = sync.Pool{New: func() any { return make(Servers, 0, 4) }}
+	serverpool8   = sync.Pool{New: func() any { return make(Servers, 0, 8) }}
+	serverpool16  = sync.Pool{New: func() any { return make(Servers, 0, 16) }}
+	serverpool32  = sync.Pool{New: func() any { return make(Servers, 0, 32) }}
+	serverpool64  = sync.Pool{New: func() any { return make(Servers, 0, 64) }}
+	serverpool128 = sync.Pool{New: func() any { return make(Servers, 0, 128) }}
+)
 
-// Release releases the servers into the pool.
-func (sp *ServersPool) Release(servers Servers) {
-	if cap(servers) > 0 {
-		sp.pool.Put(servers[:0])
+// AcquireServers acquires a preallocated zero-length servers from the pool.
+func AcquireServers(expectedMaxCap int) Servers {
+	switch {
+	case expectedMaxCap <= 4:
+		return serverpool4.Get().(Servers)
+
+	case expectedMaxCap <= 8:
+		return serverpool8.Get().(Servers)
+
+	case expectedMaxCap <= 16:
+		return serverpool16.Get().(Servers)
+
+	case expectedMaxCap <= 32:
+		return serverpool32.Get().(Servers)
+
+	case expectedMaxCap <= 64:
+		return serverpool64.Get().(Servers)
+
+	default:
+		return serverpool128.Get().(Servers)
+	}
+}
+
+// ReleaseServers releases the servers back into the pool.
+func ReleaseServers(ss Servers) {
+	for i, _len := 0, len(ss); i < _len; i++ {
+		ss[i] = nil
+	}
+
+	ss = ss[:0]
+	cap := cap(ss)
+	switch {
+	case cap < 8:
+		serverpool4.Put(ss)
+
+	case cap < 16:
+		serverpool8.Put(ss)
+
+	case cap < 32:
+		serverpool16.Put(ss)
+
+	case cap < 64:
+		serverpool32.Put(ss)
+
+	case cap < 128:
+		serverpool64.Put(ss)
+
+	default:
+		serverpool128.Put(ss)
 	}
 }

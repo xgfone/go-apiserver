@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,11 +21,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/xgfone/go-apiserver/http/upstream"
-	"github.com/xgfone/go-apiserver/http/upstream/balancer"
-	"github.com/xgfone/go-apiserver/http/upstream/healthcheck"
+	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/nets"
+	"github.com/xgfone/go-apiserver/upstream"
+	"github.com/xgfone/go-apiserver/upstream/balancer"
+	"github.com/xgfone/go-apiserver/upstream/healthcheck"
 )
 
 var _ healthcheck.Updater = &LoadBalancer{}
@@ -36,7 +37,7 @@ type (
 )
 
 // ErrorHandler is used to handle the error of forwarding the request.
-type ErrorHandler func(*LoadBalancer, http.ResponseWriter, *http.Request, error)
+type ErrorHandler func(context.Context, *LoadBalancer, interface{}, error)
 
 // LoadBalancer is used to forward the http request to one of the backend servers.
 type LoadBalancer struct {
@@ -118,48 +119,60 @@ func (lb *LoadBalancer) SetErrorHandler(handler ErrorHandler) {
 	}
 }
 
-func handleError(lb *LoadBalancer, w http.ResponseWriter, r *http.Request, err error) {
+func handleError(ctx context.Context, lb *LoadBalancer, req interface{}, err error) {
+	c := req.(*reqresp.Context)
 	switch err {
 	case nil:
 		if log.Enabled(log.LevelDebug) {
 			log.Debug("forward the http request",
+				"requestid", upstream.GetRequestID(ctx, req),
 				"upstream", lb.name,
 				"balancer", lb.GetBalancer().Policy(),
-				"clientaddr", r.RemoteAddr,
-				"reqhost", r.Host,
-				"reqmethod", r.Method,
-				"reqpath", r.URL.Path)
+				"clientaddr", c.RemoteAddr,
+				"reqhost", c.Host,
+				"reqmethod", c.Method,
+				"reqpath", c.URL.Path)
 		}
 		return
 
 	case upstream.ErrNoAvailableServers:
-		w.WriteHeader(503) // Service Unavailable
+		c.WriteHeader(503) // Service Unavailable
 
 	default:
 		if nets.IsTimeout(err) {
-			w.WriteHeader(504) // Gateway Timeout
+			c.WriteHeader(504) // Gateway Timeout
 		} else {
-			w.WriteHeader(502) // Bad Gateway
+			c.WriteHeader(502) // Bad Gateway
 		}
 	}
 
 	log.Error("fail to forward the http request",
+		"requestid", upstream.GetRequestID(ctx, req),
 		"upstream", lb.name,
 		"balancer", lb.GetBalancer().Policy(),
-		"clientaddr", r.RemoteAddr,
-		"reqhost", r.Host,
-		"reqmethod", r.Method,
-		"reqpath", r.URL.Path,
+		"clientaddr", c.RemoteAddr,
+		"reqhost", c.Host,
+		"reqmethod", c.Method,
+		"reqpath", c.URL.Path,
 		"err", err)
 }
 
-// ServeHTTP implements the interface http.Handler.
+// ServeHTTP implements the interface http.Handler,
+// which is the encapsulation of Serve for HTTP.
 func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	lb.handleError(lb, w, r, lb.HandleHTTP(w, r))
+	c := reqresp.GetContext(w, r)
+	if c == nil {
+		c = reqresp.DefaultContextAllocator.Acquire()
+		c.ResponseWriter = reqresp.NewResponseWriter(w)
+		c.Request = reqresp.SetContext(r, c)
+		defer reqresp.DefaultContextAllocator.Release(c)
+	}
+	lb.handleError(c.Context(), lb, c, lb.Serve(c.Context(), c))
 }
 
-// HandleHTTP implements the interface Server.
-func (lb *LoadBalancer) HandleHTTP(w http.ResponseWriter, r *http.Request) error {
+// Serve implement the interface upstream.Server#Serve,
+// which will forward the request to one of the upstream servers.
+func (lb *LoadBalancer) Serve(ctx context.Context, req interface{}) error {
 	sd := lb.GetServerDiscovery()
 	if sd == nil {
 		sd = lb.svrManager
@@ -170,12 +183,12 @@ func (lb *LoadBalancer) HandleHTTP(w http.ResponseWriter, r *http.Request) error
 	}
 
 	if timeout := lb.GetTimeout(); timeout > 0 {
-		ctx, cancel := context.WithTimeout(r.Context(), timeout)
-		r = r.WithContext(ctx)
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
 	}
 
-	return lb.GetBalancer().Forward(w, r, sd.OnServers)
+	return lb.GetBalancer().Forward(ctx, req, sd)
 }
 
 // SetServerOnline implements the interface healthcheck.Updater#SetServerOnline
@@ -258,7 +271,8 @@ func (lb *LoadBalancer) GetOffServers() upstream.Servers {
 	return lb.svrManager.OffServers()
 }
 
-// GetAllServers returns all the servers.
+// GetAllServers returns all the servers, which are a set of the wrappers
+// of the original servers and can be unwrapped by upstream.UnwrapServer.
 //
 // This is the inner server management of loadbalancer.
 func (lb *LoadBalancer) GetAllServers() upstream.Servers {
