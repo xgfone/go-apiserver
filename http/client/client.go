@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,10 +32,26 @@ type Getter interface {
 	GetHTTPClient() *http.Client
 }
 
+var _ Getter = GetterFunc(nil)
+
+// GetterFunc is a function to get the http client.
+type GetterFunc func() *http.Client
+
+// GetHTTPClient implements the interface Getter.
+func (f GetterFunc) GetHTTPClient() *http.Client { return f() }
+
 // Setter is used to set the http client.
 type Setter interface {
 	SetHTTPClient(*http.Client)
 }
+
+var _ Setter = SetterFunc(nil)
+
+// SetterFunc is a function to set the http client.
+type SetterFunc func(*http.Client)
+
+// SetHTTPClient implements the interface Setter.
+func (f SetterFunc) SetHTTPClient(c *http.Client) { f(c) }
 
 // Client is used to maintain the http.Client thread-safely.
 type Client struct {
