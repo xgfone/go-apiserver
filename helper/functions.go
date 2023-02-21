@@ -48,28 +48,3 @@ func Indirect(value interface{}) interface{} {
 		return value
 	}
 }
-
-// MapKeys returns all the keys of the map.
-func MapKeys[T ~map[K]V, K comparable, V any](maps T) []K {
-	keys := make([]K, 0, len(maps))
-	for k := range maps {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-// CloneMap clones the map and returns the new.
-func CloneMap[T ~map[K]V, K comparable, V any](maps T) T {
-	newmap := make(T, len(maps))
-	for k, v := range maps {
-		newmap[k] = v
-	}
-	return newmap
-}
-
-// CloneSlice clones the slice and returns the new.
-func CloneSlice[T ~[]E, E any](slice T) T {
-	newslice := make(T, len(slice))
-	copy(newslice, slice)
-	return newslice
-}

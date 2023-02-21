@@ -15,6 +15,13 @@
 // Package slice provides some convenient slice functions.
 package slice
 
+// Clone clones the slice and returns the new.
+func Clone[T ~[]E, E any](slice T) T {
+	newslice := make(T, len(slice))
+	copy(newslice, slice)
+	return newslice
+}
+
 // Index returns the index where v is in vs, else -1.
 func Index[T ~[]E, E comparable](vs T, v E) int {
 	for i, e := range vs {
