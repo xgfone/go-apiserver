@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,9 @@ type RuntimeState struct {
 	Total   uint64 // The total number to handle all the requests.
 	Success uint64 // The total number to handle the requests successfully.
 	Current uint64 // The number of the requests that are being handled.
+
+	// For the extra runtime information.
+	Extra interface{} `json:",omitempty" xml:",omitempty"`
 }
 
 // IncSuccess increases the success state.
@@ -40,8 +43,17 @@ func (rs *RuntimeState) Dec() {
 }
 
 // Clone clones itself to a new one.
+//
+// If Extra has implemented the interface { Clone() interface{} }, call it//
+// to clone the field Extra.
 func (rs *RuntimeState) Clone() RuntimeState {
+	extra := rs.Extra
+	if clone, ok := rs.Extra.(interface{ Clone() interface{} }); ok {
+		extra = clone.Clone()
+	}
+
 	return RuntimeState{
+		Extra:   extra,
 		Total:   atomic.LoadUint64(&rs.Total),
 		Success: atomic.LoadUint64(&rs.Success),
 		Current: atomic.LoadUint64(&rs.Current),
