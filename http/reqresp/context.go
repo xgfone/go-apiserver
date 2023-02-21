@@ -1,4 +1,4 @@
-// Copyright 2021~2022 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -265,6 +265,12 @@ func (c *Context) GetContext(http.ResponseWriter, *http.Request) *Context {
 	return c
 }
 
+// GetHTTPRequest returns the http.Request.
+func (c *Context) GetHTTPRequest() *http.Request { return c.Request }
+
+// GetHTTPResponseWriter returns the http.ResponseWriter.
+func (c *Context) GetHTTPResponseWriter() http.ResponseWriter { return c.ResponseWriter }
+
 // UpdateError updates the context error.
 func (c *Context) UpdateError(err error) {
 	if UpdateContextError != nil {
@@ -332,6 +338,9 @@ func (c *Context) Write(p []byte) (int, error) { return c.ResponseWriter.Write(p
 // ---------------------------------------------------------------------------
 // Common
 // ---------------------------------------------------------------------------
+
+// RequestID returns the request header "X-Request-Id".
+func (c *Context) RequestID() string { return c.Request.Header.Get(header.HeaderXRequestID) }
 
 // IsWebSocket reports whether the request is websocket.
 func (c *Context) IsWebSocket() bool { return header.IsWebSocket(c.Request) }
