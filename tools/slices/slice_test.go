@@ -14,7 +14,24 @@
 
 package slices
 
-import "fmt"
+import (
+	"fmt"
+	"testing"
+)
+
+func TestMax(t *testing.T) {
+	v := Max([]int{3, 2, 5, 4, 1})
+	if v != 5 {
+		t.Errorf("expect 5, but got %v", v)
+	}
+}
+
+func TestMin(t *testing.T) {
+	v := Min([]int{3, 2, 5, 4, 1})
+	if v != 1 {
+		t.Errorf("expect 1, but got %v", v)
+	}
+}
 
 func ExampleConvert() {
 	type Ints []int

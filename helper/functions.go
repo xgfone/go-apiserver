@@ -17,6 +17,8 @@ package helper
 import (
 	"reflect"
 	"time"
+
+	"golang.org/x/exp/constraints"
 )
 
 // Now is used to customize the time Now.
@@ -47,4 +49,36 @@ func Indirect(value interface{}) interface{} {
 	default:
 		return value
 	}
+}
+
+// Compare compares left and right and returns
+//
+//	 0 if left == right
+//	-1 if left <  right
+//	+1 if left >  right
+func Compare[T constraints.Ordered](left, right T) int {
+	switch {
+	case left < right:
+		return -1
+	case left == right:
+		return 0
+	default:
+		return 1
+	}
+}
+
+// Max returns the maximum of left and right.
+func Max[T constraints.Ordered](left, right T) T {
+	if left < right {
+		return right
+	}
+	return left
+}
+
+// Min returns the minimum of left and right.
+func Min[T constraints.Ordered](left, right T) T {
+	if right < left {
+		return right
+	}
+	return left
 }

@@ -15,6 +15,54 @@
 // Package slices provides some convenient slice functions.
 package slices
 
+import "golang.org/x/exp/constraints"
+
+// Max returns the maximum element of the slice.
+//
+// Return ZERO instead if the slice is empty.
+func Max[T ~[]E, E constraints.Ordered](vs T) E {
+	switch _len := len(vs); _len {
+	case 0:
+		var v E
+		return v
+
+	case 1:
+		return vs[0]
+
+	default:
+		v := vs[0]
+		for i := 1; i < _len; i++ {
+			if v < vs[i] {
+				v = vs[i]
+			}
+		}
+		return v
+	}
+}
+
+// Min returns the minimum element of the slice.
+//
+// Return ZERO instead if the slice is empty.
+func Min[T ~[]E, E constraints.Ordered](vs T) E {
+	switch _len := len(vs); _len {
+	case 0:
+		var v E
+		return v
+
+	case 1:
+		return vs[0]
+
+	default:
+		v := vs[0]
+		for i := 1; i < _len; i++ {
+			if v > vs[i] {
+				v = vs[i]
+			}
+		}
+		return v
+	}
+}
+
 // Convert converts the slice from []E1 to []E2.
 func Convert[T1 ~[]E1, E1, E2 any](vs T1, convert func(E1) E2) []E2 {
 	newslice := make([]E2, len(vs))
