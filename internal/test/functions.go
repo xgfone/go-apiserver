@@ -17,7 +17,7 @@ package test
 import (
 	"testing"
 
-	"github.com/xgfone/go-apiserver/tools/slice"
+	"github.com/xgfone/go-apiserver/tools/slices"
 )
 
 // CheckStatusCode checks whether the result status code is equal to the expect.
@@ -46,7 +46,7 @@ func CheckStrings(t *testing.T, name string, results, expects []string) {
 // InStrings checks whether each of the result strings is in the expect strings.
 func InStrings(t *testing.T, name string, results, expects []string) {
 	for _, s := range results {
-		if !slice.Contains(expects, s) {
+		if !slices.Contains(expects, s) {
 			t.Errorf("%s: the result string '%s' is not in %v", name, s, expects)
 		}
 	}

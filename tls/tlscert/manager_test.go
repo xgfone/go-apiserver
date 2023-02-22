@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/xgfone/go-apiserver/internal/test"
-	"github.com/xgfone/go-apiserver/tools/slice"
+	"github.com/xgfone/go-apiserver/tools/slices"
 )
 
 func TestManager(t *testing.T) {
@@ -53,7 +53,7 @@ func checkCerts(t *testing.T, prefix string, certs map[string]Certificate, names
 		t.Errorf("%s: expect %d certificates, but got %d", prefix, len(names), len(certs))
 	} else {
 		for name := range certs {
-			if !slice.Contains(names, name) {
+			if !slices.Contains(names, name) {
 				t.Errorf("%s: unexpected certificate named '%s'", prefix, name)
 			}
 		}

@@ -12,25 +12,58 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package slice
+package slices
 
 import "fmt"
 
+func ExampleConvert() {
+	type Ints []int
+
+	ints1 := []int{1, 2, 3}
+	ints2 := Ints{4, 5, 6}
+	int64s1 := Convert(ints1, func(v int) int64 { return int64(v) })
+	int64s2 := Convert(ints2, func(v int) int64 { return int64(v) })
+
+	fmt.Println(int64s1)
+	fmt.Println(int64s2)
+
+	// Output:
+	// [1 2 3]
+	// [4 5 6]
+}
+
 func ExampleIndex() {
-	ints1 := []int{2, 3, 1, 4}
+	ints1 := []int{2, 1, 3, 1, 4}
 	fmt.Println(Index(ints1, 0))
 	fmt.Println(Index(ints1, 1))
 
 	type Ints []int
-	ints2 := Ints{2, 3, 1, 4}
+	ints2 := Ints{2, 1, 3, 1, 4}
 	fmt.Println(Index(ints2, 0))
 	fmt.Println(Index(ints2, 1))
 
 	// Output:
 	// -1
-	// 2
+	// 1
 	// -1
-	// 2
+	// 1
+}
+
+func ExampleLastIndex() {
+	ints1 := []int{2, 1, 3, 1, 4}
+	fmt.Println(LastIndex(ints1, 0))
+	fmt.Println(LastIndex(ints1, 1))
+
+	type Ints []int
+	ints2 := Ints{2, 1, 3, 1, 4}
+	fmt.Println(LastIndex(ints2, 0))
+	fmt.Println(LastIndex(ints2, 1))
+
+	// Output:
+	// -1
+	// 3
+	// -1
+	// 3
 }
 
 func ExampleEqual() {

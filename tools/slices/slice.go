@@ -12,21 +12,56 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package slice provides some convenient slice functions.
-package slice
+// Package slices provides some convenient slice functions.
+package slices
+
+// Convert s
+func Convert[T1 ~[]E1, E1, E2 any](vs T1, convert func(E1) E2) []E2 {
+	newslice := make([]E2, len(vs))
+	for i, e := range vs {
+		newslice[i] = convert(e)
+	}
+	return newslice
+}
 
 // Clone clones the slice and returns the new.
+//
+// NOTICE: it is a shallow clone.
 func Clone[T ~[]E, E any](slice T) T {
+	if slice == nil {
+		return nil
+	}
+
 	newslice := make(T, len(slice))
 	copy(newslice, slice)
 	return newslice
 }
 
-// Index returns the index where v is in vs, else -1.
+// Index returns the first index where v is in vs, or -1.
 func Index[T ~[]E, E comparable](vs T, v E) int {
 	for i, e := range vs {
 		if e == v {
 			return i
+		}
+	}
+	return -1
+}
+
+// LastIndex returns the last index where v is in vs, or -1.
+func LastIndex[T ~[]E, E comparable](vs T, v E) int {
+	for _len := len(vs) - 1; _len >= 0; _len-- {
+		if vs[_len] == v {
+			return _len
+		}
+	}
+	return -1
+}
+
+// LastIndexFunc returns the last index i satisfying equal(vs[i]), or -1.
+func LastIndexFunc[T ~[]E, E any](vs T, equal func(E) bool) int {
+	for _len := len(vs) - 1; _len >= 0; _len-- {
+		if equal(vs[_len]) {
+			return _len
 		}
 	}
 	return -1
