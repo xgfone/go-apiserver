@@ -262,6 +262,10 @@ func (cs IPCheckers) String() string {
 // CheckIP implements the interface IPChecker, which returns true
 // if any ip checker return true.
 func (cs IPCheckers) CheckIP(ip net.IP) bool {
+	if len(cs) == 0 {
+		return true
+	}
+
 	if len(ip) == 0 {
 		return false
 	}
