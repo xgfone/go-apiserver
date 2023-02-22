@@ -151,7 +151,7 @@ func (r *Router) UpdateRoutes(routes ...Route) (err error) {
 
 	if _len := len(routes); _len > 0 {
 		r.rlock.Lock()
-		maps.AddSlice(r.rmaps, routes, func(r Route) string { return r.Name })
+		maps.AddSliceAsValue(r.rmaps, routes, func(r Route) string { return r.Name })
 		r.updateRoutes()
 		r.rlock.Unlock()
 	}
@@ -166,7 +166,7 @@ func (r *Router) ResetRoutes(routes ...Route) (err error) {
 
 	r.rlock.Lock()
 	maps.Clear(r.rmaps)
-	maps.AddSlice(r.rmaps, routes, func(r Route) string { return r.Name })
+	maps.AddSliceAsValue(r.rmaps, routes, func(r Route) string { return r.Name })
 	r.updateRoutes()
 	r.rlock.Unlock()
 	return

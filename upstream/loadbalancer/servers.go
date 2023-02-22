@@ -124,10 +124,9 @@ func (m *serversManager) ResetServers(servers ...upstream.Server) {
 	defer m.slock.Unlock()
 
 	maps.Clear(m.servers)
-	for i, _len := 0, len(servers); i < _len; i++ {
-		server := servers[i]
-		m.servers[server.ID()] = newUpServer(server)
-	}
+	maps.AddSlice(m.servers, servers, func(s upstream.Server) (string, *upserver) {
+		return s.ID(), newUpServer(s)
+	})
 	m.updateServers()
 }
 
@@ -135,10 +134,9 @@ func (m *serversManager) UpsertServers(servers ...upstream.Server) {
 	m.slock.Lock()
 	defer m.slock.Unlock()
 
-	for i, _len := 0, len(servers); i < _len; i++ {
-		server := servers[i]
-		m.servers[server.ID()] = newUpServer(server)
-	}
+	maps.AddSlice(m.servers, servers, func(s upstream.Server) (string, *upserver) {
+		return s.ID(), newUpServer(s)
+	})
 	m.updateServers()
 }
 

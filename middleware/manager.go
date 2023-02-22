@@ -106,7 +106,7 @@ func (m *Manager) Cancel(names ...string) {
 func (m *Manager) ResetMiddlewares(mws ...Middleware) {
 	m.lock.Lock()
 	maps.Clear(m.maps)
-	maps.AddSlice(m.maps, mws, func(mw Middleware) string { return mw.Name() })
+	maps.AddSliceAsValue(m.maps, mws, func(mw Middleware) string { return mw.Name() })
 	m.updateMiddlewares()
 	m.lock.Unlock()
 }
@@ -118,7 +118,7 @@ func (m *Manager) UpsertMiddlewares(mws ...Middleware) {
 	}
 
 	m.lock.Lock()
-	maps.AddSlice(m.maps, mws, func(mw Middleware) string { return mw.Name() })
+	maps.AddSliceAsValue(m.maps, mws, func(mw Middleware) string { return mw.Name() })
 	m.updateMiddlewares()
 	m.lock.Unlock()
 }

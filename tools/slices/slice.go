@@ -15,7 +15,7 @@
 // Package slices provides some convenient slice functions.
 package slices
 
-// Convert s
+// Convert converts the slice from []E1 to []E2.
 func Convert[T1 ~[]E1, E1, E2 any](vs T1, convert func(E1) E2) []E2 {
 	newslice := make([]E2, len(vs))
 	for i, e := range vs {
@@ -35,6 +35,14 @@ func Clone[T ~[]E, E any](slice T) T {
 	newslice := make(T, len(slice))
 	copy(newslice, slice)
 	return newslice
+}
+
+// Merge merges the slice from src into dst and returns the new dst.
+func Merge[S1 ~[]E1, S2 ~[]E2, E1, E2 any](dst S1, src S2, convert func(E2) E1) S1 {
+	for _, e := range src {
+		dst = append(dst, convert(e))
+	}
+	return dst
 }
 
 // Index returns the first index where v is in vs, or -1.

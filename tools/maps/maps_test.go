@@ -68,12 +68,33 @@ func ExampleConvertValues() {
 
 func ExampleAddSlice() {
 	type Map map[string]int
+	type Slice []byte
+
+	maps1 := Map{"a": 1}
+	maps2 := map[string]int{"a": 1}
+	AddSlice(maps1, []byte{'b'}, func(v byte) (string, int) { return string(v), int(v) })
+	AddSlice(maps2, Slice{'b'}, func(v byte) (string, int) { return string(v), int(v) })
+
+	fmt.Printf("%s=%v\n", "a", maps1["a"])
+	fmt.Printf("%s=%v\n", "b", maps1["b"])
+	fmt.Printf("%s=%v\n", "a", maps2["a"])
+	fmt.Printf("%s=%v\n", "b", maps2["b"])
+
+	// Output:
+	// a=1
+	// b=98
+	// a=1
+	// b=98
+}
+
+func ExampleAddSliceAsValue() {
+	type Map map[string]int
 	type Slice []int
 
 	maps1 := Map{"a": 1}
 	maps2 := map[string]int{"a": 1}
-	AddSlice(maps1, []int{2}, func(v int) string { return "b" })
-	AddSlice(maps2, Slice{2}, func(v int) string { return "b" })
+	AddSliceAsValue(maps1, []int{2}, func(v int) string { return "b" })
+	AddSliceAsValue(maps2, Slice{2}, func(v int) string { return "b" })
 
 	fmt.Printf("%s=%v\n", "a", maps1["a"])
 	fmt.Printf("%s=%v\n", "b", maps1["b"])
@@ -85,4 +106,38 @@ func ExampleAddSlice() {
 	// b=2
 	// a=1
 	// b=2
+}
+
+func ExampleDeleteSlice() {
+	type Map map[string]int
+	type Slice []string
+
+	maps1 := Map{"a": 1, "b": 2, "c": 3}
+	maps2 := map[string]int{"a": 1, "b": 2, "c": 3}
+	DeleteSlice(maps1, []string{"a", "b"})
+	DeleteSlice(maps2, Slice{"a", "b"})
+
+	fmt.Println(maps1)
+	fmt.Println(maps2)
+
+	// Output:
+	// map[c:3]
+	// map[c:3]
+}
+
+func ExampleDeleteSliceFunc() {
+	type Map map[string]int
+	type Slice []byte
+
+	maps1 := Map{"a": 1, "b": 2, "c": 3}
+	maps2 := map[string]int{"a": 1, "b": 2, "c": 3}
+	DeleteSliceFunc(maps1, []byte{'a', 'b'}, func(b byte) string { return string(b) })
+	DeleteSliceFunc(maps2, Slice{'a', 'b'}, func(b byte) string { return string(b) })
+
+	fmt.Println(maps1)
+	fmt.Println(maps2)
+
+	// Output:
+	// map[c:3]
+	// map[c:3]
 }

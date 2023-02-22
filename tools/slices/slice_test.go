@@ -32,6 +32,24 @@ func ExampleConvert() {
 	// [4 5 6]
 }
 
+func ExampleMerge() {
+	type Slice1 []int64
+	type Slice2 []int
+
+	slice1 := []int64{1, 2}
+	slice2 := Slice2{1, 2}
+
+	slice1 = Merge(slice1, Slice2{3, 4}, func(v int) int64 { return int64(v) })
+	slice2 = Merge(slice2, Slice1{3, 4}, func(v int64) int { return int(v) })
+
+	fmt.Println(slice1)
+	fmt.Println(slice2)
+
+	// Output:
+	// [1 2 3 4]
+	// [1 2 3 4]
+}
+
 func ExampleIndex() {
 	ints1 := []int{2, 1, 3, 1, 4}
 	fmt.Println(Index(ints1, 0))

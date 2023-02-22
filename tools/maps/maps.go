@@ -25,9 +25,18 @@ func Add[T ~map[K]V, K comparable, V any](maps T, k K, v V) (ok bool) {
 	return
 }
 
-// AddSlice adds each element of the slices into maps, which gets the key
-// by the fucntion getkey.
-func AddSlice[M ~map[K]V, S ~[]V, K comparable, V any](maps M, slices S, getkey func(V) K) {
+// AddSlice adds each element of the slices into maps, which convert the slice
+// element to the key-value pair by the convert fucntion.
+func AddSlice[M ~map[K]V, S ~[]E, K comparable, V, E any](maps M, slices S, convert func(E) (K, V)) {
+	for _, value := range slices {
+		k, v := convert(value)
+		maps[k] = v
+	}
+}
+
+// AddSliceAsValue adds each element of the slices as the value into maps,
+// which gets the key by the fucntion getkey.
+func AddSliceAsValue[M ~map[K]V, S ~[]V, K comparable, V any](maps M, slices S, getkey func(V) K) {
 	for _, v := range slices {
 		maps[getkey(v)] = v
 	}
@@ -47,6 +56,21 @@ func Delete[T ~map[K]V, K comparable, V any](maps T, k K) (ok bool) {
 		delete(maps, k)
 	}
 	return
+}
+
+// DeleteSlice deletes a set of values as the keys.
+func DeleteSlice[M ~map[K]V, T ~[]K, K comparable, V any](maps M, keys T) {
+	for _, key := range keys {
+		delete(maps, key)
+	}
+}
+
+// DeleteSliceFunc deletes a set of values, which converts the key from K2 to K1
+// by the function getkey.
+func DeleteSliceFunc[M ~map[K1]V, T ~[]K2, K1, K2 comparable, V any](maps M, keys T, getkey func(K2) K1) {
+	for _, key := range keys {
+		delete(maps, getkey(key))
+	}
 }
 
 // Values returns all the values of the map.
