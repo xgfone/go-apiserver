@@ -24,6 +24,8 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+
+	"github.com/xgfone/go-apiserver/tools/maps"
 )
 
 // URL is the metadata information of the http endpoint.
@@ -36,14 +38,6 @@ type URL struct {
 	Path     string            `json:"path,omitempty"`     // Such as "/"
 	Queries  map[string]string `json:"queries,omitempty"`
 	Headers  map[string]string `json:"headers,omitempty"`
-}
-
-func clonemap(ms map[string]string) map[string]string {
-	_ms := make(map[string]string)
-	for k, v := range ms {
-		_ms[k] = v
-	}
-	return _ms
 }
 
 func map2urlvalues(ms map[string]string) url.Values {
@@ -74,8 +68,8 @@ func map2httpheader(ms map[string]string) http.Header {
 
 // Clone clones itself and returns a new one.
 func (u URL) Clone() URL {
-	u.Queries = clonemap(u.Queries)
-	u.Headers = clonemap(u.Headers)
+	u.Queries = maps.Clone(u.Queries)
+	u.Headers = maps.Clone(u.Headers)
 	return u
 }
 

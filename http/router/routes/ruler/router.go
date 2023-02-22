@@ -30,6 +30,8 @@ import (
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/matcher"
 	"github.com/xgfone/go-apiserver/internal/ruler"
+	"github.com/xgfone/go-apiserver/tools/maps"
+	"github.com/xgfone/go-apiserver/tools/slices"
 )
 
 // DefaultRouter is the default global ruler router.
@@ -106,10 +108,7 @@ func (r *Router) GetRoute(name string) (route Route, ok bool) {
 
 // GetRoutes returns all the registered routes.
 func (r *Router) GetRoutes() (routes Routes) {
-	origs := r.routes.Load().(routesWrapper).Routes
-	routes = make(Routes, len(origs))
-	copy(routes, origs)
-	return
+	return slices.Clone(r.routes.Load().(routesWrapper).Routes)
 }
 
 // AddRoute adds the given route.
@@ -119,13 +118,13 @@ func (r *Router) AddRoute(route Route) (err error) {
 	}
 
 	r.rlock.Lock()
-	if _, ok := r.rmaps[route.Name]; ok {
-		err = fmt.Errorf("the route named '%s' has been added", route.Name)
-	} else {
-		r.rmaps[route.Name] = route
+	if maps.Add(r.rmaps, route.Name, route) {
 		r.updateRoutes()
+	} else {
+		err = fmt.Errorf("the route named '%s' has been added", route.Name)
 	}
 	r.rlock.Unlock()
+
 	return
 }
 
@@ -136,8 +135,7 @@ func (r *Router) DelRoute(name string) (route Route, ok bool) {
 	}
 
 	r.rlock.Lock()
-	if route, ok = r.rmaps[name]; ok {
-		delete(r.rmaps, name)
+	if route, ok = maps.Pop(r.rmaps, name); ok {
 		r.updateRoutes()
 	}
 	r.rlock.Unlock()
@@ -153,10 +151,7 @@ func (r *Router) UpdateRoutes(routes ...Route) (err error) {
 
 	if _len := len(routes); _len > 0 {
 		r.rlock.Lock()
-		for i := 0; i < _len; i++ {
-			route := routes[i]
-			r.rmaps[route.Name] = route
-		}
+		maps.AddSlice(r.rmaps, routes, func(r Route) string { return r.Name })
 		r.updateRoutes()
 		r.rlock.Unlock()
 	}
@@ -170,14 +165,8 @@ func (r *Router) ResetRoutes(routes ...Route) (err error) {
 	}
 
 	r.rlock.Lock()
-	for name := range r.rmaps {
-		delete(r.rmaps, name)
-	}
-
-	for i, _len := 0, len(routes); i < _len; i++ {
-		route := routes[i]
-		r.rmaps[route.Name] = route
-	}
+	maps.Clear(r.rmaps)
+	maps.AddSlice(r.rmaps, routes, func(r Route) string { return r.Name })
 	r.updateRoutes()
 	r.rlock.Unlock()
 	return
@@ -204,10 +193,7 @@ func (r *Router) checkRoute(route Route) error {
 }
 
 func (r *Router) updateRoutes() {
-	routes := make(Routes, 0, len(r.rmaps))
-	for _, route := range r.rmaps {
-		routes = append(routes, route)
-	}
+	routes := Routes(maps.Values(r.rmaps))
 	sort.Stable(routes)
 	r.routes.Store(routesWrapper{Routes: routes})
 }

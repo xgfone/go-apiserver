@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/xgfone/go-apiserver/tls/tlscert"
+	"github.com/xgfone/go-apiserver/tools/maps"
 )
 
 // DefaultManager is the default certificate provider manager.
@@ -71,7 +72,7 @@ func (m *Manager) GetProviders() map[string]Provider {
 	m.lock.RLock()
 	providers := make(map[string]Provider, len(m.providers))
 	for name, provider := range m.providers {
-		providers[name] = provider
+		providers[name] = provider.Provider
 	}
 	m.lock.RUnlock()
 	return providers
@@ -82,9 +83,12 @@ func (m *Manager) GetProviders() map[string]Provider {
 // Return nil if the provider does not exist.
 func (m *Manager) GetProvider(name string) Provider {
 	m.lock.RLock()
-	provider := m.providers[name]
+	provider, ok := m.providers[name]
 	m.lock.RUnlock()
-	return provider
+	if ok {
+		return provider.Provider
+	}
+	return nil
 }
 
 // AddProvider adds the provider named name into the manager.
@@ -116,8 +120,7 @@ func (m *Manager) AddProvider(name string, provider Provider) (err error) {
 // If the provider does not exist, do nothing.
 func (m *Manager) DelProvider(name string) {
 	m.lock.Lock()
-	if provider, ok := m.providers[name]; ok {
-		delete(m.providers, name)
+	if provider, ok := maps.Pop(m.providers, name); ok {
 		provider.CancelFunc()
 	}
 	m.lock.Unlock()

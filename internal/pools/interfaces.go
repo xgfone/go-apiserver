@@ -14,9 +14,7 @@
 
 package pools
 
-import (
-	"sync"
-)
+import "sync"
 
 var (
 	interfacesPool8   = newInterfacesPool(8)

@@ -25,6 +25,17 @@ import (
 
 // GetRequestID is used to get the unique request session id.
 //
+// For the default implementation, it only detects req
+// and supports the types or interfaces:
+//
+//	*reqresp.Context
+//	*http.Request
+//	interface{ GetHTTPRequest() *http.Request }
+//	interface{ GetRequestID() string }
+//	interface{ RequestID() string }
+//
+// For http.Request, it will returns the header "X-Request-Id".
+//
 // Return "" instead if not found.
 var GetRequestID func(ctx context.Context, req interface{}) string = getRequestID
 

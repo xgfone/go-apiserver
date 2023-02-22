@@ -17,6 +17,8 @@ package entrypoint
 import (
 	"fmt"
 	"sync"
+
+	"github.com/xgfone/go-apiserver/tools/maps"
 )
 
 // DefaultManager is the default global entrypoint manager.
@@ -40,10 +42,8 @@ func (m *Manager) AddEntryPoint(ep *EntryPoint) (err error) {
 	}
 
 	m.lock.Lock()
-	if _, ok := m.eps[ep.Name]; ok {
+	if !maps.Add(m.eps, ep.Name, ep) {
 		err = fmt.Errorf("the entrypoint named '%s' has existed", ep.Name)
-	} else {
-		m.eps[ep.Name] = ep
 	}
 	m.lock.Unlock()
 
@@ -55,10 +55,7 @@ func (m *Manager) AddEntryPoint(ep *EntryPoint) (err error) {
 // If the entrypoint does not exist, do nothing and return nil.
 func (m *Manager) DelEntryPoint(name string) *EntryPoint {
 	m.lock.Lock()
-	ep, ok := m.eps[name]
-	if ok {
-		delete(m.eps, name)
-	}
+	ep, _ := maps.Pop(m.eps, name)
 	m.lock.Unlock()
 	return ep
 }
@@ -76,10 +73,7 @@ func (m *Manager) GetEntryPoint(name string) *EntryPoint {
 // GetEntryPoints returns all the entrypoints.
 func (m *Manager) GetEntryPoints() []*EntryPoint {
 	m.lock.RLock()
-	eps := make([]*EntryPoint, 0, len(m.eps))
-	for _, ep := range m.eps {
-		eps = append(eps, ep)
-	}
+	eps := maps.Values(m.eps)
 	m.lock.RUnlock()
 	return eps
 }

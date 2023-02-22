@@ -65,3 +65,24 @@ func ExampleConvertValues() {
 	// a=3
 	// b=4
 }
+
+func ExampleAddSlice() {
+	type Map map[string]int
+	type Slice []int
+
+	maps1 := Map{"a": 1}
+	maps2 := map[string]int{"a": 1}
+	AddSlice(maps1, []int{2}, func(v int) string { return "b" })
+	AddSlice(maps2, Slice{2}, func(v int) string { return "b" })
+
+	fmt.Printf("%s=%v\n", "a", maps1["a"])
+	fmt.Printf("%s=%v\n", "b", maps1["b"])
+	fmt.Printf("%s=%v\n", "a", maps2["a"])
+	fmt.Printf("%s=%v\n", "b", maps2["b"])
+
+	// Output:
+	// a=1
+	// b=2
+	// a=1
+	// b=2
+}

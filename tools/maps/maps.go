@@ -25,6 +25,14 @@ func Add[T ~map[K]V, K comparable, V any](maps T, k K, v V) (ok bool) {
 	return
 }
 
+// AddSlice adds each element of the slices into maps, which gets the key
+// by the fucntion getkey.
+func AddSlice[M ~map[K]V, S ~[]V, K comparable, V any](maps M, slices S, getkey func(V) K) {
+	for _, v := range slices {
+		maps[getkey(v)] = v
+	}
+}
+
 // Pop removes the element by the key and returns the removed value.
 func Pop[T ~map[K]V, K comparable, V any](maps T, k K) (v V, ok bool) {
 	if v, ok = maps[k]; ok {

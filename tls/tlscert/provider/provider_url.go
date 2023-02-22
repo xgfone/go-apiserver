@@ -24,6 +24,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/tls/tlscert"
+	"github.com/xgfone/go-apiserver/tools/maps"
 )
 
 var _ Provider = &URLProvider{}
@@ -47,11 +48,10 @@ type urlCertInfo struct {
 // information from the response body, which is a JSON data with the three keys,
 // "keyPEM" and "certPEM", the values of which is the PEM string, for example,
 //
-//     {
-//         "keyPEM": "-----BEGIN RSA PRIVATE KEY-----......-----END RSA PRIVATE KEY-----",
-//         "certPEM": "-----BEGIN CERTIFICATE-----......-----END CERTIFICATE-----"
-//     }
-//
+//	{
+//	    "keyPEM": "-----BEGIN RSA PRIVATE KEY-----......-----END RSA PRIVATE KEY-----",
+//	    "certPEM": "-----BEGIN CERTIFICATE-----......-----END CERTIFICATE-----"
+//	}
 type URLProvider struct {
 	interval time.Duration
 
@@ -128,8 +128,7 @@ func (p *URLProvider) DelCertURL(name string) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	if _, ok := p.certs[name]; ok {
-		delete(p.certs, name)
+	if maps.Delete(p.certs, name) {
 		select {
 		case p.delch <- name:
 		default:

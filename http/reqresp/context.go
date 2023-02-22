@@ -29,6 +29,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/herrors"
 	"github.com/xgfone/go-apiserver/http/render"
 	"github.com/xgfone/go-apiserver/result"
+	"golang.org/x/exp/maps"
 )
 
 type builder struct{ buf []byte }
@@ -282,13 +283,7 @@ func (c *Context) UpdateError(err error) {
 
 // Reset resets the context itself.
 func (c *Context) Reset() {
-	// Clean the datas.
-	if len(c.Data) > 0 {
-		for key := range c.Data {
-			delete(c.Data, key)
-		}
-	}
-
+	maps.Clear(c.Data)
 	*c = Context{
 		Data:            c.Data,
 		Renderer:        c.Renderer,

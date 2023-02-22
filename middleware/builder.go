@@ -14,7 +14,11 @@
 
 package middleware
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/xgfone/go-apiserver/tools/maps"
+)
 
 var builders = make(map[string]Builder, 16)
 
@@ -29,10 +33,8 @@ func RegisterBuilder(name string, builder Builder) (err error) {
 		panic("the middleware builder is nil")
 	}
 
-	if _, ok := builders[name]; ok {
+	if !maps.Add(builders, name, builder) {
 		err = fmt.Errorf("the middleware builder named '%s' has existed", name)
-	} else {
-		builders[name] = builder
 	}
 
 	return
@@ -47,13 +49,7 @@ func UnregisterBuilder(name string) { delete(builders, name) }
 func GetBuilder(name string) Builder { return builders[name] }
 
 // GetBuilderNames returns the names of all the middleware builders.
-func GetBuilderNames() (names []string) {
-	names = make([]string, 0, len(builders))
-	for name := range builders {
-		names = append(names, name)
-	}
-	return
-}
+func GetBuilderNames() (names []string) { return maps.Keys(builders) }
 
 // Build uses the builder named name to build a middleware named name
 // with the config.

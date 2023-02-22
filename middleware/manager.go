@@ -24,6 +24,7 @@ import (
 	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/tcp"
+	"github.com/xgfone/go-apiserver/tools/maps"
 )
 
 // DefaultManager is the default global middleware manager.
@@ -59,11 +60,7 @@ func (m *Manager) updateHandler(handler interface{}) {
 }
 
 func (m *Manager) updateMiddlewares() {
-	mdws := make(Middlewares, 0, len(m.maps))
-	for _, mw := range m.maps {
-		mdws = append(mdws, mw)
-	}
-
+	mdws := Middlewares(maps.Values(m.maps))
 	sort.Stable(mdws)
 	m.mdws.Store(middlewaresWrapper{mdws})
 	if handler := m.GetHandler(); handler != nil {
@@ -108,22 +105,20 @@ func (m *Manager) Cancel(names ...string) {
 // ResetMiddlewares resets the middlewares.
 func (m *Manager) ResetMiddlewares(mws ...Middleware) {
 	m.lock.Lock()
-	for name := range m.maps {
-		delete(m.maps, name)
-	}
-	for _, mw := range mws {
-		m.maps[mw.Name()] = mw
-	}
+	maps.Clear(m.maps)
+	maps.AddSlice(m.maps, mws, func(mw Middleware) string { return mw.Name() })
 	m.updateMiddlewares()
 	m.lock.Unlock()
 }
 
 // UpsertMiddlewares adds or updates the middlewares.
 func (m *Manager) UpsertMiddlewares(mws ...Middleware) {
-	m.lock.Lock()
-	for _, mw := range mws {
-		m.maps[mw.Name()] = mw
+	if len(mws) == 0 {
+		return
 	}
+
+	m.lock.Lock()
+	maps.AddSlice(m.maps, mws, func(mw Middleware) string { return mw.Name() })
 	m.updateMiddlewares()
 	m.lock.Unlock()
 }
@@ -132,11 +127,10 @@ func (m *Manager) UpsertMiddlewares(mws ...Middleware) {
 func (m *Manager) AddMiddleware(mw Middleware) (err error) {
 	name := mw.Name()
 	m.lock.Lock()
-	if _, ok := m.maps[name]; ok {
-		err = fmt.Errorf("the middleware named '%s' has existed", name)
-	} else {
-		m.maps[name] = mw
+	if maps.Add(m.maps, name, mw) {
 		m.updateMiddlewares()
+	} else {
+		err = fmt.Errorf("the middleware named '%s' has existed", name)
 	}
 	m.lock.Unlock()
 	return
@@ -147,9 +141,8 @@ func (m *Manager) AddMiddleware(mw Middleware) (err error) {
 // If the middleware does not exist, do nothing and return nil.
 func (m *Manager) DelMiddleware(name string) Middleware {
 	m.lock.Lock()
-	mw, ok := m.maps[name]
+	mw, ok := maps.Pop(m.maps, name)
 	if ok {
-		delete(m.maps, name)
 		m.updateMiddlewares()
 	}
 	m.lock.Unlock()

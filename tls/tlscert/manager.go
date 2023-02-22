@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+
+	"github.com/xgfone/go-apiserver/tools/maps"
 )
 
 // DefaultManager is the default certificate manager.
@@ -71,10 +73,7 @@ func (m *Manager) GetUpdater() Updater {
 // GetCertificates returns all the certificates.
 func (m *Manager) GetCertificates() map[string]Certificate {
 	m.clock.RLock()
-	certs := make(map[string]Certificate, len(m.cmaps))
-	for name, cert := range m.cmaps {
-		certs[name] = cert
-	}
+	certs := maps.Clone(m.cmaps)
 	m.clock.RUnlock()
 	return certs
 }
@@ -115,19 +114,14 @@ func (m *Manager) DelCertificate(name string) {
 
 	m.clock.Lock()
 	defer m.clock.Unlock()
-	if _, ok := m.cmaps[name]; ok {
-		delete(m.cmaps, name)
+	if maps.Delete(m.cmaps, name) {
 		m.updateCertificates()
 		m.updaterDelCertificate(name)
 	}
 }
 
 func (m *Manager) updateCertificates() {
-	certs := make([]Certificate, 0, len(m.cmaps))
-	for _, cert := range m.cmaps {
-		certs = append(certs, cert)
-	}
-	m.certs.Store(certsWrapper{certs})
+	m.certs.Store(certsWrapper{maps.Values(m.cmaps)})
 }
 
 // FindCertificate traverses all the certificates and finds the matched certificate.

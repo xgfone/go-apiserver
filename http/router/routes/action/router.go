@@ -22,6 +22,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/result"
+	"github.com/xgfone/go-apiserver/tools/maps"
 )
 
 // HeaderAction represents the http header to store the action method.
@@ -130,10 +131,7 @@ func (r *Router) GetHandler(action string) (handler http.Handler) {
 // GetHandlers returns the handlers of all the actions.
 func (r *Router) GetHandlers() (handlers map[string]http.Handler) {
 	r.alock.RLock()
-	handlers = make(map[string]http.Handler, len(r.amaps))
-	for action, handler := range r.amaps {
-		handlers[action] = handler
-	}
+	handlers = maps.Clone(r.amaps)
 	r.alock.RUnlock()
 	return
 }
@@ -141,10 +139,7 @@ func (r *Router) GetHandlers() (handlers map[string]http.Handler) {
 // GetActions returns the names of all the actions.
 func (r *Router) GetActions() (actions []string) {
 	r.alock.RLock()
-	actions = make([]string, 0, len(r.amaps))
-	for action := range r.amaps {
-		actions = append(actions, action)
-	}
+	actions = maps.Keys(r.amaps)
 	r.alock.RUnlock()
 	return
 }
@@ -175,9 +170,7 @@ func (r *Router) Register(action string, handler http.Handler) (ok bool) {
 	r.checkAction(action, handler)
 
 	r.alock.Lock()
-	_, ok = r.amaps[action]
-	if ok = !ok; ok {
-		r.amaps[action] = handler
+	if maps.Add(r.amaps, action, handler) {
 		r.updateActions()
 	}
 	r.alock.Unlock()
@@ -197,9 +190,7 @@ func (r *Router) Update(actions map[string]http.Handler) {
 	}
 
 	r.alock.Lock()
-	for action, handler := range actions {
-		r.amaps[action] = handler
-	}
+	maps.Copy(r.amaps, actions)
 	r.updateActions()
 	r.alock.Unlock()
 }
@@ -211,13 +202,8 @@ func (r *Router) Reset(actions map[string]http.Handler) {
 	}
 
 	r.alock.Lock()
-	for action := range r.amaps {
-		delete(r.amaps, action)
-	}
-
-	for action, handler := range actions {
-		r.amaps[action] = handler
-	}
+	maps.Clear(r.amaps)
+	maps.Copy(r.amaps, actions)
 	r.updateActions()
 	r.alock.Unlock()
 }
@@ -229,8 +215,7 @@ func (r *Router) Unregister(action string) (ok bool) {
 	}
 
 	r.alock.Lock()
-	if _, ok = r.amaps[action]; ok {
-		delete(r.amaps, action)
+	if maps.Delete(r.amaps, action) {
 		r.updateActions()
 	}
 	r.alock.Unlock()
@@ -239,11 +224,7 @@ func (r *Router) Unregister(action string) (ok bool) {
 }
 
 func (r *Router) updateActions() {
-	actions := make(map[string]http.Handler, len(r.amaps))
-	for action, handler := range r.amaps {
-		actions[action] = handler
-	}
-	r.actions.Store(actionsWrapper{actions: actions})
+	r.actions.Store(actionsWrapper{actions: maps.Clone(r.amaps)})
 }
 
 func (r *Router) checkAction(action string, handler http.Handler) {

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/log"
+	"github.com/xgfone/go-apiserver/tools/maps"
 	"github.com/xgfone/go-apiserver/upstream"
 )
 
@@ -324,18 +325,14 @@ func (hc *HealthChecker) RemoveServer(serverID string) {
 	}
 
 	hc.slock.Lock()
-	if sc, ok := hc.servers[serverID]; ok {
-		delete(hc.servers, serverID)
-		hc.slock.Unlock()
-
+	sc, ok := maps.Pop(hc.servers, serverID)
+	hc.slock.Unlock()
+	if ok {
+		sc.Stop()
 		hc.updaters.Range(func(_, value interface{}) bool {
 			value.(Updater).RemoveServer(serverID)
 			return true
 		})
-
-		sc.Stop()
-	} else {
-		hc.slock.Unlock()
 	}
 }
 

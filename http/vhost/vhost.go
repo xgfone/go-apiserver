@@ -25,6 +25,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/matcher"
+	"github.com/xgfone/go-apiserver/tools/maps"
 )
 
 const (
@@ -131,10 +132,7 @@ func (m *Manager) getReqHost(r *http.Request) string {
 }
 
 func (m *Manager) updateVHosts() {
-	vhosts := make(vhosts, 0, len(m.vhosts))
-	for _, vhost := range m.vhosts {
-		vhosts = append(vhosts, vhost)
-	}
+	vhosts := vhosts(maps.Values(m.vhosts))
 	sort.Stable(vhosts)
 	m.handler.Store(vhostsWrapper{vhosts: vhosts})
 }
@@ -179,11 +177,10 @@ func (m *Manager) AddVHost(vhost string, handler http.Handler) (err error) {
 	vh := newVHost(vhost, handler)
 
 	m.lock.Lock()
-	if _, ok := m.vhosts[vhost]; ok {
-		err = fmt.Errorf("vhost '%s' has been added", vhost)
-	} else {
-		m.vhosts[vhost] = vh
+	if maps.Add(m.vhosts, vhost, vh) {
 		m.updateVHosts()
+	} else {
+		err = fmt.Errorf("vhost '%s' has been added", vhost)
 	}
 	m.lock.Unlock()
 
@@ -199,12 +196,12 @@ func (m *Manager) DelVHost(vhost string) (handler http.Handler) {
 	}
 
 	m.lock.Lock()
-	if vh, ok := m.vhosts[vhost]; ok {
+	if vh, ok := maps.Pop(m.vhosts, vhost); ok {
 		handler = vh.Handler
-		delete(m.vhosts, vhost)
 		m.updateVHosts()
 	}
 	m.lock.Unlock()
+
 	return
 }
 

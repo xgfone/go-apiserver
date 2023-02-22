@@ -19,6 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/xgfone/go-apiserver/tools/maps"
 	"github.com/xgfone/go-apiserver/upstream"
 )
 
@@ -122,13 +123,11 @@ func (m *serversManager) ResetServers(servers ...upstream.Server) {
 	m.slock.Lock()
 	defer m.slock.Unlock()
 
-	allservers := make(map[string]*upserver, len(servers))
+	maps.Clear(m.servers)
 	for i, _len := 0, len(servers); i < _len; i++ {
 		server := servers[i]
-		allservers[server.ID()] = newUpServer(server)
+		m.servers[server.ID()] = newUpServer(server)
 	}
-
-	m.servers = allservers
 	m.updateServers()
 }
 

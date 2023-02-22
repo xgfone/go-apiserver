@@ -24,6 +24,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/tls/tlscert"
+	"github.com/xgfone/go-apiserver/tools/maps"
 )
 
 type fileInfo struct {
@@ -75,10 +76,7 @@ func NewFileProvider(interval time.Duration) *FileProvider {
 // GetCertNames returns the names of all the file certificates.
 func (p *FileProvider) GetCertNames() []string {
 	p.lock.RLock()
-	names := make([]string, 0, len(p.certs))
-	for name := range p.certs {
-		names = append(names, name)
-	}
+	names := maps.Keys(p.certs)
 	p.lock.RUnlock()
 	return names
 }
@@ -129,8 +127,7 @@ func (p *FileProvider) DelCertFile(name string) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	if _, ok := p.certs[name]; ok {
-		delete(p.certs, name)
+	if maps.Delete(p.certs, name) {
 		select {
 		case p.delch <- name:
 		default:
