@@ -84,17 +84,17 @@ func ExampleLastIndex() {
 	// 3
 }
 
-func ExampleEqual() {
+func ExampleSetEqual() {
 	s1 := []string{"a", "b", "c"}
 	s2 := []string{"b", "c", "a"}
 	s3 := []string{"a", "b", "b"}
-	if Equal(s1, s2) {
+	if SetEqual(s1, s2) {
 		fmt.Printf("%v is equal to %v\n", s1, s2)
 	} else {
 		fmt.Printf("%v is not equal to %v\n", s1, s2)
 	}
 
-	if Equal(s1, s3) {
+	if SetEqual(s1, s3) {
 		fmt.Printf("%v is equal to %v\n", s1, s3)
 	} else {
 		fmt.Printf("%v is not equal to %v\n", s1, s3)

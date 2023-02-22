@@ -41,7 +41,7 @@ func TestCertificate(t *testing.T) {
 		t.Errorf("expect CN '%s', but got '%s'", CertCN, cn)
 	}
 
-	if !slices.Equal(cert.DNSNames, CertDNSNames) {
+	if !slices.SetEqual(cert.DNSNames, CertDNSNames) {
 		t.Errorf("expect DNS '%v', but got '%v'", CertDNSNames, cert.DNSNames)
 	}
 

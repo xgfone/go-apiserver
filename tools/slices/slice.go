@@ -75,8 +75,24 @@ func LastIndexFunc[T ~[]E, E any](vs T, equal func(E) bool) int {
 	return -1
 }
 
-// Equal reports whether the element set of the two slices are equal.
+// Equal reports whether the element and order of the two slices are equal.
 func Equal[T ~[]E, E comparable](vs1, vs2 T) bool {
+	len1 := len(vs1)
+	if len1 != len(vs2) {
+		return false
+	}
+
+	for i := 0; i < len1; i++ {
+		if vs1[i] != vs2[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+// SetEqual reports whether the element set of the two slices are equal.
+func SetEqual[T ~[]E, E comparable](vs1, vs2 T) bool {
 	len1 := len(vs1)
 	if len1 != len(vs2) {
 		return false
