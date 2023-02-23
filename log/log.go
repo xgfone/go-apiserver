@@ -17,14 +17,12 @@ package log
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
 
 	"github.com/xgfone/go-apiserver/helper"
-	"github.com/xgfone/go-apiserver/internal/writer"
 	"github.com/xgfone/go-apiserver/tools/io2"
 	"github.com/xgfone/go-atexit"
 	"golang.org/x/exp/slog"
@@ -61,26 +59,6 @@ type (
 	// Attr represents a key-value pair.
 	Attr = slog.Attr
 )
-
-// NewFileWriter returns a new file writer that rotates the log files
-// based on the file size.
-//
-// filesize is parsed as the log file size, which maybe have a unit suffix,
-// such as "123", "123M, 123G". Valid size units contain "b", "B", "k", "K",
-// "m", "M", "g", "G", "t", "T", "p", "P", "e", "E". The lower units are 1000x,
-// and the upper units are 1024x.
-func NewFileWriter(filepath, filesize string, filenum int) (io.WriteCloser, error) {
-	if filepath == "" {
-		return nil, errors.New("the log filepath must not be empty")
-	}
-
-	size, err := writer.ParseSize(filesize)
-	if err != nil {
-		return nil, err
-	}
-
-	return writer.NewSizedRotatingFile(filepath, int(size), filenum), nil
-}
 
 // NewJSONHandler returns a new json handler.
 //
