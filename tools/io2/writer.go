@@ -20,7 +20,37 @@ import (
 	"sync/atomic"
 )
 
-var _ io.WriteCloser = new(SwitchWriter)
+var (
+	_ io.WriteCloser = new(SwitchWriter)
+	_ io.WriteCloser = new(SafeWriter)
+)
+
+// RunWriter executes the function f with the writer w.
+// If w has implemented the interface { Run(func(io.Writer)) },
+// call the Run method with f instead.
+func RunWriter(w io.Writer, f func(io.Writer)) {
+	if wr, ok := w.(interface{ Run(func(io.Writer)) }); ok {
+		wr.Run(f)
+	} else {
+		f(w)
+	}
+}
+
+// SyncWriter calls the Sync method if w has implemented the interface
+// { Sync() error }, or call the Run method to finish to sync if w has
+// implemented the interface { Run(func(io.Writer)) }.
+// Or, do nothing and return nil.
+func SyncWriter(w io.Writer) (err error) {
+	switch _w := w.(type) {
+	case interface{ Sync() error }:
+		err = _w.Sync()
+
+	case interface{ Run(func(io.Writer)) }:
+		_w.Run(func(w io.Writer) { err = SyncWriter(w) })
+	}
+
+	return
+}
 
 type wrappedWriter struct{ io.Writer }
 
