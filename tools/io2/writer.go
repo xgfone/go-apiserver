@@ -37,13 +37,16 @@ func RunWriter(w io.Writer, f func(io.Writer)) {
 }
 
 // SyncWriter calls the Sync method if w has implemented the interface
-// { Sync() error }, or call the Run method to finish to sync if w has
-// implemented the interface { Run(func(io.Writer)) }.
+// { Sync() error } or { Flush() error }, or call the Run method to finish
+// to sync if w has implemented the interface { Run(func(io.Writer)) }.
 // Or, do nothing and return nil.
 func SyncWriter(w io.Writer) (err error) {
 	switch _w := w.(type) {
 	case interface{ Sync() error }:
 		err = _w.Sync()
+
+	case interface{ Flush() error }:
+		err = _w.Flush()
 
 	case interface{ Run(func(io.Writer)) }:
 		_w.Run(func(w io.Writer) { err = SyncWriter(w) })
