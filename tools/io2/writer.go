@@ -32,6 +32,9 @@ type SwitchWriter struct {
 
 // NewSwitchWriter returns a new SwitchWriter with w.
 func NewSwitchWriter(w io.Writer) *SwitchWriter {
+	if w == nil {
+		panic("SwitchWriter: io.Writer is nil")
+	}
 	sw := new(SwitchWriter)
 	sw.w.Store(wrappedWriter{w})
 	return sw
@@ -45,6 +48,20 @@ func (w *SwitchWriter) Write(b []byte) (int, error) {
 // Close implements the interface io.Closer.
 func (w *SwitchWriter) Close() error {
 	return Close(w.w)
+}
+
+// Sync calls the Sync method if the inner writer has implemented the interface
+// { Sync() error }. Or, do nothing and return nil.
+func (w *SwitchWriter) Sync() error {
+	if ws, ok := w.Get().(interface{ Sync() error }); ok {
+		return ws.Sync()
+	}
+	return nil
+}
+
+// Run executes the function f with the inner writer.
+func (w *SwitchWriter) Run(f func(io.Writer)) {
+	f(w.Get())
 }
 
 // Get returns the wrapped writer.
