@@ -20,7 +20,7 @@ import "golang.org/x/exp/constraints"
 // Max returns the maximum element of the slice.
 //
 // Return ZERO instead if the slice is empty.
-func Max[T ~[]E, E constraints.Ordered](vs T) E {
+func Max[S ~[]E, E constraints.Ordered](vs S) E {
 	switch _len := len(vs); _len {
 	case 0:
 		var v E
@@ -43,7 +43,7 @@ func Max[T ~[]E, E constraints.Ordered](vs T) E {
 // Min returns the minimum element of the slice.
 //
 // Return ZERO instead if the slice is empty.
-func Min[T ~[]E, E constraints.Ordered](vs T) E {
+func Min[S ~[]E, E constraints.Ordered](vs S) E {
 	switch _len := len(vs); _len {
 	case 0:
 		var v E
@@ -64,7 +64,7 @@ func Min[T ~[]E, E constraints.Ordered](vs T) E {
 }
 
 // Convert converts the slice from []E1 to []E2.
-func Convert[T1 ~[]E1, E1, E2 any](vs T1, convert func(E1) E2) []E2 {
+func Convert[S1 ~[]E1, E1, E2 any](vs S1, convert func(E1) E2) []E2 {
 	newslice := make([]E2, len(vs))
 	for i, e := range vs {
 		newslice[i] = convert(e)
@@ -75,12 +75,12 @@ func Convert[T1 ~[]E1, E1, E2 any](vs T1, convert func(E1) E2) []E2 {
 // Clone clones the slice and returns the new.
 //
 // NOTICE: it is a shallow clone.
-func Clone[T ~[]E, E any](slice T) T {
+func Clone[S ~[]E, E any](slice S) S {
 	if slice == nil {
 		return nil
 	}
 
-	newslice := make(T, len(slice))
+	newslice := make(S, len(slice))
 	copy(newslice, slice)
 	return newslice
 }
@@ -94,7 +94,7 @@ func Merge[S1 ~[]E1, S2 ~[]E2, E1, E2 any](dst S1, src S2, convert func(E2) E1) 
 }
 
 // Index returns the first index where v is in vs, or -1.
-func Index[T ~[]E, E comparable](vs T, v E) int {
+func Index[S ~[]E, E comparable](vs S, v E) int {
 	for i, e := range vs {
 		if e == v {
 			return i
@@ -104,7 +104,7 @@ func Index[T ~[]E, E comparable](vs T, v E) int {
 }
 
 // LastIndex returns the last index where v is in vs, or -1.
-func LastIndex[T ~[]E, E comparable](vs T, v E) int {
+func LastIndex[S ~[]E, E comparable](vs S, v E) int {
 	for _len := len(vs) - 1; _len >= 0; _len-- {
 		if vs[_len] == v {
 			return _len
@@ -114,7 +114,7 @@ func LastIndex[T ~[]E, E comparable](vs T, v E) int {
 }
 
 // LastIndexFunc returns the last index i satisfying equal(vs[i]), or -1.
-func LastIndexFunc[T ~[]E, E any](vs T, equal func(E) bool) int {
+func LastIndexFunc[S ~[]E, E any](vs S, equal func(E) bool) int {
 	for _len := len(vs) - 1; _len >= 0; _len-- {
 		if equal(vs[_len]) {
 			return _len
@@ -124,7 +124,7 @@ func LastIndexFunc[T ~[]E, E any](vs T, equal func(E) bool) int {
 }
 
 // Equal reports whether the element and order of the two slices are equal.
-func Equal[T ~[]E, E comparable](vs1, vs2 T) bool {
+func Equal[S ~[]E, E comparable](vs1, vs2 S) bool {
 	len1 := len(vs1)
 	if len1 != len(vs2) {
 		return false
@@ -140,7 +140,7 @@ func Equal[T ~[]E, E comparable](vs1, vs2 T) bool {
 }
 
 // SetEqual reports whether the element set of the two slices are equal.
-func SetEqual[T ~[]E, E comparable](vs1, vs2 T) bool {
+func SetEqual[S ~[]E, E comparable](vs1, vs2 S) bool {
 	len1 := len(vs1)
 	if len1 != len(vs2) {
 		return false
@@ -156,7 +156,7 @@ func SetEqual[T ~[]E, E comparable](vs1, vs2 T) bool {
 }
 
 // Contains reports whether the slice vs contains the value v.
-func Contains[T ~[]E, E comparable](vs T, v E) bool {
+func Contains[S ~[]E, E comparable](vs S, v E) bool {
 	for i, _len := 0, len(vs); i < _len; i++ {
 		if vs[i] == v {
 			return true
@@ -166,7 +166,7 @@ func Contains[T ~[]E, E comparable](vs T, v E) bool {
 }
 
 // Reverse reverses the elements in the slice.
-func Reverse[T ~[]E, E any](vs T) {
+func Reverse[S ~[]E, E any](vs S) {
 	_len := len(vs) - 1
 	if _len <= 0 {
 		return
@@ -179,7 +179,7 @@ func Reverse[T ~[]E, E any](vs T) {
 }
 
 // ToInterfaces converts []any to []interface{}.
-func ToInterfaces[T ~[]E, E any](vs T) []interface{} {
+func ToInterfaces[S ~[]E, E any](vs S) []interface{} {
 	is := make([]interface{}, len(vs))
 	for i, _len := 0, len(vs); i < _len; i++ {
 		is[i] = vs[i]

@@ -5,7 +5,7 @@
 package slices
 
 // IndexFunc returns the first index i satisfying equal(vs[i]), or -1.
-func IndexFunc[T ~[]E, E any](vs T, equal func(E) bool) int {
+func IndexFunc[S ~[]E, E any](vs S, equal func(E) bool) int {
 	for i, e := range vs {
 		if equal(e) {
 			return i
