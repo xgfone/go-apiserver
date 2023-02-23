@@ -27,6 +27,10 @@ import (
 //
 // If w is nil, use Writer instead.
 func NewJSONHandler(w io.Writer, level Leveler) slog.Handler {
+	if w == nil {
+		w = Writer
+	}
+
 	return slog.HandlerOptions{
 		Level:       level,
 		AddSource:   true,
@@ -40,6 +44,8 @@ func replaceSourceAttr(groups []string, a slog.Attr) slog.Attr {
 	}
 	return a
 }
+
+var _ slog.Handler = new(SwitchHandler)
 
 type handlerWrapper struct{ Handler slog.Handler }
 
