@@ -133,6 +133,11 @@ func (f *SizedRotatingFile) Close() (err error) {
 	return
 }
 
+// Sync is equal to Flush to flush the data to the underlying disk.
+func (f *SizedRotatingFile) Sync() (err error) {
+	return f.Flush()
+}
+
 // Flush flushes the data to the underlying disk.
 func (f *SizedRotatingFile) Flush() (err error) {
 	if f.file != nil {
