@@ -16,10 +16,30 @@ package log
 
 import (
 	"context"
+	"io"
 	"sync/atomic"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"golang.org/x/exp/slog"
 )
+
+// NewJSONHandler returns a new json handler.
+//
+// If w is nil, use Writer instead.
+func NewJSONHandler(w io.Writer, level Leveler) slog.Handler {
+	return slog.HandlerOptions{
+		Level:       level,
+		AddSource:   true,
+		ReplaceAttr: replaceSourceAttr,
+	}.NewJSONHandler(w)
+}
+
+func replaceSourceAttr(groups []string, a slog.Attr) slog.Attr {
+	if a.Key == slog.SourceKey {
+		a.Value = slog.StringValue(helper.TrimPkgFile(a.Value.String()))
+	}
+	return a
+}
 
 type handlerWrapper struct{ Handler slog.Handler }
 
