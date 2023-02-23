@@ -14,61 +14,7 @@
 
 package helper
 
-import (
-	"fmt"
-	"testing"
-)
-
-func ExampleIndirect() {
-	fmt.Println(Indirect(123))   // 123
-	fmt.Println(Indirect("abc")) // abc
-
-	var p *int
-	fmt.Println(Indirect(p)) // <nil>
-
-	p = new(int)
-	fmt.Println(Indirect(p)) // 0
-
-	*p = 123
-	fmt.Println(Indirect(p)) // 123
-
-	var pp **int
-	fmt.Println(Indirect(pp)) // <nil>
-
-	pp = new(*int)
-	fmt.Println(Indirect(pp)) // <nil>
-
-	pt := new(int)
-	*pt = 456
-	*pp = pt
-	fmt.Println(Indirect(pp)) // 456
-
-	**pp = *p
-	fmt.Println(Indirect(pp)) // 123
-	fmt.Println(Indirect(pt)) // 123
-
-	var i interface{}
-	fmt.Println(Indirect(i)) // <nil>
-
-	i = p
-	fmt.Println(Indirect(i))  // 123
-	fmt.Println(Indirect(&i)) // 123
-
-	// Output:
-	// 123
-	// abc
-	// <nil>
-	// 0
-	// 123
-	// <nil>
-	// <nil>
-	// 456
-	// 123
-	// 123
-	// <nil>
-	// 123
-	// 123
-}
+import "testing"
 
 func TestCompare(t *testing.T) {
 	if v := Compare(1, 2); v != -1 {

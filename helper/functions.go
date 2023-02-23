@@ -51,6 +51,33 @@ func Indirect(value interface{}) interface{} {
 	}
 }
 
+// Unwrap unwraps the inner value of v with ok==true if v has implemented
+// the interface { Unwrap() T } or { Get() T }.
+// Or, assert v to T and return it with ok==false instead.
+func Unwrap[T any](v interface{}) (inner T, ok bool) {
+	switch _v := v.(type) {
+	case interface{ Get() T }:
+		return _v.Get(), true
+
+	case interface{ Unwrap() T }:
+		return _v.Unwrap(), true
+
+	default:
+		return v.(T), false
+	}
+}
+
+// UnwrapAll is the same as Unwrap, but unwraps the innest value of v.
+func UnwrapAll[T any](v interface{}) T {
+	for {
+		if t, ok := Unwrap[T](v); ok {
+			v = t
+		} else {
+			return t
+		}
+	}
+}
+
 // Compare compares left and right and returns
 //
 //	 0 if left == right
