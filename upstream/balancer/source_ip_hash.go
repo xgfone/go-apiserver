@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/nets"
@@ -31,18 +32,36 @@ func init() {
 }
 
 // GetSourceAddr is used to get the source addr, which is used by SourceIPHash.
-var GetSourceAddr = getSourceAddr
+//
+// For the default implementation, supports the types of req:
+//
+//	*http.Request
+//	*reqresp.Context
+//	interface{ RemoteAddr() string }
+//	interface{ RemoteAddr() net.IP }
+//	interface{ RemoteAddr() net.Addr }
+//	interface{ RemoteAddr() netip.Addr }
+var GetSourceAddr func(req interface{}) (netip.Addr, error) = getSourceAddr
 
-func getSourceAddr(req interface{}) string {
+func getSourceAddr(req interface{}) (addr netip.Addr, err error) {
 	switch v := req.(type) {
 	case *reqresp.Context:
-		return v.RemoteAddr
+		return netip.ParseAddr(v.RemoteAddr)
 
 	case *http.Request:
-		return v.RemoteAddr
+		return netip.ParseAddr(v.RemoteAddr)
+
+	case interface{ RemoteAddr() string }:
+		return netip.ParseAddr(v.RemoteAddr())
+
+	case interface{ RemoteAddr() net.IP }:
+		return nets.ToAddr(v.RemoteAddr()), nil
 
 	case interface{ RemoteAddr() net.Addr }:
-		return v.RemoteAddr().String()
+		return netip.ParseAddr(v.RemoteAddr().String())
+
+	case interface{ RemoteAddr() netip.Addr }:
+		return v.RemoteAddr(), nil
 
 	default:
 		panic(fmt.Errorf("GetSourceAddr: unknown type %T", req))
@@ -62,13 +81,21 @@ func SourceIPHash() Balancer {
 				return ss[0].Serve(c, r)
 			}
 
+			ip, err := GetSourceAddr(r)
+			if err != nil {
+				return err
+			}
+
 			var value uint64
-			host, _ := nets.SplitHostPort(GetSourceAddr(r))
-			switch ip := net.ParseIP(host); len(ip) {
-			case net.IPv4len:
-				value = uint64(binary.BigEndian.Uint32(ip))
-			case net.IPv6len:
-				value = binary.BigEndian.Uint64(ip[8:16])
+			switch ip.BitLen() {
+			case 32:
+				b4 := ip.As4()
+				value = uint64(binary.BigEndian.Uint32(b4[:]))
+
+			case 128:
+				b16 := ip.As16()
+				value = binary.BigEndian.Uint64(b16[8:16])
+
 			default:
 				value = uint64(random(_len))
 			}
