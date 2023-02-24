@@ -25,6 +25,18 @@ func NowLocal() time.Time { return Now().Local() }
 // NowUTC returns the now UTC time.
 func NowUTC() time.Time { return Now().UTC() }
 
+// StopTimer stops the timer.
+func StopTimer(timer *time.Timer) {
+	if timer != nil {
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
+	}
+}
+
 // StopTicker stops the time ticker.
 func StopTicker(ticker *time.Ticker) {
 	if ticker != nil {
