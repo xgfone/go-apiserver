@@ -16,6 +16,9 @@ package helper
 
 import "time"
 
+// Now is used to customize the time Now.
+var Now = time.Now
+
 // StopTicker stops the time ticker.
 func StopTicker(ticker *time.Ticker) {
 	if ticker != nil {

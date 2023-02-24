@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,36 +14,7 @@
 
 package helper
 
-import (
-	"reflect"
-	"time"
-
-	"golang.org/x/exp/constraints"
-)
-
-// Now is used to customize the time Now.
-var Now = time.Now
-
-// Indirect returns the underlying value of the pointer or interface
-// if the input value is a pointer or interface. Or, return the input.
-//
-// Return nil if the input value is a pointer(nil), or interface(nil).
-func Indirect(value interface{}) interface{} {
-	if value == nil {
-		return nil
-	}
-
-	switch vf := reflect.ValueOf(value); vf.Kind() {
-	case reflect.Pointer, reflect.Interface:
-		if vf.IsNil() {
-			return nil
-		}
-		return Indirect(vf.Elem().Interface())
-
-	default:
-		return value
-	}
-}
+import "golang.org/x/exp/constraints"
 
 // Unwrap unwraps the inner value of v with ok==true if v has implemented
 // the interface { Unwrap() T } or { Get() T }.

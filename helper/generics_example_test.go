@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,16 @@ func (g getter) Get() string     { return string(g) }
 func (w wrapper) Unwrap() string { return string(w) }
 
 func ExampleUnwrap() {
+	/*
+		type (
+			getter  string
+			wrapper string
+		)
+
+		func (g getter) Get() string     { return string(g) }
+		func (w wrapper) Unwrap() string { return string(w) }
+	*/
+
 	s, ok := Unwrap[string](getter("a"))
 	fmt.Println(s, ok)
 
@@ -44,4 +54,17 @@ func ExampleUnwrap() {
 	// b true
 	// c false
 	// panic: interface conversion: interface {} is int, not string
+}
+
+func ExampleUnwrapAll() {
+	err1 := fmt.Errorf("err1")
+	err2 := fmt.Errorf("err2: %w", err1)
+	err3 := fmt.Errorf("err3: %w", err2)
+	err4 := fmt.Errorf("err4: %w", err3)
+
+	err := UnwrapAll[error](err4)
+	fmt.Println(err)
+
+	// Output:
+	// err1
 }

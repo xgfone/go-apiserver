@@ -22,6 +22,27 @@ func IsPointer(kind interface{ Kind() reflect.Kind }) bool {
 	return kind.Kind() == reflect.Pointer
 }
 
+// Indirect returns the underlying value of the pointer or interface
+// if the input value is a pointer or interface. Or, return the input.
+//
+// Return nil if the input value is a pointer(nil), or interface(nil).
+func Indirect(value interface{}) interface{} {
+	if value == nil {
+		return nil
+	}
+
+	switch vf := reflect.ValueOf(value); vf.Kind() {
+	case reflect.Pointer, reflect.Interface:
+		if vf.IsNil() {
+			return nil
+		}
+		return Indirect(vf.Elem().Interface())
+
+	default:
+		return value
+	}
+}
+
 // Implements reports whether the value has implemented the interface iface.
 //
 // The type of value and iface may be one of reflect.Type and reflect.Value.
