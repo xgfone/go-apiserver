@@ -20,16 +20,22 @@ import (
 )
 
 func TestMax(t *testing.T) {
-	v := Max([]int{3, 2, 5, 4, 1})
-	if v != 5 {
+	if v := Max([]int{3, 2, 5, 4, 1}); v != 5 {
 		t.Errorf("expect 5, but got %v", v)
+	}
+
+	if v := Max([]int{}); v != 0 {
+		t.Errorf("expect 0, but got %v", v)
 	}
 }
 
 func TestMin(t *testing.T) {
-	v := Min([]int{3, 2, 5, 4, 1})
-	if v != 1 {
+	if v := Min([]int{3, 2, 5, 4, 1}); v != 1 {
 		t.Errorf("expect 1, but got %v", v)
+	}
+
+	if v := Min([]int{}); v != 0 {
+		t.Errorf("expect 0, but got %v", v)
 	}
 }
 
