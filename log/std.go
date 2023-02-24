@@ -44,8 +44,8 @@ func (w *handlerWriter) Write(buf []byte) (int, error) {
 		buf = buf[:len(buf)-1]
 	}
 
-	r := slog.NewRecord(time.Now(), w.level, string(buf), callerPC(5), nil)
-	return origLen, w.handler.Handle(r)
+	r := slog.NewRecord(time.Now(), w.level, string(buf), callerPC(5))
+	return origLen, w.handler.Handle(nil, r)
 }
 
 // callerPC returns the program counter at the given stack depth.

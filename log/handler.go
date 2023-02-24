@@ -81,8 +81,8 @@ func (h *SwitchHandler) Enabled(c context.Context, l Level) bool {
 }
 
 // Handle implements the interface slog.Handler#Handle.
-func (h *SwitchHandler) Handle(r slog.Record) error {
-	return h.Get().Handle(r)
+func (h *SwitchHandler) Handle(c context.Context, r slog.Record) error {
+	return h.Get().Handle(c, r)
 }
 
 // WithAttrs implements the interface slog.Handler#WithAttrs.
