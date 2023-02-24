@@ -19,6 +19,12 @@ import "time"
 // Now is used to customize the time Now.
 var Now = time.Now
 
+// NowLocal returns the now local time.
+func NowLocal() time.Time { return Now().Local() }
+
+// NowUTC returns the now UTC time.
+func NowUTC() time.Time { return Now().UTC() }
+
 // StopTicker stops the time ticker.
 func StopTicker(ticker *time.Ticker) {
 	if ticker != nil {
