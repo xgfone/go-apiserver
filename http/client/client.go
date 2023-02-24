@@ -69,6 +69,9 @@ func NewClient(client *http.Client) *Client {
 	return c
 }
 
+// Unwrap is the alias of GetHTTPClient.
+func (c *Client) Unwrap() *http.Client { return c.GetHTTPClient() }
+
 // GetHTTPClient implements the interface Getter to get the http.Client.
 func (c *Client) GetHTTPClient() *http.Client {
 	return c.httpClient.Load().(*http.Client)
