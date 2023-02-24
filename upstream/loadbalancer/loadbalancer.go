@@ -36,9 +36,6 @@ type (
 	discoveryWrapper struct{ upstream.ServerDiscovery }
 )
 
-// ErrorHandler is used to handle the error of forwarding the request.
-type ErrorHandler func(context.Context, *LoadBalancer, interface{}, error)
-
 // LoadBalancer is used to forward the http request to one of the backend servers.
 type LoadBalancer struct {
 	name      string
@@ -46,8 +43,8 @@ type LoadBalancer struct {
 	balancer  atomic.Value
 	discovery atomic.Value
 
-	svrManager  *serversManager
-	handleError ErrorHandler
+	svrManager *serversManager
+	httpError  func(*LoadBalancer, *reqresp.Context, error)
 }
 
 // NewLoadBalancer returns a new LoadBalancer to forward the http request.
@@ -59,7 +56,7 @@ func NewLoadBalancer(name string, balancer balancer.Balancer) *LoadBalancer {
 	lb := &LoadBalancer{name: name, svrManager: newServersManager()}
 	lb.balancer.Store(balancerWrapper{balancer})
 	lb.discovery.Store(discoveryWrapper{})
-	lb.SetErrorHandler(nil)
+	lb.SetHTTPErrorHandler(nil)
 	return lb
 }
 
@@ -107,25 +104,24 @@ func (lb *LoadBalancer) SwapServerDiscovery(new upstream.ServerDiscovery) (old u
 	return
 }
 
-// SetErrorHandler sets the error handler to handle the error of forwarding
-// the request, so it may be used to log the request.
+// SetHTTPErrorHandler sets the error handler to handle the error of forwarding
+// the http request, so it may be used to log the request.
 //
 // If handler is equal to nil, reset it to the default.
-func (lb *LoadBalancer) SetErrorHandler(handler ErrorHandler) {
+func (lb *LoadBalancer) SetHTTPErrorHandler(handler func(*LoadBalancer, *reqresp.Context, error)) {
 	if handler == nil {
-		lb.handleError = handleError
+		lb.httpError = handleHTTPError
 	} else {
-		lb.handleError = handler
+		lb.httpError = handler
 	}
 }
 
-func handleError(ctx context.Context, lb *LoadBalancer, req interface{}, err error) {
-	c := req.(*reqresp.Context)
+func handleHTTPError(lb *LoadBalancer, c *reqresp.Context, err error) {
 	switch err {
 	case nil:
 		if log.Enabled(log.LevelDebug) {
 			log.Debug("forward the http request",
-				"requestid", upstream.GetRequestID(ctx, req),
+				"requestid", upstream.GetRequestID(c.Context(), c.Request),
 				"upstream", lb.name,
 				"balancer", lb.GetBalancer().Policy(),
 				"clientaddr", c.RemoteAddr,
@@ -147,7 +143,7 @@ func handleError(ctx context.Context, lb *LoadBalancer, req interface{}, err err
 	}
 
 	log.Error("fail to forward the http request",
-		"requestid", upstream.GetRequestID(ctx, req),
+		"requestid", upstream.GetRequestID(c.Context(), c.Request),
 		"upstream", lb.name,
 		"balancer", lb.GetBalancer().Policy(),
 		"clientaddr", c.RemoteAddr,
@@ -167,7 +163,7 @@ func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		c.Request = reqresp.SetContext(r, c)
 		defer reqresp.DefaultContextAllocator.Release(c)
 	}
-	lb.handleError(c.Context(), lb, c, lb.Serve(c.Context(), c))
+	lb.httpError(lb, c, lb.Serve(c.Context(), c))
 }
 
 // Serve implement the interface upstream.Server#Serve,
