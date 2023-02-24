@@ -161,14 +161,6 @@ func (ss Servers) Less(i, j int) bool {
 	}
 }
 
-// UnwrapServer unwraps the innest upsteam server.
-func UnwrapServer(server Server) Server {
-	if w, ok := server.(ServerWrapper); ok {
-		UnwrapServer(w.Unwrap())
-	}
-	return server
-}
-
 // GetServerWeight returns the weight of the server if it has implements
 // the interface WeightedServer. Or, check whether it has implemented
 // the interface ServerWrapper and unwrap it.
