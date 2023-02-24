@@ -53,6 +53,9 @@ type SetterFunc func(*http.Client)
 // SetHTTPClient implements the interface Setter.
 func (f SetterFunc) SetHTTPClient(c *http.Client) { f(c) }
 
+// DefaultClient is the default global http client.
+var DefaultClient = NewClient(http.DefaultClient)
+
 // Client is used to maintain the http.Client thread-safely.
 type Client struct {
 	httpClient atomic.Value
