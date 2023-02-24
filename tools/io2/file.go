@@ -21,10 +21,10 @@ import (
 	"github.com/xgfone/go-apiserver/internal/writer"
 )
 
-// NewFileWriter returns a new file writer that rotates the log files
-// based on the file size.
+// NewFileWriter returns a new file writer that rotates the files
+// based on the file size, which is used as the log writer.
 //
-// filesize is parsed as the log file size, which maybe have a unit suffix,
+// filesize is parsed as the file size, which maybe have a unit suffix,
 // such as "123", "123M, 123G". Valid size units contain "b", "B", "k", "K",
 // "m", "M", "g", "G", "t", "T", "p", "P", "e", "E". The lower units are 1000x,
 // and the upper units are 1024x.
