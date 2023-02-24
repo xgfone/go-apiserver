@@ -24,12 +24,6 @@ import (
 // Now is used to customize the time Now.
 var Now = time.Now
 
-// ScannerFunc is a scanner function.
-type ScannerFunc func(src interface{}) error
-
-// Scan implements the interface sql.Scanner.
-func (f ScannerFunc) Scan(src interface{}) error { return f(src) }
-
 // Indirect returns the underlying value of the pointer or interface
 // if the input value is a pointer or interface. Or, return the input.
 //
