@@ -122,7 +122,7 @@ func TestManager(t *testing.T) {
 
 	rec4 = httptest.NewRecorder()
 	m.SetDefaultVHost(nil)
-	m.HandleHTTP = func(w http.ResponseWriter, _ *http.Request, _ http.Handler) {
+	m.HandleHTTP = func(w http.ResponseWriter, _ *http.Request, _ string, _ http.Handler) {
 		w.WriteHeader(205)
 	}
 	m.ServeHTTP(rec4, req4)

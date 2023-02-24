@@ -104,10 +104,11 @@ type Manager struct {
 	// HandleHTTP is used to wrap the matched virtual host to decide
 	// how to handle the request.
 	//
-	// Notice: If h is nil, it indicates that no virtual host matches the request.
+	// If handler is nil, it indicates that no virtual host matches the request.
+	// If vhost is empty and handler is not nil, it indicates to use the default vhost.
 	//
 	// Default: h.ServeHTTP(w, r) or handler.Handler404.ServeHTTP(w, r)
-	HandleHTTP func(w http.ResponseWriter, r *http.Request, h http.Handler)
+	HandleHTTP func(w http.ResponseWriter, r *http.Request, vhost string, handler http.Handler)
 
 	lock   sync.RWMutex
 	vhosts map[string]vhost
@@ -137,9 +138,9 @@ func (m *Manager) updateVHosts() {
 	m.handler.Store(vhostsWrapper{vhosts: vhosts})
 }
 
-func (m *Manager) handlerHTTP(w http.ResponseWriter, r *http.Request, h http.Handler) {
+func (m *Manager) handlerHTTP(w http.ResponseWriter, r *http.Request, vhost string, h http.Handler) {
 	if m.HandleHTTP != nil {
-		m.HandleHTTP(w, r, h)
+		m.HandleHTTP(w, r, vhost, h)
 	} else if h != nil {
 		h.ServeHTTP(w, r)
 	} else {
@@ -149,14 +150,24 @@ func (m *Manager) handlerHTTP(w http.ResponseWriter, r *http.Request, h http.Han
 
 // ServeHTTP implements the interface http.Handler.
 func (m *Manager) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	if vhost, handler, ok := m.MatchHost(m.getReqHost(r)); ok {
+		m.handlerHTTP(rw, r, vhost, handler)
+	} else {
+		m.handlerHTTP(rw, r, "", m.GetDefaultVHost())
+	}
+}
+
+// MatchHost matches the host with vhosts and returns the matched vhost and handler.
+//
+// If no vhost matches the host, return ("", nil, false).
+func (m *Manager) MatchHost(host string) (vhost string, handler http.Handler, ok bool) {
 	vhosts := m.handler.Load().(vhostsWrapper).vhosts
 	for i, _len := 0, len(vhosts); i < _len; i++ {
-		if vhosts[i].MatchHost(m.getReqHost(r)) {
-			m.handlerHTTP(rw, r, vhosts[i].Handler)
-			return
+		if vhosts[i].MatchHost(host) {
+			return vhosts[i].VHost, vhosts[i].Handler, true
 		}
 	}
-	m.handlerHTTP(rw, r, m.GetDefaultVHost())
+	return
 }
 
 // GetDefaultVHost returns the default virtual host and handler.
