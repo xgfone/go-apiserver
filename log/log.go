@@ -59,6 +59,14 @@ type (
 	Attr = slog.Attr
 )
 
+var _ Leveler = LevelFunc(nil)
+
+// LevelFunc is a function to return the log level.
+type LevelFunc func() int
+
+// Level implements the interface Leveler to get the log level.
+func (f LevelFunc) Level() Level { return Level(f()) }
+
 // SetDefault is used to set default global logger with the handler.
 func SetDefault(ctx context.Context, handler slog.Handler, atts ...slog.Attr) {
 	if len(atts) > 0 {
