@@ -194,7 +194,10 @@ func (h HandlerWithError) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handleContextResult(c)
 }
 
-var _ ResponseWriter = &Context{}
+var (
+	_ ResponseWriter = new(Context)
+	_ ContextGetter  = new(Context)
+)
 
 // ContextGetter is used to get the Context from the http request or response.
 type ContextGetter interface {
@@ -266,11 +269,11 @@ func (c *Context) GetContext(http.ResponseWriter, *http.Request) *Context {
 	return c
 }
 
-// GetHTTPRequest returns the http.Request.
-func (c *Context) GetHTTPRequest() *http.Request { return c.Request }
+// GetRequest returns the http.Request.
+func (c *Context) GetRequest() *http.Request { return c.Request }
 
-// GetHTTPResponseWriter returns the http.ResponseWriter.
-func (c *Context) GetHTTPResponseWriter() http.ResponseWriter { return c.ResponseWriter }
+// GetResponse returns the http.ResponseWriter.
+func (c *Context) GetResponse() http.ResponseWriter { return c.ResponseWriter }
 
 // UpdateError updates the context error.
 func (c *Context) UpdateError(err error) {
