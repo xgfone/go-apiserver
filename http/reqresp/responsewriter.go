@@ -41,25 +41,6 @@ func ErrIsStatusCode(err error, statusCode int) bool {
 	return false
 }
 
-// Unwrap unwraps the innest wrapped http ResponseWriter.
-//
-// If rw has not implemented the interface WrappedResponseWriter, return itself.
-func Unwrap(rw http.ResponseWriter) http.ResponseWriter {
-	for {
-		ww, ok := rw.(WrappedResponseWriter)
-		if !ok {
-			return rw
-		}
-		rw = ww.Unwrap()
-	}
-}
-
-// WrappedResponseWriter is used to unwrap the wrapped http.ResponseWriter.
-type WrappedResponseWriter interface {
-	Unwrap() http.ResponseWriter
-	http.ResponseWriter
-}
-
 // StatusCodeGetter is an interface used to get the status code.
 type StatusCodeGetter interface {
 	StatusCode() int
@@ -135,12 +116,18 @@ func (rw *responseWriter) WriteString(s string) (n int, err error) {
 }
 
 // NewResponseWriter returns a new ResponseWriter from http.ResponseWriter.
+//
+// NOTICE: The returned ResponseWriter has also implemented the interface
+// { Unwrap() http.ResponseWriter }.
 func NewResponseWriter(w http.ResponseWriter) ResponseWriter {
 	return NewResponseWriterWithWriteResponse(w, nil)
 }
 
 // NewResponseWriterWithWriteFunc returns a new ResponseWriter
 // from http.ResponseWriter with the wrapped write function.
+//
+// NOTICE: The returned ResponseWriter has also implemented the interface
+// { Unwrap() http.ResponseWriter }.
 func NewResponseWriterWithWriteFunc(w http.ResponseWriter, f func([]byte) (int, error)) ResponseWriter {
 	return NewResponseWriterWithWriteResponse(w, func(w http.ResponseWriter, b []byte) (int, error) {
 		return f(b)
@@ -149,6 +136,9 @@ func NewResponseWriterWithWriteFunc(w http.ResponseWriter, f func([]byte) (int, 
 
 // NewResponseWriterWithWriteResponse returns a new ResponseWriter
 // from http.ResponseWriter with the wrapped write function.
+//
+// NOTICE: The returned ResponseWriter has also implemented the interface
+// { Unwrap() http.ResponseWriter }.
 func NewResponseWriterWithWriteResponse(w http.ResponseWriter,
 	write func(http.ResponseWriter, []byte) (int, error)) ResponseWriter {
 	switch rw := w.(type) {

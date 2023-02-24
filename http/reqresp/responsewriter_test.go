@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/xgfone/go-apiserver/helper"
 )
 
 func wrapHandler(next http.HandlerFunc) http.HandlerFunc {
@@ -48,9 +50,19 @@ func TestResponseWriter(t *testing.T) {
 		t.Errorf("expect the response body '%s', but got '%s'", "201", body)
 	}
 
-	if w, ok := NewResponseWriter(rec).(WrappedResponseWriter); !ok {
-		t.Error("expect WrappedResponseWriter")
+	rw := NewResponseWriter(rec)
+	if w, ok := rw.(interface{ Unwrap() http.ResponseWriter }); !ok {
+		t.Error("expect wrapped ResponseWriter")
 	} else if r, ok := w.Unwrap().(*httptest.ResponseRecorder); !ok {
+		t.Error("expect httptest.ResponseRecorder")
+	} else if r != rec {
+		t.Error("unexpected httptest.ResponseRecorder")
+	}
+
+	if _, ok := helper.Unwrap[http.ResponseWriter](rw); !ok {
+		t.Error("expect WrappedResponseWriter")
+	}
+	if r, ok := helper.UnwrapAll[http.ResponseWriter](rw).(*httptest.ResponseRecorder); !ok {
 		t.Error("expect httptest.ResponseRecorder")
 	} else if r != rec {
 		t.Error("unexpected httptest.ResponseRecorder")
