@@ -109,15 +109,22 @@ func Enabled(ctx context.Context, level Level) bool {
 	return slog.Default().Handler().Enabled(ctx, level)
 }
 
+var disableTime bool
+
 // emit is used to emit the log.
 func emit(skipStackDepth int, level Level, msg string, kvs ...interface{}) {
 	if !Enabled(context.Background(), level) {
 		return
 	}
 
+	var now time.Time
+	if !disableTime {
+		now = helper.Now()
+	}
+
 	var pcs [1]uintptr
-	runtime.Callers(skipStackDepth+1, pcs[:])
-	r := slog.NewRecord(time.Now(), level, msg, pcs[0])
+	runtime.Callers(skipStackDepth+2, pcs[:])
+	r := slog.NewRecord(now, level, msg, pcs[0])
 	r.Add(kvs...)
 	slog.Default().Handler().Handle(context.Background(), r)
 }
