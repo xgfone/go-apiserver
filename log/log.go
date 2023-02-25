@@ -18,6 +18,7 @@ package log
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"runtime"
@@ -68,6 +69,31 @@ type LevelFunc func() int
 
 // Level implements the interface Leveler to get the log level.
 func (f LevelFunc) Level() Level { return Level(f()) }
+
+// NewJSONHandler returns a new json handler.
+//
+// If w is nil, use Writer instead.
+func NewJSONHandler(w io.Writer, level Leveler) slog.Handler {
+	if w == nil {
+		w = Writer
+	}
+
+	return slog.HandlerOptions{
+		Level:       level,
+		AddSource:   true,
+		ReplaceAttr: replaceSourceAttr,
+	}.NewJSONHandler(w)
+}
+
+func replaceSourceAttr(groups []string, a slog.Attr) slog.Attr {
+	if a.Key == slog.SourceKey {
+		a.Value = slog.StringValue(helper.TrimPkgFile(a.Value.String()))
+	}
+	return a
+}
+
+// GetHandler returns the handler of the default logger.
+func GetHandler() slog.Handler { return slog.Default().Handler() }
 
 // SetDefault is used to set default global logger with the handler.
 func SetDefault(handler slog.Handler, atts ...slog.Attr) {
