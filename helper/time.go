@@ -14,7 +14,10 @@
 
 package helper
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // Now is used to customize the time Now.
 var Now = time.Now
@@ -68,23 +71,36 @@ func TimeAdd(t time.Time, years, months, days, hours, minutes, seconds int) time
 	return t
 }
 
-// MustParseTime is the same as time.ParseInLocation, but panics if failed.
+// MustParseTime is the same as time.ParseInLocation, but in turn tries
+// to use the layout in layouts to parse value and panics if failed.
 //
-// If layout is empty, use time.RFC3339 instead.
 // If loc is nil, use time.UTC instead.
-func MustParseTime(layout, value string, loc *time.Location) time.Time {
-	if layout == "" {
-		layout = time.RFC3339
-	}
-
+// If layouts is empty, try to use []string{time.RFC3339Nano, time.DateTime} instead.
+func MustParseTime(value string, loc *time.Location, layouts ...string) time.Time {
 	if loc == nil {
 		loc = time.UTC
 	}
 
-	t, err := time.ParseInLocation(layout, value, loc)
+	var t time.Time
+	var err error
+
+	if len(layouts) == 0 {
+		t, err = tryParseTime(value, loc, time.RFC3339Nano, "2006-01-02 15:04:05")
+	} else {
+		t, err = tryParseTime(value, loc, layouts...)
+	}
+
 	if err != nil {
 		panic(err)
 	}
-
 	return t
+}
+
+func tryParseTime(v string, loc *time.Location, layouts ...string) (time.Time, error) {
+	for _, layout := range layouts {
+		if t, err := time.ParseInLocation(layout, v, loc); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("invalid time '%s'", v)
 }
