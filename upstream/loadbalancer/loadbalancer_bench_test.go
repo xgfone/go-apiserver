@@ -47,7 +47,7 @@ func (s *testServer) Serve(c context.Context, r interface{}) error {
 func newTestServer(ip string) *testServer { return &testServer{ip: ip} }
 
 func BenchmarkLoadBalancer(b *testing.B) {
-	log.SetDefault(nil, log.NewJSONHandler(io.Discard, nil))
+	log.SetDefault(log.NewJSONHandler(io.Discard, nil))
 	lb := NewLoadBalancer("test", balancer.Random())
 	lb.ResetServers(newTestServer("127.0.0.1"), newTestServer("127.0.0.2"))
 

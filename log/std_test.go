@@ -24,7 +24,7 @@ import (
 
 func TestStdLogger(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	SetDefault(nil, NewJSONHandler(buf, nil), slog.String("ctxkey", "ctxvalue"))
+	SetDefault(NewJSONHandler(buf, nil), slog.String("ctxkey", "ctxvalue"))
 
 	// Emit the log by the std log.Logger
 	StdLogger("stdlog: ", slog.LevelError).Printf("msg")

@@ -45,7 +45,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 
 	return middleware.NewMiddleware("logger", priority, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !log.Enabled(log.LevelInfo) {
+			if !log.Enabled(r.Context(), log.LevelInfo) {
 				h.(http.Handler).ServeHTTP(w, r)
 				return
 			}

@@ -23,7 +23,7 @@ import (
 
 func ExampleLogger() {
 	// Set the default global logger.
-	SetDefault(nil, NewJSONHandler(os.Stdout, nil), slog.String("ctxkey", "ctxvalue"))
+	SetDefault(NewJSONHandler(os.Stdout, nil), slog.String("ctxkey", "ctxvalue"))
 
 	// Log the message by the key-value log functions.
 	Debug("log msg")

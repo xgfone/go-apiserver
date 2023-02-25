@@ -34,7 +34,7 @@ func testHandleBusiness() {
 
 func TestWrapPanic(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	SetDefault(nil, NewJSONHandler(buf, nil))
+	SetDefault(NewJSONHandler(buf, nil))
 	testHandleBusiness()
 
 	expects := []string{

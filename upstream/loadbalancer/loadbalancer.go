@@ -119,7 +119,7 @@ func (lb *LoadBalancer) SetHTTPErrorHandler(handler func(*LoadBalancer, *reqresp
 func handleHTTPError(lb *LoadBalancer, c *reqresp.Context, err error) {
 	switch err {
 	case nil:
-		if log.Enabled(log.LevelDebug) {
+		if log.Enabled(c.Context(), log.LevelDebug) {
 			log.Debug("forward the http request",
 				"requestid", upstream.GetRequestID(c.Context(), c.Request),
 				"upstream", lb.name,

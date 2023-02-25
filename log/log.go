@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
+	"time"
 
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/tools/io2"
@@ -68,28 +70,30 @@ type LevelFunc func() int
 func (f LevelFunc) Level() Level { return Level(f()) }
 
 // SetDefault is used to set default global logger with the handler.
-func SetDefault(ctx context.Context, handler slog.Handler, atts ...slog.Attr) {
+func SetDefault(handler slog.Handler, atts ...slog.Attr) {
 	if len(atts) > 0 {
 		handler = handler.WithAttrs(atts)
 	}
-
-	logger := slog.New(handler)
-	if ctx != nil {
-		logger = logger.WithContext(ctx)
-	}
-
 	log.SetFlags(log.Lshortfile | log.Llongfile)
-	slog.SetDefault(logger)
+	slog.SetDefault(slog.New(handler))
 }
 
 // Enabled reports whether the level is enabled.
-func Enabled(level Level) bool {
-	return slog.Default().Enabled(level)
+func Enabled(ctx context.Context, level Level) bool {
+	return slog.Default().Handler().Enabled(ctx, level)
 }
 
 // emit is used to emit the log.
 func emit(skipStackDepth int, level Level, msg string, kvs ...interface{}) {
-	slog.Default().LogDepth(skipStackDepth+1, level, msg, kvs...)
+	if !Enabled(context.Background(), level) {
+		return
+	}
+
+	var pcs [1]uintptr
+	runtime.Callers(skipStackDepth+1, pcs[:])
+	r := slog.NewRecord(time.Now(), level, msg, pcs[0])
+	r.Add(kvs...)
+	slog.Default().Handler().Handle(context.Background(), r)
 }
 
 // Log emits a log with the given level.

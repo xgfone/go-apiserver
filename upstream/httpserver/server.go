@@ -196,7 +196,7 @@ func getStaticStatus(s upstream.Server) upstream.ServerStatus {
 
 func handleRequest(client *http.Client, req *http.Request) (*http.Response, error) {
 	resp, err := client.Do(req)
-	if log.Enabled(log.LevelTrace) {
+	if log.Enabled(req.Context(), log.LevelTrace) {
 		log.Trace("forward the http request",
 			"requestid", upstream.GetRequestID(req.Context(), req),
 			"method", req.Method, "host", req.Host, "url", req.URL.String(),
