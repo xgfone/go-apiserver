@@ -30,6 +30,8 @@ import (
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/matcher"
+	"github.com/xgfone/go-apiserver/http/reqresp"
+	"github.com/xgfone/go-apiserver/http/router/routes/action"
 	"github.com/xgfone/go-apiserver/internal/ruler"
 	"github.com/xgfone/go-apiserver/tools/maps"
 	"github.com/xgfone/go-apiserver/tools/slices"
@@ -225,4 +227,29 @@ func pprofIndex(prefix string) func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set(header.HeaderLocation, path)
 		w.WriteHeader(301)
 	}
+}
+
+// AddRuleRoute adds a route to serve the routes of the current router
+// with the path pathPrefix+"/debug/router/ruler/routes".
+func (r *Router) AddRuleRoute(pathPrefix string) {
+	pathPrefix = strings.TrimRight(pathPrefix, "/")
+	r.Path(pathPrefix + "/debug/router/ruler/routes").GETContextWithError(func(c *reqresp.Context) error {
+		return c.JSON(200, map[string]interface{}{"Routes": r.GetRoutes()})
+	})
+}
+
+// AddActionRoute adds a route to serve the actions of the action router
+// with the path pathPrefix+"/debug/router/action/actions".
+//
+// If the action router is nil, use action.DefaultRouter instead.
+func (r *Router) AddActionRoute(pathPrefix string, router *action.Router) {
+	pathPrefix = strings.TrimRight(pathPrefix, "/")
+	r.Path(pathPrefix + "/debug/router/action/actions").GETContext(func(c *reqresp.Context) {
+		r := router
+		if r == nil {
+			r = action.DefaultRouter
+		}
+
+		c.JSON(200, map[string][]string{"Actions": r.GetActions()})
+	})
 }
