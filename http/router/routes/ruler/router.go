@@ -28,6 +28,7 @@ import (
 	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/http/handler"
+	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/matcher"
 	"github.com/xgfone/go-apiserver/internal/ruler"
 	"github.com/xgfone/go-apiserver/tools/maps"
@@ -212,8 +213,16 @@ func (r *Router) AddProfileRoutes(pathPrefix string) {
 	r.Path(pathPrefix + "/debug/pprof/symbol").GETFunc(pprof.Symbol)
 	r.Path(pathPrefix + "/debug/pprof/trace").GETFunc(pprof.Trace)
 	r.Path(pathPrefix + "/debug/pprof/").GETFunc(pprof.Index)
-	r.Path(pathPrefix + "/debug/pprof").GETFunc(pprof.Index)
+	r.Path(pathPrefix + "/debug/pprof").GETFunc(pprofIndex(pathPrefix))
 	for _, p := range rpprof.Profiles() {
 		r.Path(pathPrefix + "/debug/pprof/" + p.Name()).GET(pprof.Handler(p.Name()))
+	}
+}
+
+func pprofIndex(prefix string) func(w http.ResponseWriter, r *http.Request) {
+	path := prefix + "/debug/pprof/"
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set(header.HeaderLocation, path)
+		w.WriteHeader(301)
 	}
 }

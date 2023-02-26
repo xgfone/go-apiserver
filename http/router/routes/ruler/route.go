@@ -42,7 +42,7 @@ type Route struct {
 	Matcher matcher.Matcher
 
 	// Handler is the handler of the route.
-	http.Handler
+	Handler http.Handler `json:"-"`
 
 	handler http.Handler
 }
