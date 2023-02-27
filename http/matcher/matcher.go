@@ -537,7 +537,8 @@ func headerRegexpMatcher(key, regexpValue string) (Matcher, error) {
 
 func hostMatcher(host string) (Matcher, error) {
 	desc := fmt.Sprintf("Host(`%s`)", host)
-	return New(PriorityHost, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	prio := PriorityHost * 10 * len(host)
+	return New(prio, desc, func(w http.ResponseWriter, r *http.Request) bool {
 		return GetHost(r) == host
 	}), nil
 }
