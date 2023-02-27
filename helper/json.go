@@ -17,7 +17,10 @@ package helper
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"strings"
+
+	"github.com/xgfone/go-apiserver/internal/pools"
 )
 
 // DecodeJSONFromString decodes the json raw string s into dst.
@@ -28,4 +31,36 @@ func DecodeJSONFromString(dst interface{}, s string) error {
 // DecodeJSONFromBytes decodes the json raw bytes s into dst.
 func DecodeJSONFromBytes(dst interface{}, b []byte) error {
 	return json.NewDecoder(bytes.NewReader(b)).Decode(dst)
+}
+
+// EncodeJSON encodes the value by json into w.
+//
+// NOTICE: it does not escape the problematic HTML characters.
+func EncodeJSON(w io.Writer, value interface{}) error {
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	return enc.Encode(value)
+}
+
+// EncodeJSONBytes encodes the value by json to bytes.
+//
+// NOTICE: it does not escape the problematic HTML characters.
+func EncodeJSONBytes(value interface{}) (data []byte, err error) {
+	buf := bytes.NewBuffer(make([]byte, 0, 128))
+	if err = EncodeJSON(buf, value); err == nil {
+		data = buf.Bytes()
+	}
+	return
+}
+
+// EncodeJSONString encodes the value by json to string.
+//
+// NOTICE: it does not escape the problematic HTML characters.
+func EncodeJSONString(value interface{}) (data string, err error) {
+	pool, buf := pools.GetBuffer(128)
+	if err = EncodeJSON(buf, value); err == nil {
+		data = buf.String()
+	}
+	pool.Put(buf)
+	return
 }

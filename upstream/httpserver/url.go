@@ -17,7 +17,6 @@ package httpserver
 import (
 	"context"
 	"crypto/md5"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -25,6 +24,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/tools/maps"
 )
 
@@ -95,8 +95,10 @@ func (u URL) ID() string {
 		host = net.JoinHostPort(host, fmt.Sprint(u.Port))
 	}
 
-	data, _ := json.Marshal(u)
-	fragment := fmt.Sprintf("md5=%x", md5.Sum(data))
+	var fragment string
+	if data, _ := helper.EncodeJSONBytes(u); len(data) > 0 {
+		fragment = fmt.Sprintf("md5=%x", md5.Sum(data))
+	}
 	_url := url.URL{Scheme: u.Scheme, Host: host, Path: u.Path, Fragment: fragment}
 	return _url.String()
 }

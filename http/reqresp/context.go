@@ -16,7 +16,6 @@ package reqresp
 
 import (
 	"context"
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -24,6 +23,7 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/binder"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
@@ -220,11 +220,12 @@ type Context struct {
 
 	// The context information, which will be reset to ZERO after finishing
 	// to handle the request.
-	Err  error                  // Be used to save the context error
-	Reg1 interface{}            // The register to save the temporary context value.
-	Reg2 interface{}            // The register to save the temporary context value.
-	Reg3 interface{}            // The register to save the temporary context value.
-	Data map[string]interface{} // A set of any key-value data
+	Err  error       // Be used to save the context error
+	Reg1 interface{} // The register to save the temporary context value.
+	Reg2 interface{} // The register to save the temporary context value.
+	Reg3 interface{} // The register to save the temporary context value.
+	// As a general rule, the keys starting with "_" are private.
+	Data map[string]interface{} // A set of any key-value pairs
 
 	// The extra context information, which may be used by some middlewares
 	// or services, such as the action router.
@@ -577,7 +578,7 @@ func (c *Context) HTML(code int, format string, args ...interface{}) error {
 // JSON sends a JSON response with the status code.
 func (c *Context) JSON(code int, v interface{}) (err error) {
 	buf := getBuilder()
-	if err = json.NewEncoder(buf).Encode(v); err == nil {
+	if err = helper.EncodeJSON(buf, v); err == nil {
 		c.SetContentType(header.MIMEApplicationJSONCharsetUTF8)
 		c.WriteHeader(code)
 		_, err = buf.WriteTo(c.ResponseWriter)

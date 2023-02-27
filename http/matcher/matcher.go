@@ -28,6 +28,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/nets"
 )
@@ -90,6 +91,11 @@ func Not(matcher Matcher) Matcher { return notMatcher{matcher} }
 
 type andMatcher Matchers
 
+// MarshalJSON implements the interface json.Marshaler.
+func (m andMatcher) MarshalJSON() ([]byte, error) {
+	return helper.EncodeJSONBytes(m.String())
+}
+
 func (m andMatcher) String() string {
 	return formatMatchers(" && ", Matchers(m))
 }
@@ -127,6 +133,11 @@ func And(matchers ...Matcher) Matcher {
 }
 
 type orMatcher Matchers
+
+// MarshalJSON implements the interface json.Marshaler.
+func (m orMatcher) MarshalJSON() ([]byte, error) {
+	return helper.EncodeJSONBytes(m.String())
+}
 
 func (m orMatcher) String() string {
 	return formatMatchers(" || ", Matchers(m))

@@ -15,7 +15,6 @@
 package internal
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/xgfone/go-apiserver/helper"
@@ -35,12 +34,12 @@ func NewOneOf(name string, values ...string) OneOf {
 		panic(fmt.Errorf("%s: the values must be empty", name))
 	}
 
-	bs, err := json.Marshal(values)
+	s, err := helper.EncodeJSONString(values)
 	if err != nil {
 		panic(err)
 	}
 
-	desc := fmt.Sprintf("%s(%s)", name, string(bs[1:len(bs)-1]))
+	desc := fmt.Sprintf("%s(%s)", name, s[1:len(s)-1])
 	return OneOf{name: name, desc: desc, values: values}
 }
 
