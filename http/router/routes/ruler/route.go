@@ -26,7 +26,7 @@ type Routes []Route
 
 func (rs Routes) Len() int           { return len(rs) }
 func (rs Routes) Swap(i, j int)      { rs[i], rs[j] = rs[j], rs[i] }
-func (rs Routes) Less(i, j int) bool { return rs[j].Priority < rs[i].Priority }
+func (rs Routes) Less(i, j int) bool { return rs[j].less(rs[i]) }
 
 // Route is a http request route.
 type Route struct {
@@ -79,4 +79,11 @@ func (r *Route) Use(mws ...middleware.Middleware) {
 	for _len := len(mws) - 1; _len >= 0; _len-- {
 		r.handler = mws[_len].Handler(r.handler).(http.Handler)
 	}
+}
+
+func (r Route) less(o Route) bool {
+	if r.Priority == o.Priority {
+		return r.Name < o.Name
+	}
+	return r.Priority < o.Priority
 }
