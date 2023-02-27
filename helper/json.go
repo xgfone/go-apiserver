@@ -49,6 +49,9 @@ func EncodeJSONBytes(value interface{}) (data []byte, err error) {
 	buf := bytes.NewBuffer(make([]byte, 0, 128))
 	if err = EncodeJSON(buf, value); err == nil {
 		data = buf.Bytes()
+		if _len := len(data); _len > 0 && data[_len-1] == '\n' {
+			data = data[:_len-1]
+		}
 	}
 	return
 }
@@ -60,6 +63,9 @@ func EncodeJSONString(value interface{}) (data string, err error) {
 	pool, buf := pools.GetBuffer(128)
 	if err = EncodeJSON(buf, value); err == nil {
 		data = buf.String()
+		if _len := len(data); _len > 0 && data[_len-1] == '\n' {
+			data = data[:_len-1]
+		}
 	}
 	pool.Put(buf)
 	return
