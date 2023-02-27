@@ -221,6 +221,12 @@ var GetHost = func(r *http.Request) (host string) {
 	return
 }
 
+// GetClientIP is used to get the ip of the client.
+var GetClientIP = func(r *http.Request) (clientip net.IP) {
+	remoteIP, _ := nets.SplitHostPort(r.RemoteAddr)
+	return net.ParseIP(remoteIP)
+}
+
 // Pre-define some matcher priorities.
 const (
 	PriorityHeaderRegexp = 1
@@ -452,8 +458,7 @@ func clientIPMatcher(clientIP string) (Matcher, error) {
 
 	desc := fmt.Sprintf("ClientIP(`%s`)", clientIP)
 	return New(PriorityClientIP, desc, func(_ http.ResponseWriter, r *http.Request) bool {
-		remoteIP, _ := nets.SplitHostPort(r.RemoteAddr)
-		return ipChecker.CheckIP(net.ParseIP(remoteIP))
+		return ipChecker.CheckIP(GetClientIP(r))
 	}), nil
 }
 
