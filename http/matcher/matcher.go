@@ -410,6 +410,14 @@ func newPathMatcher(desc, path string, isPrefix bool) (Matcher, error) {
 		prio = PriorityPathPrefix
 	}
 
+	prefixlen := len(p.rawPath)
+	if len(p.paths) > 0 && p.paths[0].name == "" {
+		prefixlen = len(p.paths[0].path)
+	}
+	if prefixlen > 0 {
+		prio *= prefixlen
+	}
+
 	return New(prio, desc, p.Match), nil
 }
 
