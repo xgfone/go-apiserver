@@ -36,7 +36,7 @@ func TestMatcherRuleBuilder(t *testing.T) {
 	req.RemoteAddr = "1.2.3.4"
 
 	rule = "Method(`GET`, `POST`) && Path(`/path`)"
-	expect = "((Method(`GET`) || Method(`POST`)) && Path(`/path`))"
+	expect = "(Path(`/path`) && (Method(`GET`) || Method(`POST`)))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) && Method(`GET`) && Path(`/path`)"
@@ -56,11 +56,11 @@ func TestMatcherRuleBuilder(t *testing.T) {
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) || Method(`GET`) && Path(`/path`)"
-	expect = "((Path(`/path`) && Method(`GET`)) || Host(`www.example.com`))"
+	expect = "(Host(`www.example.com`) || (Path(`/path`) && Method(`GET`)))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "Host(`www.example.com`) && (Method(`GET`) || Path(`/path`))"
-	expect = "((Path(`/path`) || Method(`GET`)) && Host(`www.example.com`))"
+	expect = "(Host(`www.example.com`) && (Path(`/path`) || Method(`GET`)))"
 	testBuilder(t, rule, expect, req, true)
 
 	rule = "(Host(`www.example.com`) && ClientIP(`1.2.3.4`)) || (Method(`GET`) && Path(`/path`))"
