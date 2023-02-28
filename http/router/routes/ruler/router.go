@@ -110,6 +110,8 @@ func (r *Router) GetRoute(name string) (route Route, ok bool) {
 }
 
 // GetRoutes returns all the registered routes.
+//
+// NOTICE: The returned routes must not be modified.
 func (r *Router) GetRoutes() (routes Routes) {
 	return slices.Clone(r.routes.Load().(routesWrapper).Routes)
 }
@@ -201,14 +203,16 @@ func (r *Router) updateRoutes() {
 	r.routes.Store(routesWrapper{Routes: routes})
 }
 
-// AddVarsRoute adds the route to serve the published vars coming from "expvar".
-func (r *Router) AddVarsRoute(pathPrefix string) {
+// AddDebugVarsRoute adds the debug route to serve the published vars
+// coming from "expvar" with the path pathPrefix+"/debug/vars".
+func (r *Router) AddDebugVarsRoute(pathPrefix string) {
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
 	r.Path(pathPrefix + "/debug/vars").GET(expvar.Handler())
 }
 
-// AddProfileRoutes adds the profile routes coming from "net/http/pprof".
-func (r *Router) AddProfileRoutes(pathPrefix string) {
+// AddDebugProfileRoutes adds the debug profile routes coming from
+// "net/http/pprof" with the path like pathPrefix+"/debug/pprof/XXX".
+func (r *Router) AddDebugProfileRoutes(pathPrefix string) {
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
 	r.Path(pathPrefix + "/debug/pprof/profile").GETFunc(pprof.Profile)
 	r.Path(pathPrefix + "/debug/pprof/cmdline").GETFunc(pprof.Cmdline)
@@ -229,20 +233,20 @@ func pprofIndex(prefix string) func(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// AddRuleRoute adds a route to serve the routes of the current router
+// AddDebugRuleRoute adds a debug route to serve the routes of the current router
 // with the path pathPrefix+"/debug/router/ruler/routes".
-func (r *Router) AddRuleRoute(pathPrefix string) {
+func (r *Router) AddDebugRuleRoute(pathPrefix string) {
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
 	r.Path(pathPrefix + "/debug/router/ruler/routes").GETContextWithError(func(c *reqresp.Context) error {
 		return c.JSON(200, map[string]interface{}{"Routes": r.GetRoutes()})
 	})
 }
 
-// AddActionRoute adds a route to serve the actions of the action router
+// AddDebugActionRoute adds a debug route to serve the actions of the action router
 // with the path pathPrefix+"/debug/router/action/actions".
 //
 // If the action router is nil, use action.DefaultRouter instead.
-func (r *Router) AddActionRoute(pathPrefix string, router *action.Router) {
+func (r *Router) AddDebugActionRoute(pathPrefix string, router *action.Router) {
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
 	r.Path(pathPrefix + "/debug/router/action/actions").GETContext(func(c *reqresp.Context) {
 		r := router

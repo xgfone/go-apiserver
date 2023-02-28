@@ -29,8 +29,8 @@ func init() { AddDefaultRoutes(ruler.DefaultRouter, "", nil) }
 //
 // If action is nil, use action.DefaultRouter instead.
 func AddDefaultRoutes(router *ruler.Router, pathPrefix string, action *action.Router) {
-	router.AddVarsRoute(pathPrefix)
-	router.AddProfileRoutes(pathPrefix)
-	router.AddActionRoute(pathPrefix, action)
-	router.AddRuleRoute(pathPrefix)
+	router.AddDebugVarsRoute(pathPrefix)
+	router.AddDebugProfileRoutes(pathPrefix)
+	router.AddDebugActionRoute(pathPrefix, action)
+	router.AddDebugRuleRoute(pathPrefix)
 }
