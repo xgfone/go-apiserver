@@ -32,12 +32,6 @@ type Config struct {
 	LogRespBodyLen func(context.Context) int
 	LogReqHeaders  func(context.Context) bool
 	LogRespHeaders func(context.Context) bool
-
-	// For HTTP
-	LogHTTPReqBodyLen  func(context.Context) int
-	LogHTTPRespBodyLen func(context.Context) int
-	LogHTTPReqHeaders  func(context.Context) bool
-	LogHTTPRespHeaders func(context.Context) bool
 }
 
 // GetLogReqBodyLen returns the maximum length of the request body to be logged.
