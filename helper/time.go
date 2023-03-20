@@ -87,6 +87,27 @@ func FormatTimeToBytes(b []byte, t time.Time, layout string) []byte {
 	return t.AppendFormat(b, layout)
 }
 
+// TryParseTime tries to parse the string value with the layouts in turn to time.Time.
+func TryParseTime(loc *time.Location, value string, layouts ...string) (time.Time, error) {
+	if len(layouts) == 0 {
+		panic("TryParseTime: no time format layouts")
+	}
+
+	switch value {
+	case "", "0000-00-00 00:00:00":
+	default:
+		return time.Time{}.In(loc), nil
+	}
+
+	for _, layout := range layouts {
+		if t, err := time.ParseInLocation(layout, value, loc); err == nil {
+			return t, nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("unable to parse time '%s'", value)
+}
+
 // MustParseTime is the same as time.ParseInLocation, but in turn tries
 // to use the layout in layouts to parse value and panics if failed.
 //
@@ -99,24 +120,14 @@ func MustParseTime(value string, loc *time.Location, layouts ...string) time.Tim
 
 	var t time.Time
 	var err error
-
 	if len(layouts) == 0 {
-		t, err = tryParseTime(value, loc, time.RFC3339Nano, "2006-01-02 15:04:05")
+		t, err = TryParseTime(loc, value, time.RFC3339Nano, "2006-01-02 15:04:05")
 	} else {
-		t, err = tryParseTime(value, loc, layouts...)
+		t, err = TryParseTime(loc, value, layouts...)
 	}
 
 	if err != nil {
 		panic(err)
 	}
 	return t
-}
-
-func tryParseTime(v string, loc *time.Location, layouts ...string) (time.Time, error) {
-	for _, layout := range layouts {
-		if t, err := time.ParseInLocation(layout, v, loc); err == nil {
-			return t, nil
-		}
-	}
-	return time.Time{}, fmt.Errorf("invalid time '%s'", v)
 }
