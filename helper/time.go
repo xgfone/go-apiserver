@@ -71,6 +71,22 @@ func TimeAdd(t time.Time, years, months, days, hours, minutes, seconds int) time
 	return t
 }
 
+// FormatTimeToString formats time.Time as string.
+func FormatTimeToString(t time.Time, layout string) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format(layout)
+}
+
+// FormatTimeToBytes formats time.Time as []byte.
+func FormatTimeToBytes(b []byte, t time.Time, layout string) []byte {
+	if t.IsZero() {
+		return nil
+	}
+	return t.AppendFormat(b, layout)
+}
+
 // MustParseTime is the same as time.ParseInLocation, but in turn tries
 // to use the layout in layouts to parse value and panics if failed.
 //
