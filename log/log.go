@@ -189,7 +189,7 @@ func Ef(err error, format string, args ...interface{}) {
 	if len(args) > 0 {
 		format = fmt.Sprintf(format, args...)
 	}
-	emit(1, LevelError, format, slog.ErrorKey, err)
+	emit(1, LevelError, format, "err", err)
 }
 
 // Err is the same as Error, but appends the error "err" into kvs.
