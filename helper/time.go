@@ -84,6 +84,9 @@ func FormatTimeToBytes(b []byte, t time.Time, layout string) []byte {
 	if t.IsZero() {
 		return nil
 	}
+	if len(b) == 0 {
+		b = make([]byte, 0, 48)
+	}
 	return t.AppendFormat(b, layout)
 }
 
