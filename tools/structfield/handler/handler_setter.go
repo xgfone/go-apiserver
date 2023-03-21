@@ -22,6 +22,17 @@ import (
 	"github.com/xgfone/go-apiserver/tools/setter"
 )
 
+// NewSetFormatHandler is the same as NewSetterHandler,
+// but asserts the struct field to the interface{ SetFormat(string) }.
+//
+// By default, it is registered into DefaultReflector with the tag name "setfmt".
+func NewSetFormatHandler() Handler {
+	return NewSetterHandler(nil, SimpleRunner(func(vf reflect.Value, arg interface{}) error {
+		vf.Interface().(interface{ SetFormat(string) }).SetFormat(arg.(string))
+		return nil
+	}))
+}
+
 // NewSetterHandler returns a handler to set the struct field to something
 // by the set function, which is registered into DefaultReflector
 // with the tag name "set" and the nil parser and set function by default.

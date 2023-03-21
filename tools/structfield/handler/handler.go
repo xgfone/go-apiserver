@@ -29,6 +29,13 @@ type Parser func(string) (interface{}, error)
 // Runner is the function to handle the struct field.
 type Runner func(interface{}, reflect.Value, reflect.Value, reflect.StructField, interface{}) error
 
+// SimpleRunner converts a simple function to Runner.
+func SimpleRunner(f func(field reflect.Value, arg interface{}) error) Runner {
+	return func(_ interface{}, _, vf reflect.Value, _ reflect.StructField, arg interface{}) error {
+		return f(vf, arg)
+	}
+}
+
 // Parse implements the interface Handler, which does nothing
 // and returns the original string input as the parsed result.
 func (f Runner) Parse(s string) (interface{}, error) { return s, nil }

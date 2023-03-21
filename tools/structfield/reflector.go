@@ -30,6 +30,7 @@ import (
 func init() {
 	Register("validate", handler.NewValidatorHandler(nil))
 	Register("default", handler.NewDefaultHandler())
+	Register("setfmt", handler.NewSetFormatHandler())
 	Register("set", handler.NewSetterHandler(nil, nil))
 }
 
