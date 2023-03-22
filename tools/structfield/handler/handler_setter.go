@@ -23,13 +23,21 @@ import (
 )
 
 // NewSetFormatHandler is the same as NewSetterHandler,
-// but asserts the struct field to the interface{ SetFormat(string) }.
+// but asserts the struct field to the interface { SetFormat(string) }
+// or { SetFormat(string) error }.
 //
 // By default, it is registered into DefaultReflector with the tag name "setfmt".
 func NewSetFormatHandler() Handler {
-	return NewSetterHandler(nil, SimpleRunner(func(vf reflect.Value, arg interface{}) error {
-		vf.Interface().(interface{ SetFormat(string) }).SetFormat(arg.(string))
-		return nil
+	return NewSetterHandler(nil, SimpleRunner(func(vf reflect.Value, arg interface{}) (err error) {
+		switch i := vf.Interface().(type) {
+		case interface{ SetFormat(string) }:
+			i.SetFormat(arg.(string))
+		case interface{ SetFormat(string) error }:
+			err = i.SetFormat(arg.(string))
+		default:
+			panic(fmt.Errorf("%T has not implemented the interface { SetFormat(string) } or { SetFormat(string) error }", i))
+		}
+		return
 	}))
 }
 
