@@ -71,25 +71,6 @@ func TimeAdd(t time.Time, years, months, days, hours, minutes, seconds int) time
 	return t
 }
 
-// FormatTimeToString formats time.Time as string.
-func FormatTimeToString(t time.Time, layout string) string {
-	if t.IsZero() {
-		return ""
-	}
-	return t.Format(layout)
-}
-
-// FormatTimeToBytes formats time.Time as []byte.
-func FormatTimeToBytes(b []byte, t time.Time, layout string) []byte {
-	if t.IsZero() {
-		return nil
-	}
-	if len(b) == 0 {
-		b = make([]byte, 0, 48)
-	}
-	return t.AppendFormat(b, layout)
-}
-
 // TryParseTime tries to parse the string value with the layouts in turn to time.Time.
 func TryParseTime(loc *time.Location, value string, layouts ...string) (time.Time, error) {
 	if len(layouts) == 0 {
