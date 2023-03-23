@@ -281,7 +281,11 @@ func (c *Context) UpdateError(err error) {
 	if UpdateContextError != nil {
 		UpdateContextError(c, err)
 	} else if err != nil {
-		c.Err = err
+		if c.Err == nil {
+			c.Err = err
+		} else {
+			c.Err = fmt.Errorf("%w; %w", c.Err, err)
+		}
 	}
 }
 
