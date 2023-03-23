@@ -28,6 +28,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
 	"github.com/xgfone/go-apiserver/http/render"
+	"github.com/xgfone/go-apiserver/internal/errors2"
 	"github.com/xgfone/go-apiserver/result"
 	"golang.org/x/exp/maps"
 )
@@ -284,7 +285,7 @@ func (c *Context) UpdateError(err error) {
 		if c.Err == nil {
 			c.Err = err
 		} else {
-			c.Err = fmt.Errorf("%w; %w", c.Err, err)
+			c.Err = errors2.Join(c.Err, err)
 		}
 	}
 }
