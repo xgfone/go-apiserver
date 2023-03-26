@@ -18,6 +18,8 @@ package binder
 import (
 	"fmt"
 	"mime/multipart"
+	"net/http"
+	"net/textproto"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -27,13 +29,39 @@ import (
 	"github.com/xgfone/go-apiserver/helper"
 )
 
+// BindStruct is used to bind the dstStruct to srcMap.
+var BindStruct func(dstStruct, srcMap interface{}, tag string) error = bindStruct
+
+func bindStruct(dstStruct, srcMap interface{}, tag string) (err error) {
+	switch ms := srcMap.(type) {
+	case map[string]interface{}:
+		err = BindStructFromMap(dstStruct, tag, ms)
+
+	case map[string]string:
+		err = BindStructFromStringMap(dstStruct, tag, ms)
+
+	case map[string][]string:
+		err = BindStructFromURLValues(dstStruct, tag, ms)
+
+	case url.Values:
+		err = BindStructFromURLValues(dstStruct, tag, ms)
+
+	case http.Header:
+		err = BindStructFromHTTPHeader(dstStruct, tag, ms)
+
+	default:
+		err = fmt.Errorf("binder.BindStruct: unsupport the type %T", srcMap)
+	}
+	return
+}
+
 // Unmarshaler is an interface to unmarshal itself from the string parameter.
 type Unmarshaler interface {
 	UnmarshalBind(string) error
 }
 
-// BindStruct binds the fields of the pointer struct to the values got
-// by the get function that should return one of nil, string, []string
+// BindStructFromFunc binds the fields of the pointer struct to the values
+// got by the get function that should return one of nil, string, []string
 // or []*multipart.FileHeader. For []*multipart.FileHeader, it is only
 //
 // Notice: tag is the name of the struct tag. such as "form", "query", etc.
@@ -63,7 +91,7 @@ type Unmarshaler interface {
 //   - BindUnmarshaler
 //   - *multipart.FileHeader
 //   - []*multipart.FileHeader
-func BindStruct(structptr interface{}, tag string, get func(name string) interface{}) error {
+func BindStructFromFunc(structptr interface{}, tag string, get func(name string) interface{}) error {
 	pvalue := reflect.ValueOf(structptr)
 	if !helper.IsPointer(pvalue) {
 		return fmt.Errorf("%T is not a pointer to struct", structptr)
@@ -79,13 +107,23 @@ func BindStruct(structptr interface{}, tag string, get func(name string) interfa
 
 // BindStructFromMap is the same BindStruct, but use a map instead of a function.
 func BindStructFromMap(structptr interface{}, tag string, data map[string]interface{}) error {
-	return BindStruct(structptr, tag, func(name string) interface{} { return data[name] })
+	return BindStructFromFunc(structptr, tag, func(name string) interface{} { return data[name] })
 }
 
 // BindStructFromStringMap is the same BindStruct, but use a string map instead of a function.
 func BindStructFromStringMap(structptr interface{}, tag string, data map[string]string) error {
-	return BindStruct(structptr, tag, func(name string) interface{} {
+	return BindStructFromFunc(structptr, tag, func(name string) interface{} {
 		if value, ok := data[name]; ok {
+			return value
+		}
+		return nil
+	})
+}
+
+// BindStructFromHTTPHeader is the same BindStruct, but use a map instead of a http.Header.
+func BindStructFromHTTPHeader(structptr interface{}, tag string, data http.Header) error {
+	return BindStructFromFunc(structptr, tag, func(name string) interface{} {
+		if value, ok := data[textproto.CanonicalMIMEHeaderKey(name)]; ok {
 			return value
 		}
 		return nil
@@ -94,7 +132,7 @@ func BindStructFromStringMap(structptr interface{}, tag string, data map[string]
 
 // BindStructFromURLValues is the same BindStruct, but use a map instead of a url.Values.
 func BindStructFromURLValues(structptr interface{}, tag string, data url.Values) error {
-	return BindStruct(structptr, tag, func(name string) interface{} {
+	return BindStructFromFunc(structptr, tag, func(name string) interface{} {
 		if value, ok := data[name]; ok {
 			return value
 		}
@@ -193,12 +231,9 @@ func bindUnmarshaler(kind reflect.Kind, val reflect.Value, value string) (ok boo
 		val = val.Addr()
 	}
 
-	if val.Type().Implements(binderType) {
-		if unmarshaler, ok := val.Interface().(Unmarshaler); ok {
-			return true, unmarshaler.UnmarshalBind(value)
-		}
+	if unmarshaler, ok := val.Interface().(Unmarshaler); ok {
+		return true, unmarshaler.UnmarshalBind(value)
 	}
-
 	return false, nil
 }
 

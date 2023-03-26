@@ -114,7 +114,7 @@ func FormBinder(maxMemory int64) Binder {
 				fhs = r.MultipartForm.File
 			}
 
-			err = binder.BindStruct(v, "form", func(name string) interface{} {
+			err = binder.BindStructFromFunc(v, "form", func(name string) interface{} {
 				if values, ok := r.Form[name]; ok {
 					return values
 				}
