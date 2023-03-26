@@ -141,7 +141,7 @@ func Set(dst, src interface{}) (err error) {
 		err = d.Scan(src)
 
 	default:
-		err = fmt.Errorf("unsupported the dst type %T", dst)
+		err = fmt.Errorf("unsupport to set a value to %T", dst)
 	}
 
 	return
@@ -195,7 +195,7 @@ func convertToBool(i interface{}) (dst bool, err error) {
 	case fmt.Stringer:
 		dst, err = strconv.ParseBool(src.String())
 	default:
-		err = fmt.Errorf("unsupported the dst type %T", dst)
+		err = fmt.Errorf("unsupport to convert %T to bool", i)
 	}
 	return
 }
@@ -219,7 +219,7 @@ func convertToString(i interface{}) (dst string, err error) {
 	case fmt.Stringer:
 		dst = src.String()
 	default:
-		err = fmt.Errorf("unsupported the dst type %T", dst)
+		err = fmt.Errorf("unsupport to convert %T to string", i)
 	}
 	return
 }
@@ -262,7 +262,7 @@ func convertToInt64(i interface{}) (dst int64, err error) {
 	case fmt.Stringer:
 		dst, err = strconv.ParseInt(src.String(), 0, 64)
 	default:
-		err = fmt.Errorf("unsupported the dst type %T", dst)
+		err = fmt.Errorf("unsupport to convert %T to int64", i)
 	}
 	return
 }
@@ -305,7 +305,7 @@ func convertToUint64(i interface{}) (dst uint64, err error) {
 	case fmt.Stringer:
 		dst, err = strconv.ParseUint(src.String(), 0, 64)
 	default:
-		err = fmt.Errorf("unsupported the dst type %T", dst)
+		err = fmt.Errorf("unsupport to convert %T to uint64", i)
 	}
 	return
 }
@@ -348,7 +348,7 @@ func convertToFloat64(i interface{}) (dst float64, err error) {
 	case fmt.Stringer:
 		dst, err = strconv.ParseFloat(src.String(), 64)
 	default:
-		err = fmt.Errorf("unsupported the dst type %T", dst)
+		err = fmt.Errorf("unsupport to convert %T to float64", i)
 	}
 	return
 }
@@ -393,7 +393,7 @@ func convertToDuration(i interface{}) (dst time.Duration, err error) {
 	case fmt.Stringer:
 		dst, err = time.ParseDuration(src.String())
 	default:
-		err = fmt.Errorf("unsupported the dst type %T", dst)
+		err = fmt.Errorf("unsupport to convert %T to time.Duration", i)
 	}
 	return
 }
@@ -420,7 +420,7 @@ func convertToTime(i interface{}) (dst time.Time, err error) {
 	case fmt.Stringer:
 		dst, err = convertStringToTime(src.String())
 	default:
-		err = fmt.Errorf("unsupported the dst type %T", dst)
+		err = fmt.Errorf("unsupport to convert %T to time.Time", i)
 	}
 	return
 }
