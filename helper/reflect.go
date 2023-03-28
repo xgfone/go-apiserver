@@ -22,6 +22,27 @@ func IsPointer(kind interface{ Kind() reflect.Kind }) bool {
 	return kind.Kind() == reflect.Pointer
 }
 
+// FillNilPtr fills the zero value of its base type if value is a pointer
+// and equal to nil. Or, do nothing and return the original value.
+func FillNilPtr(value reflect.Value) reflect.Value {
+	if IsPointer(value) && value.CanSet() && value.IsNil() {
+		value.Set(reflect.New(value.Type().Elem()))
+	}
+	return value
+}
+
+// IndirectValue returns the underlying value of the pointer or interface
+// if the input value is a pointer or interface. Or, return the input.
+func IndirectValue(value reflect.Value) reflect.Value {
+	switch value.Kind() {
+	case reflect.Pointer, reflect.Interface:
+		if !value.IsNil() {
+			value = IndirectValue(value.Elem())
+		}
+	}
+	return value
+}
+
 // Indirect returns the underlying value of the pointer or interface
 // if the input value is a pointer or interface. Or, return the input.
 //
@@ -31,17 +52,12 @@ func Indirect(value interface{}) interface{} {
 		return nil
 	}
 
-	vf, ok := value.(reflect.Value)
-	if !ok {
-		vf = reflect.ValueOf(value)
-	}
-
-	switch vf.Kind() {
+	switch vf := reflect.ValueOf(value); vf.Kind() {
 	case reflect.Pointer, reflect.Interface:
 		if vf.IsNil() {
 			return nil
 		}
-		return Indirect(vf.Elem())
+		return Indirect(vf.Elem().Interface())
 
 	default:
 		return value
@@ -79,25 +95,4 @@ func Implements(value, iface interface{}) bool {
 	}
 
 	return v.Implements(i)
-}
-
-// FillNilPtr fills the zero value of its base type if value is a pointer
-// and equal to nil. Or, do nothing and return the original value.
-func FillNilPtr(value reflect.Value) reflect.Value {
-	if IsPointer(value) && value.CanSet() && value.IsNil() {
-		value.Set(reflect.New(value.Type().Elem()))
-	}
-	return value
-}
-
-// IndirectValue returns the underlying value of the pointer or interface
-// if the input value is a pointer or interface. Or, return the input.
-func IndirectValue(value reflect.Value) reflect.Value {
-	switch value.Kind() {
-	case reflect.Pointer, reflect.Interface:
-		if !value.IsNil() {
-			value = IndirectValue(value.Elem())
-		}
-	}
-	return value
 }
