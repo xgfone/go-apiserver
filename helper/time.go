@@ -79,7 +79,6 @@ func TryParseTime(loc *time.Location, value string, layouts ...string) (time.Tim
 
 	switch value {
 	case "", "0000-00-00 00:00:00", "0000-00-00 00:00:00.000", "0000-00-00 00:00:00.000000":
-	default:
 		return time.Time{}.In(loc), nil
 	}
 
