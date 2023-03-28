@@ -15,6 +15,8 @@
 package binder
 
 import (
+	"fmt"
+	"mime/multipart"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -165,4 +167,37 @@ func TestBindURLValues(t *testing.T) {
 		t.Errorf("expect '%+v', but got '%+v'", result, v)
 		t.Error(*v.Slice1[0], *v.Slice1[1])
 	}
+}
+
+func ExampleBindStructFromMultipartFileHeaders() {
+	src := map[string][]*multipart.FileHeader{
+		"file":  {{Filename: "file"}},
+		"files": {{Filename: "file1"}, {Filename: "file2"}},
+		"_file": {{Filename: "file3"}},
+	}
+
+	var dst struct {
+		Other       string                  `form:"Other"`
+		_File       *multipart.FileHeader   `form:"_file"` // unexported, so ignored
+		FileHeader  *multipart.FileHeader   `form:"file"`
+		FileHeaders []*multipart.FileHeader `form:"files"`
+	}
+
+	err := BindStructFromMultipartFileHeaders(&dst, "form", src)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(dst.FileHeader.Filename)
+		if dst._File != nil {
+			fmt.Println(dst._File.Filename)
+		}
+		for _, fh := range dst.FileHeaders {
+			fmt.Println(fh.Filename)
+		}
+	}
+
+	// Output:
+	// file
+	// file1
+	// file2
 }

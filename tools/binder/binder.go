@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-apiserver/internal/structs"
 )
 
 // BindStruct is used to bind the dstStruct to srcMap.
@@ -138,6 +139,44 @@ func BindStructFromURLValues(structptr interface{}, tag string, data url.Values)
 		}
 		return nil
 	})
+}
+
+// BindStructFromMultipartFileHeaders binds the struct to the multipart form file headers.
+func BindStructFromMultipartFileHeaders(structptr interface{}, tag string, fhs map[string][]*multipart.FileHeader) error {
+	if len(fhs) == 0 {
+		return nil
+	}
+
+	pvalue := reflect.ValueOf(structptr)
+	if pvalue.Kind() != reflect.Pointer {
+		return fmt.Errorf("BindStructFromMultipartFileHeaders: %T is not a pointer", structptr)
+	}
+
+	vvalue := pvalue.Elem()
+	if vvalue.Kind() != reflect.Struct {
+		return fmt.Errorf("BindStructFromMultipartFileHeaders: %T is not a pointer to struct", structptr)
+	}
+
+	stype := vvalue.Type()
+	for name, field := range structs.GetAllFieldsWithTag(stype, tag) {
+		if !field.IsExported() {
+			continue
+		}
+
+		if values := fhs[name]; len(values) > 0 {
+			fieldValue := vvalue.Field(field.Index)
+			switch iface := fieldValue.Interface(); iface.(type) {
+			case *multipart.FileHeader:
+				fieldValue.Set(reflect.ValueOf(values[0]))
+			case []*multipart.FileHeader:
+				fieldValue.Set(reflect.ValueOf(values))
+			default:
+				return fmt.Errorf("BindStructFromMultipartFileHeaders: unsupport to bind %T to []*multipart.FileHeader", iface)
+			}
+		}
+	}
+
+	return nil
 }
 
 func bindValues(val reflect.Value, tag string, get func(string) interface{}) (err error) {

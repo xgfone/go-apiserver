@@ -122,6 +122,12 @@ func Set(dst, src interface{}) (err error) {
 			*d = v
 		}
 
+	case *uintptr:
+		var v uint64
+		if v, err = convertToUint64(src); err == nil {
+			*d = uintptr(v)
+		}
+
 	case *time.Duration:
 		var v time.Duration
 		if v, err = convertToDuration(src); err == nil {

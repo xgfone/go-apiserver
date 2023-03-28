@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
-	"net/url"
 
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
@@ -38,7 +37,7 @@ var (
 	})
 
 	DefaultHeaderBinder Binder = BinderFunc(func(dst interface{}, r *http.Request) error {
-		return binder.BindStructFromURLValues(dst, "header", url.Values(r.Header))
+		return binder.BindStructFromHTTPHeader(dst, "header", r.Header)
 	})
 
 	DefaultValidateFunc = func(v interface{}, r *http.Request) error {
@@ -114,15 +113,10 @@ func FormBinder(maxMemory int64) Binder {
 				fhs = r.MultipartForm.File
 			}
 
-			err = binder.BindStructFromFunc(v, "form", func(name string) interface{} {
-				if values, ok := r.Form[name]; ok {
-					return values
-				}
-				if values, ok := fhs[name]; ok {
-					return values
-				}
-				return nil
-			})
+			err = binder.BindStructFromURLValues(v, "form", r.Form)
+			if err == nil && len(fhs) > 0 {
+				err = binder.BindStructFromMultipartFileHeaders(v, "form", fhs)
+			}
 		}
 
 		return
