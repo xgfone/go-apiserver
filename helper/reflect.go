@@ -31,12 +31,17 @@ func Indirect(value interface{}) interface{} {
 		return nil
 	}
 
-	switch vf := reflect.ValueOf(value); vf.Kind() {
+	vf, ok := value.(reflect.Value)
+	if !ok {
+		vf = reflect.ValueOf(value)
+	}
+
+	switch vf.Kind() {
 	case reflect.Pointer, reflect.Interface:
 		if vf.IsNil() {
 			return nil
 		}
-		return Indirect(vf.Elem().Interface())
+		return Indirect(vf.Elem())
 
 	default:
 		return value
