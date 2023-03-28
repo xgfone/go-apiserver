@@ -19,11 +19,11 @@ import (
 	"strings"
 )
 
-// GetTagFromStructField returns the tag information from the struct field.
+// GetFieldTag returns the tag information from the struct field.
 //
 // If the tag value contains "-", return ("", "", ""). Or, fieldName is not empty.
 // If tagName is not empty, fieldName is equal to tagName. Or, it is equal to sf.Name.
-func GetTagFromStructField(sf reflect.StructField, tag string) (fieldName, tagName, tagArg string) {
+func GetFieldTag(sf reflect.StructField, tag string) (fieldName, tagName, tagArg string) {
 	fieldName = sf.Name
 	if tag == "" {
 		return

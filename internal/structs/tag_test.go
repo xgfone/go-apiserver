@@ -19,7 +19,7 @@ import (
 	"reflect"
 )
 
-func ExampleGetTagFromStructField() {
+func ExampleGetFieldTag() {
 	type T struct {
 		Int   int
 		Int8  int8  `json:""`
@@ -32,7 +32,7 @@ func ExampleGetTagFromStructField() {
 	stype := reflect.TypeOf(T{})
 	for i := 0; i < stype.NumField(); i++ {
 		field := stype.Field(i)
-		fieldName, tagName, tagArg := GetTagFromStructField(field, "json")
+		fieldName, tagName, tagArg := GetFieldTag(field, "json")
 		fmt.Printf("field=%s, tag=%s, arg=%s\n", fieldName, tagName, tagArg)
 	}
 

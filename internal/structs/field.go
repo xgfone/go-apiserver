@@ -16,6 +16,7 @@ package structs
 
 import (
 	"reflect"
+	"strings"
 	"sync"
 )
 
@@ -84,7 +85,7 @@ func GetAllFieldsWithTag(stype reflect.Type, tag string) map[string]Field {
 	fields := make(map[string]Field, _len)
 	for i := 0; i < _len; i++ {
 		field := Field{StructField: stype.Field(i), Index: i}
-		field.FieldName, field.TagName, field.TagArg = GetTagFromStructField(field.StructField, tag)
+		field.FieldName, field.TagName, field.TagArg = GetFieldTag(field.StructField, tag)
 		if len(field.FieldName) > 0 {
 			fields[field.FieldName] = field
 		}
@@ -92,4 +93,58 @@ func GetAllFieldsWithTag(stype reflect.Type, tag string) map[string]Field {
 
 	fieldtypes.Store(key, fields)
 	return fields
+}
+
+// GetFieldValueByName returns the struct field value by the name.
+//
+// fieldName maybe starts with ".".
+func GetFieldValueByName(structValue interface{}, fieldName string) (fieldValue reflect.Value, ok bool) {
+	fieldName = strings.TrimPrefix(fieldName, ".")
+	if fieldName == "" {
+		return
+	}
+
+	var v reflect.Value
+	switch sv := structValue.(type) {
+	case nil:
+		return
+
+	case reflect.Value:
+		v = sv
+
+	default:
+		v = reflect.ValueOf(structValue)
+	}
+
+	switch v.Kind() {
+	case reflect.Struct:
+	case reflect.Pointer:
+		if v.IsNil() {
+			return
+		}
+
+		if v = v.Elem(); v.Kind() != reflect.Struct {
+			return
+		}
+	default:
+		return
+	}
+
+	for len(fieldName) > 0 {
+		name := fieldName
+		index := strings.IndexByte(fieldName, '.')
+		if index < 0 {
+			fieldName = ""
+		} else {
+			name = fieldName[:index]
+			fieldName = fieldName[index+1:]
+		}
+
+		v = v.FieldByName(name)
+		if v == (reflect.Value{}) {
+			return reflect.Value{}, false
+		}
+	}
+
+	return v, true
 }

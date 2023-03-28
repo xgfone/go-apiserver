@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-apiserver/internal/structs"
 )
 
 // StructFieldLess returns a validator to check whether the current value
@@ -43,7 +44,7 @@ func StructFieldLess(fieldName string) Validator {
 			return fmt.Errorf("the context is nil")
 		}
 
-		vf, ok := helper.GetStructFieldByName(ctx, fieldName)
+		vf, ok := structs.GetFieldValueByName(ctx, fieldName)
 		if !ok {
 			panic(fmt.Errorf("the context is not a struct or does not contain the field named '%s'", fieldName))
 		}
@@ -81,7 +82,7 @@ func StructFieldLessEqual(fieldName string) Validator {
 			return fmt.Errorf("the context is nil")
 		}
 
-		vf, ok := helper.GetStructFieldByName(ctx, fieldName)
+		vf, ok := structs.GetFieldValueByName(ctx, fieldName)
 		if !ok {
 			panic(fmt.Errorf("the context is not a struct or does not contain the field named '%s'", fieldName))
 		}
@@ -119,7 +120,7 @@ func StructFieldGreater(fieldName string) Validator {
 			return fmt.Errorf("the context is nil")
 		}
 
-		vf, ok := helper.GetStructFieldByName(ctx, fieldName)
+		vf, ok := structs.GetFieldValueByName(ctx, fieldName)
 		if !ok {
 			panic(fmt.Errorf("the context is not a struct or does not contain the field named '%s'", fieldName))
 		}
@@ -157,7 +158,7 @@ func StructFieldGreaterEqual(fieldName string) Validator {
 			return fmt.Errorf("the context is nil")
 		}
 
-		vf, ok := helper.GetStructFieldByName(ctx, fieldName)
+		vf, ok := structs.GetFieldValueByName(ctx, fieldName)
 		if !ok {
 			panic(fmt.Errorf("the context is not a struct or does not contain the field named '%s'", fieldName))
 		}

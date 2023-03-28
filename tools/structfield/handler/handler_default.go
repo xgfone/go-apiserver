@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-apiserver/internal/structs"
 	"github.com/xgfone/go-apiserver/tools/setter"
 )
 
@@ -79,7 +80,7 @@ func setdefault(_ interface{}, root, fieldptr reflect.Value, sf reflect.StructFi
 			return fmt.Errorf("%s: invalid default value", sf.Name)
 		}
 
-		fieldv, ok := helper.GetStructFieldByName(root, s)
+		fieldv, ok := structs.GetFieldValueByName(root, s)
 		if !ok {
 			panic(fmt.Errorf("not found the struct field '%s'", s))
 		}
