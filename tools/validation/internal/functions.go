@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/xgfone/go-apiserver/helper"
-	"github.com/xgfone/go-apiserver/tools/slices"
+	"github.com/xgfone/go-generics/slices"
 )
 
 // OneOf is used to check whether a value is one of the values.

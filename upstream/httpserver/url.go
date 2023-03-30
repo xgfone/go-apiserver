@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/xgfone/go-apiserver/helper"
-	"github.com/xgfone/go-apiserver/tools/maps"
+	"github.com/xgfone/go-generics/maps"
 )
 
 // URL is the metadata information of the http endpoint.

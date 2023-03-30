@@ -12,60 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package binder provides a common struct binder.
+// Package binder provides a common binder, for example, bind a struct to a map.
 package binder
 
 import (
 	"fmt"
-	"mime/multipart"
-	"net/http"
-	"net/textproto"
-	"net/url"
 	"reflect"
-	"strconv"
-	"strings"
 	"time"
 
-	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/cast"
 	"github.com/xgfone/go-apiserver/internal/structs"
 )
 
-// BindStruct is used to bind the dstStruct to srcMap.
-var BindStruct func(dstStruct, srcMap interface{}, tag string) error = bindStruct
-
-func bindStruct(dstStruct, srcMap interface{}, tag string) (err error) {
-	switch ms := srcMap.(type) {
-	case map[string]interface{}:
-		err = BindStructFromMap(dstStruct, tag, ms)
-
-	case map[string]string:
-		err = BindStructFromStringMap(dstStruct, tag, ms)
-
-	case map[string][]string:
-		err = BindStructFromURLValues(dstStruct, tag, ms)
-
-	case url.Values:
-		err = BindStructFromURLValues(dstStruct, tag, ms)
-
-	case http.Header:
-		err = BindStructFromHTTPHeader(dstStruct, tag, ms)
-
-	default:
-		err = fmt.Errorf("binder.BindStruct: unsupport the type %T", srcMap)
-	}
-	return
-}
-
-// Unmarshaler is an interface to unmarshal itself from the string parameter.
+// Unmarshaler is an interface to unmarshal itself from the parameter.
 type Unmarshaler interface {
-	UnmarshalBind(string) error
+	UnmarshalBind(interface{}) error
 }
 
-// BindStructFromFunc binds the fields of the pointer struct to the values
-// got by the get function that should return one of nil, string, []string
-// or []*multipart.FileHeader. For []*multipart.FileHeader, it is only
+// BindStructFromMap binds the struct to map[string]interface{}.
 //
-// Notice: tag is the name of the struct tag. such as "form", "query", etc.
 // If the tag value is equal to "-", ignore this field.
 //
 // Support the types of the struct fields as follow:
@@ -84,304 +49,272 @@ type Unmarshaler interface {
 //   - string
 //   - float32
 //   - float64
-//   - time.Time     // use time.Time.UnmarshalText(), so only support RFC3339 format
-//   - time.Duration // use time.ParseDuration()
+//   - time.Time
+//   - time.Duration
 //
-// And any pointer to the type above, and
-//
-//   - BindUnmarshaler
-//   - *multipart.FileHeader
-//   - []*multipart.FileHeader
-func BindStructFromFunc(structptr interface{}, tag string, get func(name string) interface{}) error {
-	pvalue := reflect.ValueOf(structptr)
-	if !helper.IsPointer(pvalue) {
-		return fmt.Errorf("%T is not a pointer to struct", structptr)
-	}
-
-	vvalue := pvalue.Elem()
-	if vvalue.Kind() != reflect.Struct {
-		return fmt.Errorf("%T is not a pointer to struct", structptr)
-	}
-
-	return bindValues(vvalue, tag, get)
-}
-
-// BindStructFromMap is the same BindStruct, but use a map instead of a function.
+// And any pointer to the types above, and the interface BindUnmarshaler.
 func BindStructFromMap(structptr interface{}, tag string, data map[string]interface{}) error {
-	return BindStructFromFunc(structptr, tag, func(name string) interface{} { return data[name] })
-}
-
-// BindStructFromStringMap is the same BindStruct, but use a string map instead of a function.
-func BindStructFromStringMap(structptr interface{}, tag string, data map[string]string) error {
-	return BindStructFromFunc(structptr, tag, func(name string) interface{} {
-		if value, ok := data[name]; ok {
-			return value
-		}
-		return nil
+	return bindStruct(structptr, data, func(sf reflect.StructField) (name, arg string) {
+		name, _, arg = structs.GetFieldTag(sf, tag)
+		return
 	})
 }
 
-// BindStructFromHTTPHeader is the same BindStruct, but use a map instead of a http.Header.
-func BindStructFromHTTPHeader(structptr interface{}, tag string, data http.Header) error {
-	return BindStructFromFunc(structptr, tag, func(name string) interface{} {
-		if value, ok := data[textproto.CanonicalMIMEHeaderKey(name)]; ok {
-			return value
-		}
-		return nil
-	})
+func bindStruct(dstptr, src interface{}, getTag func(reflect.StructField) (name, arg string)) (err error) {
+	dstValue := reflect.ValueOf(dstptr)
+	if dstValue.Kind() != reflect.Pointer {
+		return fmt.Errorf("%T must be a pointer to struct", dstptr)
+	} else if dstValue = dstValue.Elem(); dstValue.Kind() != reflect.Struct {
+		return fmt.Errorf("%T must be a pointer to struct", dstptr)
+	}
+
+	return binder{getTag: getTag}.bind(dstValue.Kind(), dstValue, src)
 }
 
-// BindStructFromURLValues is the same BindStruct, but use a map instead of a url.Values.
-func BindStructFromURLValues(structptr interface{}, tag string, data url.Values) error {
-	return BindStructFromFunc(structptr, tag, func(name string) interface{} {
-		if value, ok := data[name]; ok {
-			return value
-		}
-		return nil
-	})
+type binder struct {
+	getTag func(reflect.StructField) (name, arg string)
 }
 
-// BindStructFromMultipartFileHeaders binds the struct to the multipart form file headers.
-func BindStructFromMultipartFileHeaders(structptr interface{}, tag string, fhs map[string][]*multipart.FileHeader) error {
-	if len(fhs) == 0 {
-		return nil
+func (b binder) bind(kind reflect.Kind, value reflect.Value, src interface{}) (err error) {
+	if src == nil {
+		return
 	}
-
-	pvalue := reflect.ValueOf(structptr)
-	if pvalue.Kind() != reflect.Pointer {
-		return fmt.Errorf("BindStructFromMultipartFileHeaders: %T is not a pointer", structptr)
-	}
-
-	vvalue := pvalue.Elem()
-	if vvalue.Kind() != reflect.Struct {
-		return fmt.Errorf("BindStructFromMultipartFileHeaders: %T is not a pointer to struct", structptr)
-	}
-
-	stype := vvalue.Type()
-	for name, field := range structs.GetAllFieldsWithTag(stype, tag) {
-		if !field.IsExported() {
-			continue
-		}
-
-		if values := fhs[name]; len(values) > 0 {
-			fieldValue := vvalue.Field(field.Index)
-			switch iface := fieldValue.Interface(); iface.(type) {
-			case *multipart.FileHeader:
-				fieldValue.Set(reflect.ValueOf(values[0]))
-			case []*multipart.FileHeader:
-				fieldValue.Set(reflect.ValueOf(values))
-			default:
-				return fmt.Errorf("BindStructFromMultipartFileHeaders: unsupport to bind %T to []*multipart.FileHeader", iface)
+	if !value.CanSet() {
+		switch kind {
+		case reflect.Pointer, reflect.Interface:
+			if !value.Elem().CanAddr() {
+				return
 			}
-		}
-	}
-
-	return nil
-}
-
-func bindValues(val reflect.Value, tag string, get func(string) interface{}) (err error) {
-	valType := val.Type()
-	for i, num := 0, valType.NumField(); i < num; i++ {
-		field := valType.Field(i)
-		fieldName := field.Tag.Get(tag)
-		switch fieldName = strings.TrimSpace(fieldName); fieldName {
-		case "":
-			fieldName = field.Name
-		case "-":
-			continue
-		}
-
-		fieldValue := val.Field(i)
-		fieldKind := fieldValue.Kind()
-		if field.Anonymous && fieldKind == reflect.Struct {
-			if err = bindValues(fieldValue, tag, get); err != nil {
-				return err
-			}
-			continue
-		} else if !fieldValue.CanSet() {
-			continue
-		}
-
-		switch value := get(fieldName).(type) {
-		case nil:
-			continue
-
-		case string:
-			if fieldKind == reflect.Slice {
-				kind := field.Type.Elem().Kind()
-				slice := reflect.MakeSlice(field.Type, 1, 1)
-				err = setWithProperType(kind, slice.Index(0), value)
-				if err != nil {
-					return
-				}
-				fieldValue.Set(slice)
-			} else {
-				err = setWithProperType(fieldKind, fieldValue, value)
-				if err != nil {
-					return
-				}
-			}
-
-		case []string:
-			if fieldKind == reflect.Slice {
-				num := len(value)
-				kind := field.Type.Elem().Kind()
-				slice := reflect.MakeSlice(field.Type, num, num)
-				for j := 0; j < num; j++ {
-					err = setWithProperType(kind, slice.Index(j), value[j])
-					if err != nil {
-						return
-					}
-				}
-				fieldValue.Set(slice)
-			} else {
-				err = setWithProperType(fieldKind, fieldValue, value[0])
-				if err != nil {
-					return
-				}
-			}
-
-		case []*multipart.FileHeader:
-			if len(value) == 0 {
-				continue
-			}
-
-			switch fieldValue.Interface().(type) {
-			case *multipart.FileHeader:
-				fieldValue.Set(reflect.ValueOf(value[0]))
-			case []*multipart.FileHeader:
-				fieldValue.Set(reflect.ValueOf(value))
-			default:
-				continue
-			}
-
 		default:
-			return fmt.Errorf("unsupported value type %T", value)
+			return
 		}
+	}
+
+	ptrvalue := value
+	if kind != reflect.Pointer {
+		ptrvalue = value.Addr()
+	}
+	if unmarshaler, ok := ptrvalue.Interface().(Unmarshaler); ok {
+		return unmarshaler.UnmarshalBind(src)
+	}
+
+	switch kind {
+	case reflect.Bool:
+		err = b.bindBool(value, src)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
+		err = b.bindInt(value, src)
+	case reflect.Int64:
+		err = b.bindInt64(value, src)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		err = b.bindUint(value, src)
+	case reflect.Float32, reflect.Float64:
+		err = b.bindFloat(value, src)
+	case reflect.String:
+		err = b.bindString(value, src)
+	case reflect.Pointer:
+		err = b.bindPointer(value, src)
+	case reflect.Interface:
+		err = b.bindInterface(value, src)
+	case reflect.Struct:
+		err = b.bindStruct(value, src)
+	case reflect.Array:
+		err = b.bindArray(value, src)
+	case reflect.Slice:
+		err = b.bindSlice(value, src)
+	case reflect.Map:
+		err = b.bindMap(value, src)
+
+	// case reflect.Chan:
+	// case reflect.Func:
+	// case reflect.Complex64:
+	// case reflect.Complex128:
+	// case reflect.UnsafePointer:
+	default:
+		err = fmt.Errorf("unsupport to bind %T to a value", value.Interface())
 	}
 
 	return
 }
 
-var binderType = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
-
-func bindUnmarshaler(kind reflect.Kind, val reflect.Value, value string) (ok bool, err error) {
-	if kind != reflect.Pointer && kind != reflect.Interface {
-		val = val.Addr()
+func (b binder) bindBool(dstValue reflect.Value, src interface{}) (err error) {
+	v, err := cast.ToBool(src)
+	if err == nil {
+		dstValue.SetBool(v)
 	}
-
-	if unmarshaler, ok := val.Interface().(Unmarshaler); ok {
-		return true, unmarshaler.UnmarshalBind(value)
-	}
-	return false, nil
+	return
 }
 
-func setWithProperType(kind reflect.Kind, value reflect.Value, input string) error {
-	if kind == reflect.Pointer && value.IsNil() {
-		value.Set(reflect.New(value.Type().Elem()))
-	} else if kind == reflect.Interface && value.IsNil() {
-		panic("the bind struct field interface value must not be nil")
+func (b binder) bindInt(dstValue reflect.Value, src interface{}) (err error) {
+	v, err := cast.ToInt64(src)
+	if err == nil {
+		dstValue.SetInt(v)
+	}
+	return
+}
+
+func (b binder) bindInt64(dstValue reflect.Value, src interface{}) (err error) {
+	if _, ok := dstValue.Interface().(time.Duration); !ok {
+		return b.bindInt(dstValue, src)
 	}
 
-	if ok, err := bindUnmarshaler(kind, value, input); ok {
-		return err
+	v, err := cast.ToDuration(src)
+	if err == nil {
+		dstValue.SetInt(int64(v))
 	}
+	return
+}
 
-	switch kind {
-	case reflect.Pointer:
-		value = value.Elem()
-		return setWithProperType(value.Kind(), value, input)
-	case reflect.Int:
-		return setIntField(input, 0, value)
-	case reflect.Int8:
-		return setIntField(input, 8, value)
-	case reflect.Int16:
-		return setIntField(input, 16, value)
-	case reflect.Int32:
-		return setIntField(input, 32, value)
-	case reflect.Int64:
-		if _, ok := value.Interface().(time.Duration); ok {
-			v, err := time.ParseDuration(input)
-			if err == nil {
-				value.SetInt(int64(v))
+func (b binder) bindUint(dstValue reflect.Value, src interface{}) (err error) {
+	v, err := cast.ToUint64(src)
+	if err == nil {
+		dstValue.SetUint(v)
+	}
+	return
+}
+
+func (b binder) bindFloat(dstValue reflect.Value, src interface{}) (err error) {
+	v, err := cast.ToFloat64(src)
+	if err == nil {
+		dstValue.SetFloat(v)
+	}
+	return
+}
+
+func (b binder) bindString(dstValue reflect.Value, src interface{}) (err error) {
+	v, err := cast.ToString(src)
+	if err == nil {
+		dstValue.SetString(v)
+	}
+	return
+}
+
+func (b binder) bindPointer(dstValue reflect.Value, src interface{}) (err error) {
+	if dstValue.IsNil() {
+		dstValue.Set(reflect.New(dstValue.Type().Elem()))
+	}
+	dstValue = dstValue.Elem()
+	return b.bind(dstValue.Kind(), dstValue, src)
+}
+
+func (b binder) bindInterface(dstValue reflect.Value, src interface{}) (err error) {
+	if dstValue.IsValid() && dstValue.Elem().IsValid() { // Interface is set to a specific value.
+		elem := dstValue.Elem()
+		bindElem := elem
+
+		// If we can't address this element, then its not writable. Instead,
+		// we make a copy of the value (which is a pointer and therefore
+		// writable), decode into that, and replace the whole value.
+		var copied bool
+		if !elem.CanAddr() {
+			if elem.Kind() == reflect.Pointer {
+				// (xgf) If it is a pointer and the element is addressable,
+				// we should not new one, and still use the old.
+				if elem.Elem().CanAddr() {
+					// (xgf) We use the old pointer to check
+					// whether it has implemented the interface Unmarshaler.
+					bindElem = elem
+				} else {
+					copied = true
+				}
 			}
-			return err
 		}
-		return setIntField(input, 64, value)
-	case reflect.Uint:
-		return setUintField(input, 0, value)
-	case reflect.Uint8:
-		return setUintField(input, 8, value)
-	case reflect.Uint16:
-		return setUintField(input, 16, value)
-	case reflect.Uint32:
-		return setUintField(input, 32, value)
-	case reflect.Uint64:
-		return setUintField(input, 64, value)
-	case reflect.Bool:
-		return setBoolField(input, value)
-	case reflect.Float32:
-		return setFloatField(input, 32, value)
-	case reflect.Float64:
-		return setFloatField(input, 64, value)
-	case reflect.String:
-		value.SetString(input)
-	default:
-		if _, ok := value.Interface().(time.Time); ok {
-			if input == "" {
-				return nil
-			}
-			return value.Addr().Interface().(*time.Time).UnmarshalText([]byte(input))
+		if copied {
+			bindElem = reflect.New(elem.Type()) // v = new(T)
+			bindElem.Elem().Set(elem)           // *v = elem
 		}
-		return fmt.Errorf("unknown field type '%T'", value.Interface())
+
+		err = b.bind(bindElem.Kind(), elem, src)
+		if err != nil || !copied {
+			return
+		}
+
+		dstValue.Set(elem.Elem()) // elem is copied.
+		return
 	}
-	return nil
+
+	srcValue := reflect.ValueOf(src)
+	dstType := dstValue.Type()
+
+	// If the input data is a pointer, and the assigned type is the dereference
+	// of that exact pointer, then indirect it so that we can assign it.
+	// Example: *string to string
+	if srcValue.Kind() == reflect.Pointer && srcValue.Type().Elem() == dstType {
+		srcValue = reflect.Indirect(srcValue)
+	}
+
+	if !srcValue.IsValid() {
+		srcValue = reflect.Zero(dstType)
+	}
+
+	srcType := srcValue.Type()
+	if !srcType.AssignableTo(dstType) {
+		return fmt.Errorf("cannot assign %s to %s", srcType.String(), dstType.String())
+	}
+
+	dstValue.Set(srcValue)
+	return
 }
 
-func setIntField(value string, bitSize int, field reflect.Value) error {
-	if value == "" {
-		return nil
-	}
-
-	intVal, err := strconv.ParseInt(value, 10, bitSize)
-	if err == nil {
-		field.SetInt(intVal)
-	}
-	return err
+func (b binder) bindArray(dstValue reflect.Value, src interface{}) (err error) {
+	// TODO:
+	return fmt.Errorf("unsupport type array")
 }
 
-func setUintField(value string, bitSize int, field reflect.Value) error {
-	if value == "" {
-		return nil
-	}
-
-	uintVal, err := strconv.ParseUint(value, 10, bitSize)
-	if err == nil {
-		field.SetUint(uintVal)
-	}
-	return err
+func (b binder) bindSlice(dstValue reflect.Value, src interface{}) (err error) {
+	// TODO:
+	return fmt.Errorf("unsupport type slice")
 }
 
-func setBoolField(value string, field reflect.Value) error {
-	if value == "" {
-		return nil
-	}
-
-	boolVal, err := strconv.ParseBool(value)
-	if err == nil {
-		field.SetBool(boolVal)
-	}
-	return err
+func (b binder) bindMap(dstValue reflect.Value, src interface{}) (err error) {
+	// TODO:
+	return fmt.Errorf("unsupport type map")
 }
 
-func setFloatField(value string, bitSize int, field reflect.Value) error {
-	if value == "" {
-		return nil
+func (b binder) bindStruct(dstStructValue reflect.Value, src interface{}) (err error) {
+	if _, ok := dstStructValue.Interface().(time.Time); ok {
+		var v time.Time
+		if v, err = cast.ToTime(src); err == nil {
+			dstStructValue.Set(reflect.ValueOf(v))
+		}
+		return
 	}
 
-	floatVal, err := strconv.ParseFloat(value, bitSize)
-	if err == nil {
-		field.SetFloat(floatVal)
+	fields := structs.GetAllFields(dstStructValue.Type())
+	for index, field := range fields {
+		err = b.bindField(dstStructValue.Field(index), field, src)
+		if err != nil {
+			return
+		}
 	}
-	return err
+	return
+}
+
+func (b binder) bindField(fieldValue reflect.Value, fieldType reflect.StructField, src interface{}) (err error) {
+	if !fieldValue.CanSet() {
+		return
+	}
+
+	fieldName, tagArg := b.getTag(fieldType)
+	if fieldName == "" {
+		return
+	}
+
+	fieldKind := fieldValue.Kind()
+	if fieldKind == reflect.Struct {
+		if fieldType.Anonymous || tagArg == "squash" {
+			return b.bindStruct(fieldValue, src)
+		}
+	}
+
+	srcValue := reflect.ValueOf(src)
+	if srcValue.Kind() != reflect.Map {
+		return fmt.Errorf("unsupport to bind a struct to %T", src)
+	}
+
+	value := srcValue.MapIndex(reflect.ValueOf(fieldName))
+	if !value.IsValid() {
+		return
+	}
+
+	return b.bind(fieldKind, fieldValue, value.Interface())
 }

@@ -33,8 +33,8 @@ import (
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router/routes/action"
 	"github.com/xgfone/go-apiserver/internal/ruler"
-	"github.com/xgfone/go-apiserver/tools/maps"
-	"github.com/xgfone/go-apiserver/tools/slices"
+	"github.com/xgfone/go-generics/maps"
+	"github.com/xgfone/go-generics/slices"
 )
 
 // DefaultRouter is the default global ruler router.

@@ -39,7 +39,9 @@ func IsIntegerString(s string) bool {
 	}
 
 	for i, _len := 0, len(s); i < _len; i++ {
-		if s[i] < '0' || s[i] > '9' {
+		switch s[i] {
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '-':
+		default:
 			return false
 		}
 	}

@@ -17,7 +17,7 @@ package middleware
 import (
 	"fmt"
 
-	"github.com/xgfone/go-apiserver/tools/maps"
+	"github.com/xgfone/go-generics/maps"
 )
 
 var builders = make(map[string]Builder, 16)

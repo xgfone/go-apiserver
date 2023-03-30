@@ -17,7 +17,7 @@ package upstream
 import (
 	"testing"
 
-	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-generics/funcs"
 )
 
 type wrappedServer struct{ Server }
@@ -28,7 +28,7 @@ func TestServerWrapper(t *testing.T) {
 	var server1, server2 Server
 	server1 = &wrappedServer{}
 	server2 = &wrappedServer{Server: server1}
-	server, _ := helper.Unwrap[Server](server2)
+	server, _ := funcs.Unwrap[Server](server2)
 	if server != server1 {
 		t.Error("unexpected upstream server")
 	}

@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-generics/funcs"
 )
 
 type testHandler struct{ name string }
@@ -30,7 +30,7 @@ func TestSwitchHandlerUnwrap(t *testing.T) {
 	handler := testHandler{name: "test"}
 	sh := NewSwitchHandler(handler)
 
-	if h, _ := helper.Unwrap[http.Handler](sh); h != handler {
+	if h, _ := funcs.Unwrap[http.Handler](sh); h != handler {
 		t.Errorf("expect '%v', but got '%v'", handler, h)
 	}
 }

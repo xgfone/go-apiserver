@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/xgfone/go-apiserver/tools/maps"
+	"github.com/xgfone/go-generics/maps"
 )
 
 // DefaultManager is the default global entrypoint manager.

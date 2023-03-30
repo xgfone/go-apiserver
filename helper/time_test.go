@@ -38,12 +38,3 @@ func ExampleTimeAdd() {
 	// Minute: 7
 	// Second: 7
 }
-
-func ExampleMustParseTime() {
-	MustParseTime("2023-02-25 13:43:47", nil)                         // time.DateTime
-	MustParseTime("2023-02-25T13:43:47+08:00", nil)                   // time.RFC3339
-	MustParseTime("2023-02-25T13:43:47.123456+08:00", nil)            // time.RFC3339Nano
-	MustParseTime("Sat, 25 Feb 2023 13:43:47 CST", nil, time.RFC1123) // time.RFC1123
-
-	// Output:
-}

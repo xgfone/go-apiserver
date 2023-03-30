@@ -22,7 +22,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/result"
-	"github.com/xgfone/go-apiserver/tools/maps"
+	"github.com/xgfone/go-generics/maps"
 )
 
 // HeaderAction represents the http header to store the action method.

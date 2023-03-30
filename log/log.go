@@ -24,6 +24,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/xgfone/defaults"
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/tools/io2"
 	"github.com/xgfone/go-atexit"
@@ -122,7 +123,7 @@ func emit(skipStackDepth int, level Level, msg string, kvs ...interface{}) {
 
 	var now time.Time
 	if !disableTime {
-		now = helper.Now()
+		now = defaults.Now()
 	}
 
 	var pcs [1]uintptr

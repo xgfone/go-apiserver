@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/xgfone/go-apiserver/internal/test"
-	"github.com/xgfone/go-apiserver/tools/slices"
+	"github.com/xgfone/go-generics/slices"
 )
 
 func TestManager(t *testing.T) {

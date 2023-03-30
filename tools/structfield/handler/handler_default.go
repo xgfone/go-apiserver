@@ -20,9 +20,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/cast"
+	"github.com/xgfone/defaults"
 	"github.com/xgfone/go-apiserver/internal/structs"
-	"github.com/xgfone/go-apiserver/tools/setter"
 )
 
 // NewDefaultHandler returns a handler to set the default value
@@ -47,14 +47,14 @@ import (
 //	uint64
 //	struct
 //	struct slice
-//	setter.Setter
 //	time.Time      // Format: A. Integer(UTC); B. String(RFC3339)
 //	time.Duration  // Format: A. Integer(ms);  B. String(time.ParseDuration)
-//	pointer to the types above
+//
+// And the pointer to the types above, and interface{ Set(interface{}) error }.
 //
 // If the field type is string or int64, and the tag value is like "now()"
 // or "now(layout)", set the default value of the field to the current time
-// by helper.Now(). For example,
+// by defaults.Now(). For example,
 //
 //	type T struct {
 //	    StartTime string `default:"now()"`
@@ -85,14 +85,14 @@ func setdefault(_ interface{}, root, fieldptr reflect.Value, sf reflect.StructFi
 			panic(fmt.Errorf("not found the struct field '%s'", s))
 		}
 
-		if helper.IsPointer(fieldv) {
+		if fieldv.Kind() == reflect.Pointer {
 			fieldv = fieldv.Elem()
 		}
 		v.Set(fieldv)
 		return nil
 	}
 
-	if i, ok := fieldptr.Interface().(setter.Setter); ok {
+	if i, ok := fieldptr.Interface().(interface{ Set(interface{}) error }); ok {
 		return i.Set(s)
 	}
 
@@ -100,28 +100,68 @@ func setdefault(_ interface{}, root, fieldptr reflect.Value, sf reflect.StructFi
 	case reflect.String:
 		if strings.HasPrefix(s, "now(") && strings.HasSuffix(s, ")") {
 			if layout := s[4 : len(s)-1]; layout == "" {
-				s = helper.Now().Format(time.RFC3339)
+				s = defaults.Now().Format(time.RFC3339)
 			} else {
-				s = helper.Now().Format(layout)
+				s = defaults.Now().Format(layout)
 			}
 		}
 		v.SetString(s)
 
-	case reflect.Int64:
-		if strings.HasPrefix(s, "now(") && strings.HasSuffix(s, ")") {
-			return setter.Set(fieldptr.Interface(), helper.Now().Unix())
+	case reflect.Bool:
+		i, err := cast.ToBool(s)
+		if err != nil {
+			return err
 		}
-		return setter.Set(fieldptr.Interface(), s)
+		v.SetBool(i)
 
-	case reflect.Bool, reflect.Float32, reflect.Float64,
-		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
-		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return setter.Set(fieldptr.Interface(), s)
+	case reflect.Float32, reflect.Float64:
+		i, err := cast.ToFloat64(s)
+		if err != nil {
+			return err
+		}
+		v.SetFloat(i)
+
+	case reflect.Int64:
+		if _, ok := v.Interface().(time.Duration); ok {
+			i, err := cast.ToDuration(s)
+			if err == nil {
+				v.SetInt(int64(i))
+			}
+			return err
+		}
+
+		var e error
+		var i int64
+		if strings.HasPrefix(s, "now(") && strings.HasSuffix(s, ")") {
+			i = defaults.Now().Unix()
+		} else if i, e = cast.ToInt64(s); e != nil {
+			return e
+		}
+		v.SetInt(i)
+
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
+		i, err := cast.ToInt64(s)
+		if err != nil {
+			return err
+		}
+		v.SetInt(i)
+
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		i, err := cast.ToUint64(s)
+		if err != nil {
+			return err
+		}
+		v.SetUint(i)
 
 	case reflect.Struct:
-		if _, ok := v.Interface().(time.Time); ok {
-			return setter.Set(fieldptr.Interface(), s)
+		if _, ok := v.Interface().(time.Time); !ok {
+			return fmt.Errorf("%s: unsupported type %T", sf.Name, v.Interface())
 		}
+		i, err := cast.ToTime(s)
+		if err != nil {
+			return err
+		}
+		v.Set(reflect.ValueOf(i))
 
 	default:
 		return fmt.Errorf("%s: unsupported type %T", sf.Name, v.Interface())

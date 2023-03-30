@@ -19,7 +19,7 @@ import (
 	"crypto/x509"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/tools/slices"
+	"github.com/xgfone/go-generics/slices"
 )
 
 func TestCertificate(t *testing.T) {

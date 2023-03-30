@@ -18,14 +18,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/xgfone/go-apiserver/tools/setter"
 	"github.com/xgfone/go-apiserver/tools/structfield"
 	"github.com/xgfone/go-apiserver/tools/structfield/handler"
-)
-
-var (
-	_ setter.Setter = new(_Int)
-	_ setter.Setter = new(_Str)
 )
 
 type _Int int

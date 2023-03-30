@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/defaults"
 	"github.com/xgfone/go-apiserver/tools/structfield"
 )
 
@@ -31,9 +31,9 @@ func (d *defaultSetter) SetDefault(src interface{}) error {
 
 func ExampleNewDefaultHandler() {
 	// For test
-	oldNow := helper.Now
-	helper.Now = func() time.Time { return time.Unix(1660140928, 0).UTC() }
-	defer func() { helper.Now = oldNow }()
+	oldNow := defaults.TimeNow.Get()
+	defaults.TimeNow.Set(func() time.Time { return time.Unix(1660140928, 0).UTC() })
+	defer func() { defaults.TimeNow.Set(oldNow) }()
 
 	type String string
 	type Struct struct {

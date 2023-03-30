@@ -24,7 +24,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/tls/tlscert"
-	"github.com/xgfone/go-apiserver/tools/maps"
+	"github.com/xgfone/go-generics/maps"
 )
 
 var _ Provider = &URLProvider{}

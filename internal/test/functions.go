@@ -17,7 +17,7 @@ package test
 import (
 	"testing"
 
-	"github.com/xgfone/go-apiserver/tools/slices"
+	"github.com/xgfone/go-generics/slices"
 )
 
 // CheckStatusCode checks whether the result status code is equal to the expect.

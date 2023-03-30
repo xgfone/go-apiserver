@@ -18,14 +18,14 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-generics/funcs"
 )
 
 func TestErrorUnwrap(t *testing.T) {
 	origerr := errors.New("test")
 	err := NewError(400).WithErr(origerr)
 
-	if e, _ := helper.Unwrap[error](err); e != origerr {
+	if e, _ := funcs.Unwrap[error](err); e != origerr {
 		t.Errorf("expect '%v', but got '%v'", origerr, e)
 	}
 }

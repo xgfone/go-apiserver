@@ -16,6 +16,7 @@ package validator
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/xgfone/go-apiserver/helper"
@@ -49,7 +50,7 @@ func StructFieldLess(fieldName string) Validator {
 			panic(fmt.Errorf("the context is not a struct or does not contain the field named '%s'", fieldName))
 		}
 
-		if helper.IsPointer(vf) {
+		if vf.Kind() == reflect.Pointer {
 			if vf.IsNil() {
 				return fmt.Errorf("the field named '%s' is nil", fieldName)
 			}
@@ -87,7 +88,7 @@ func StructFieldLessEqual(fieldName string) Validator {
 			panic(fmt.Errorf("the context is not a struct or does not contain the field named '%s'", fieldName))
 		}
 
-		if helper.IsPointer(vf) {
+		if vf.Kind() == reflect.Pointer {
 			if vf.IsNil() {
 				return fmt.Errorf("the field named '%s' is nil", fieldName)
 			}
@@ -125,7 +126,7 @@ func StructFieldGreater(fieldName string) Validator {
 			panic(fmt.Errorf("the context is not a struct or does not contain the field named '%s'", fieldName))
 		}
 
-		if helper.IsPointer(vf) {
+		if vf.Kind() == reflect.Pointer {
 			if vf.IsNil() {
 				return fmt.Errorf("the field named '%s' is nil", fieldName)
 			}
@@ -163,7 +164,7 @@ func StructFieldGreaterEqual(fieldName string) Validator {
 			panic(fmt.Errorf("the context is not a struct or does not contain the field named '%s'", fieldName))
 		}
 
-		if helper.IsPointer(vf) {
+		if vf.Kind() == reflect.Pointer {
 			if vf.IsNil() {
 				return fmt.Errorf("the field named '%s' is nil", fieldName)
 			}

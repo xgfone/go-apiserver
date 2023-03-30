@@ -25,7 +25,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/matcher"
-	"github.com/xgfone/go-apiserver/tools/maps"
+	"github.com/xgfone/go-generics/maps"
 )
 
 const (

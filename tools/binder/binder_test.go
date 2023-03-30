@@ -16,188 +16,147 @@ package binder
 
 import (
 	"fmt"
-	"mime/multipart"
-	"net/url"
-	"reflect"
 	"strconv"
-	"testing"
 	"time"
 )
 
-func BenchmarkBindStruct(b *testing.B) {
-	type T struct {
-		Bool    bool    `query:"bool"`
-		Int     int     `query:"int"`
-		Uint    uint    `query:"uint"`
-		String  string  `query:"string"`
-		Float64 float64 `query:"float64"`
-	}
+// Int is the customized int.
+type Int int
 
-	var v T
-	data := map[string]interface{}{
-		"bool":    "true",
-		"int":     "123",
-		"uint":    "456",
-		"string":  "abc",
-		"float64": "789",
-	}
-
-	b.RunParallel(func(p *testing.PB) {
-		for p.Next() {
-			BindStructFromMap(&v, "query", data)
+// UnmarshalBind implements the interface Unmarshaler.
+func (i *Int) UnmarshalBind(src interface{}) (err error) {
+	switch v := src.(type) {
+	case int:
+		*i = Int(v)
+	case string:
+		var _v int64
+		_v, err = strconv.ParseInt(v, 10, 64)
+		if err == nil {
+			*i = Int(_v)
 		}
-	})
+	default:
+		err = fmt.Errorf("unsupport to convert %T to Int", src)
+	}
+	return
 }
 
-type paramBinder struct {
-	Value int `query:"Value"`
+func (i Int) String() string {
+	return fmt.Sprint(int64(i))
 }
 
-func (b *paramBinder) UnmarshalBind(param string) error {
-	v, err := strconv.ParseInt(param, 10, 64)
-	if err == nil {
-		b.Value = int(v)
-	}
-	return err
+// Struct is the customized struct.
+type Struct struct {
+	Name string
+	Age  Int
 }
 
-type AnonymousString string
-type AnonymousStruct struct {
-	Embed string `query:"Embed"`
+// UnmarshalBind implements the interface Unmarshaler.
+func (s *Struct) UnmarshalBind(src interface{}) (err error) {
+	if maps, ok := src.(map[string]interface{}); ok {
+		s.Name, _ = maps["Name"].(string)
+		err = s.Age.UnmarshalBind(maps["Age"])
+		return
+	}
+	return fmt.Errorf("unsupport to convert %T to a struct", src)
 }
 
-func TestBindURLValues(t *testing.T) {
-	type T struct {
-		Bool       bool          `query:"bool"`
-		Int        int           `query:"int"`
-		Int8       int8          `query:"int8"`
-		Int16      int16         `query:"int16"`
-		Int32      int32         `query:"int32"`
-		Int64      int64         `query:"int64"`
-		Uint       uint          `query:"uint"`
-		Uint8      uint8         `query:"uint8"`
-		Uint16     uint16        `query:"uint16"`
-		Uint32     uint32        `query:"uint32"`
-		Uint64     uint64        `query:"uint64"`
-		String     string        `query:"string"`
-		Float32    float32       `query:"float32"`
-		Float64    float64       `query:"float64"`
-		Duration   time.Duration `query:"duration"`
-		Time       time.Time     `query:"time"`
-		Interface1 paramBinder   `query:"interface1"`
-		Interface2 Unmarshaler   `query:"interface2"`
-
-		Unmarshaler     `query:"anonymous1"`
-		paramBinder     `query:"anonymous2"`
-		AnonymousStruct `query:"anonymous3"`
-		AnonymousString `query:"anonymous4"`
-
-		Ingore int `query:"-"`
-		Ptr    *int
-		Slice1 []*int
-		Slice2 []int
-		// Slice3 []Unmarshaler // Not Support
-	}
-
-	data := url.Values{
-		"bool":       []string{"true"},
-		"int":        []string{"11"},
-		"int8":       []string{"12"},
-		"int16":      []string{"13"},
-		"int32":      []string{"14"},
-		"int64":      []string{"15"},
-		"uint":       []string{"21"},
-		"uint8":      []string{"22"},
-		"uint16":     []string{"23"},
-		"uint32":     []string{"24"},
-		"uint64":     []string{"25"},
-		"string":     []string{"abc"},
-		"float32":    []string{"31"},
-		"float64":    []string{"32"},
-		"duration":   []string{"1s"},
-		"time":       []string{"2022-02-10T14:12:02Z"},
-		"interface1": []string{"41"},
-		"interface2": []string{"42"},
-		"anonymous1": []string{"43"},
-		"anonymous4": []string{"44"},
-		"Embed":      []string{"45"},
-
-		"Ptr":    []string{"51"},
-		"Value":  []string{"51"},
-		"Ingore": []string{"51"},
-		"Slice1": []string{"51", "52"},
-		"Slice2": []string{"55", "56"},
-	}
-
-	int1, int2 := 51, 52
-	result := T{
-		Bool:     true,
-		Int:      11,
-		Int8:     12,
-		Int16:    13,
-		Int32:    14,
-		Int64:    15,
-		Uint:     21,
-		Uint8:    22,
-		Uint16:   23,
-		Uint32:   24,
-		Uint64:   25,
-		String:   "abc",
-		Float32:  31,
-		Float64:  32,
-		Duration: time.Second,
-		Time:     time.Date(2022, time.February, 10, 14, 12, 02, 0, time.UTC),
-
-		Interface1:      paramBinder{41},
-		Interface2:      &paramBinder{42},
-		Unmarshaler:     &paramBinder{43},
-		AnonymousString: "44",
-		AnonymousStruct: AnonymousStruct{Embed: "45"},
-
-		paramBinder: paramBinder{int1},
-		Ptr:         &int1,
-		Slice1:      []*int{&int1, &int2},
-		Slice2:      []int{55, 56},
-	}
-
-	v := T{Interface2: &paramBinder{}, Unmarshaler: &paramBinder{}}
-	if err := BindStructFromURLValues(&v, "query", data); err != nil {
-		t.Fatal(err)
-	} else if !reflect.DeepEqual(v, result) {
-		t.Errorf("expect '%+v', but got '%+v'", result, v)
-		t.Error(*v.Slice1[0], *v.Slice1[1])
-	}
+func (s Struct) String() string {
+	return fmt.Sprintf("Name=%s, Age=%d", s.Name, s.Age)
 }
 
-func ExampleBindStructFromMultipartFileHeaders() {
-	src := map[string][]*multipart.FileHeader{
-		"file":  {{Filename: "file"}},
-		"files": {{Filename: "file1"}, {Filename: "file2"}},
-		"_file": {{Filename: "file3"}},
+func ExampleBindStructFromMap() {
+	type Person struct {
+		Name  string    `json:"name"`
+		Age   *int      `json:"age"`
+		Birth time.Time `json:"birth"`
 	}
 
-	var dst struct {
-		Other       string                  `form:"Other"`
-		_File       *multipart.FileHeader   `form:"_file"` // unexported, so ignored
-		FileHeader  *multipart.FileHeader   `form:"file"`
-		FileHeaders []*multipart.FileHeader `form:"files"`
-	}
+	// For basic types
+	fmt.Println("------ Basic ------")
+	var basicStruct struct {
+		Myself Person `json:"myself"`
+		Person
 
-	err := BindStructFromMultipartFileHeaders(&dst, "form", src)
+		Other struct {
+			Class  int    `json:"class"`
+			Ignore string `json:"-"`
+		} `json:",squash"` // squash is equal to the anonymous struct.
+
+		Duration time.Duration `json:"duration"`
+	}
+	basicMap := map[string]interface{}{
+		"myself": map[string]interface{}{
+			"name":  "Aaron",
+			"age":   "18",                   // string => int, it supports to convert between different types.
+			"birth": "2023-02-01T00:00:00Z", // string => time.Time
+		},
+
+		"name":  "Venus",
+		"age":   20,
+		"birth": 1672531200, // int(unix timestamp) => time.Time
+
+		"class":  1,
+		"Ingore": "abc",
+		"ignore": "xyz",
+
+		"duration": "1s", // or 1000(ms)
+	}
+	err := BindStructFromMap(&basicStruct, "json", basicMap)
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println(dst.FileHeader.Filename)
-		if dst._File != nil {
-			fmt.Println(dst._File.Filename)
-		}
-		for _, fh := range dst.FileHeaders {
-			fmt.Println(fh.Filename)
-		}
+		fmt.Printf("Myself.Name=%s, Myself.Age=%d, Myself.Birth=%s\n",
+			basicStruct.Myself.Name, *basicStruct.Myself.Age, basicStruct.Myself.Birth.Format(time.RFC3339))
+
+		fmt.Printf("Person.Name=%s, Person.Age=%d, Person.Birth=%s\n",
+			basicStruct.Person.Name, *basicStruct.Person.Age, basicStruct.Person.Birth.Format(time.RFC3339))
+
+		fmt.Printf("Other.Class=%d, Other.Ingore=%s\n",
+			basicStruct.Other.Class, basicStruct.Other.Ignore)
+
+		fmt.Printf("Duration=%s\n", basicStruct.Duration)
+	}
+
+	// For Interface types
+	fmt.Println()
+	fmt.Println("------ Interface ------")
+	var iface1 Struct
+	var iface2 Int
+	var ifaceStruct = struct {
+		Interface1 Unmarshaler
+		Interface2 Unmarshaler
+		Interface3 interface{} // Use to store any type value.
+		// Unmarshaler         // Do not use the anonymous interface.
+	}{
+		Interface1: &iface1, // For Unmarshaler, must be set to a pointer
+		Interface2: &iface2, //  to an implementation.
+	}
+	ifaceMap := map[string]interface{}{
+		"Interface1": map[string]interface{}{
+			"Name": "Aaron",
+			"Age":  18,
+		},
+		"Interface2": "123",
+		"Interface3": "any",
+	}
+	err = BindStructFromMap(&ifaceStruct, "json", ifaceMap)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Printf("Interface1: %s\n", ifaceStruct.Interface1)
+		fmt.Printf("Interface2: %v\n", ifaceStruct.Interface2)
+		fmt.Printf("Interface3: %v\n", ifaceStruct.Interface3)
 	}
 
 	// Output:
-	// file
-	// file1
-	// file2
+	// ------ Basic ------
+	// Myself.Name=Aaron, Myself.Age=18, Myself.Birth=2023-02-01T00:00:00Z
+	// Person.Name=Venus, Person.Age=20, Person.Birth=2023-01-01T00:00:00Z
+	// Other.Class=1, Other.Ingore=
+	// Duration=1s
+	//
+	// ------ Interface ------
+	// Interface1: Name=Aaron, Age=18
+	// Interface2: 123
+	// Interface3: any
 }

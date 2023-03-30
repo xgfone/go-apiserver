@@ -18,12 +18,12 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-generics/funcs"
 )
 
 func TestClientUnwrap(t *testing.T) {
 	client := NewClient(http.DefaultClient)
-	if c, _ := helper.Unwrap[*http.Client](client); c != http.DefaultClient {
+	if c, _ := funcs.Unwrap[*http.Client](client); c != http.DefaultClient {
 		t.Errorf("expect '%v', but got '%v'", http.DefaultClient, c)
 	}
 }

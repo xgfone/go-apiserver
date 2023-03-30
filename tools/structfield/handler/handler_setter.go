@@ -19,7 +19,6 @@ import (
 	"reflect"
 
 	"github.com/xgfone/go-apiserver/helper"
-	"github.com/xgfone/go-apiserver/tools/setter"
 )
 
 // NewSetFormatHandler is the same as NewSetterHandler,
@@ -47,7 +46,7 @@ func NewSetFormatHandler() Handler {
 //
 // If parser is nil, use the default, which returns the input directly.
 // If set is nil, use the default, which will assert the struct field
-// to the interface setter.Setter.
+// to the interface { Set(interface{}) error }.
 func NewSetterHandler(parser Parser, set Runner) Handler {
 	if set == nil {
 		set = usesetter
@@ -70,7 +69,7 @@ func (h setHandler) Run(c interface{}, root, value reflect.Value, sf reflect.Str
 	}
 
 	var ptr reflect.Value
-	if value = helper.FillNilPtr(value); helper.IsPointer(value) {
+	if value = helper.FillNilPtr(value); value.Kind() == reflect.Pointer {
 		ptr = value
 	} else {
 		ptr = value.Addr()
@@ -81,7 +80,7 @@ func (h setHandler) Run(c interface{}, root, value reflect.Value, sf reflect.Str
 
 func notparser(s string) (interface{}, error) { return s, nil }
 func usesetter(_ interface{}, root, fieldptr reflect.Value, sf reflect.StructField, arg interface{}) error {
-	if setter, ok := fieldptr.Interface().(setter.Setter); ok {
+	if setter, ok := fieldptr.Interface().(interface{ Set(interface{}) error }); ok {
 		return setter.Set(arg)
 	}
 	panic(fmt.Errorf("%s(%T) has not implemented the interface setter.Setter", sf.Name, fieldptr.Interface()))
