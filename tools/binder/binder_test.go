@@ -16,6 +16,7 @@ package binder
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -117,6 +118,46 @@ func ExampleBindStructFromMap() {
 		fmt.Printf("Duration=%s\n", basicStruct.Duration)
 	}
 
+	// For Container types
+	fmt.Println()
+	fmt.Println("------ Container ------")
+	var containerStruct struct {
+		Maps    map[string]interface{} `json:"maps"`
+		Slices  []string               `json:"slices"`
+		Structs []struct {
+			Field int        `json:"field"`
+			Query url.Values `json:"query"`
+		} `json:"structs"`
+	}
+	containerMap := map[string]interface{}{
+		"maps":   map[string]string{"k1": "v1"},
+		"slices": []interface{}{"a", "b"},
+		"structs": []map[string]interface{}{
+			{
+				"field": "123",
+				"query": map[string][]string{
+					"k2": {"v2"},
+				},
+			},
+			{
+				"field": 456,
+				"query": map[string][]string{
+					"k3": {"v3"},
+				},
+			},
+		},
+	}
+	err = BindStructFromMap(&containerStruct, "json", containerMap)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Printf("Maps: %v\n", containerStruct.Maps)
+		fmt.Printf("Slices: %v\n", containerStruct.Slices)
+		for i, s := range containerStruct.Structs {
+			fmt.Printf("Structs[%d]: Field=%d, Query=%v\n", i, s.Field, s.Query)
+		}
+	}
+
 	// For Interface types
 	fmt.Println()
 	fmt.Println("------ Interface ------")
@@ -154,6 +195,12 @@ func ExampleBindStructFromMap() {
 	// Person.Name=Venus, Person.Age=20, Person.Birth=2023-01-01T00:00:00Z
 	// Other.Class=1, Other.Ingore=
 	// Duration=1s
+	//
+	// ------ Container ------
+	// Maps: map[k1:v1]
+	// Slices: [a b]
+	// Structs[0]: Field=123, Query=map[k2:[v2]]
+	// Structs[1]: Field=456, Query=map[k3:[v3]]
 	//
 	// ------ Interface ------
 	// Interface1: Name=Aaron, Age=18

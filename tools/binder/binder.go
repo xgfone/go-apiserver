@@ -16,6 +16,7 @@
 package binder
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -262,18 +263,126 @@ func (b binder) bindInterface(dstValue reflect.Value, src interface{}) (err erro
 }
 
 func (b binder) bindArray(dstValue reflect.Value, src interface{}) (err error) {
-	// TODO:
-	return fmt.Errorf("unsupport type array")
+	return b._bindList(dstValue, src, true)
 }
 
 func (b binder) bindSlice(dstValue reflect.Value, src interface{}) (err error) {
-	// TODO:
-	return fmt.Errorf("unsupport type slice")
+	return b._bindList(dstValue, src, false)
+}
+
+func (b binder) _bindList(dstValue reflect.Value, src interface{}, isArray bool) (err error) {
+	dstType := dstValue.Type()
+	ekind := dstType.Elem().Kind()
+
+	var _len int
+	var bind func(reflect.Value, int) error
+	switch vs := src.(type) {
+	case []interface{}:
+		_len = len(vs)
+		bind = func(v reflect.Value, i int) error { return b.bind(ekind, v, vs[i]) }
+
+	case []string:
+		_len = len(vs)
+		bind = func(v reflect.Value, i int) error { return b.bind(ekind, v, vs[i]) }
+
+	default:
+		srcValue := reflect.ValueOf(src)
+		switch srcValue.Kind() {
+		case reflect.Array, reflect.Slice:
+			_len = srcValue.Len()
+			bind = func(v reflect.Value, i int) error {
+				return b.bind(ekind, v, srcValue.Index(i).Interface())
+			}
+		default:
+			return errors.New("cannot bind a slice type to a non-array/slice type")
+		}
+	}
+
+	elems := dstValue
+	if isArray {
+		dstlen := dstValue.Len()
+		if dstlen == 0 {
+			return
+		}
+		if _len < dstlen {
+			_len = dstlen
+		}
+	} else {
+		elems = reflect.MakeSlice(dstType, _len, _len)
+	}
+
+	for i := 0; i < _len; i++ {
+		if err = bind(elems.Index(i), i); err != nil {
+			return
+		}
+	}
+
+	if !isArray {
+		dstValue.Set(elems)
+	}
+	return
 }
 
 func (b binder) bindMap(dstValue reflect.Value, src interface{}) (err error) {
-	// TODO:
-	return fmt.Errorf("unsupport type map")
+	dstType := dstValue.Type()
+	keyType := dstType.Key()
+	valueType := dstType.Elem()
+
+	var dstmaps reflect.Value
+	switch srcmaps := src.(type) {
+	case map[string]interface{}:
+		dstmaps = reflect.MakeMapWithSize(dstType, len(srcmaps))
+		for key, value := range srcmaps {
+			err = b._bindMapIndex(dstmaps, keyType, valueType, key, value)
+			if err != nil {
+				return
+			}
+		}
+
+	case map[string]string:
+		dstmaps = reflect.MakeMapWithSize(dstType, len(srcmaps))
+		for key, value := range srcmaps {
+			err = b._bindMapIndex(dstmaps, keyType, valueType, key, value)
+			if err != nil {
+				return
+			}
+		}
+
+	default:
+		srcValue := reflect.ValueOf(src)
+		if srcValue.Kind() != reflect.Map {
+			return errors.New("cannot bind a map type to a non-map type")
+		}
+
+		dstmaps = reflect.MakeMapWithSize(dstType, srcValue.Len())
+		for iter := srcValue.MapRange(); iter.Next(); {
+			key, value := iter.Key().Interface(), iter.Value().Interface()
+			err = b._bindMapIndex(dstmaps, keyType, valueType, key, value)
+			if err != nil {
+				return
+			}
+		}
+	}
+
+	dstValue.Set(dstmaps)
+	return
+}
+
+func (b binder) _bindMapIndex(dstmap reflect.Value, keyType, valueType reflect.Type, key, value interface{}) (err error) {
+	srckey := reflect.New(keyType)
+	err = b.bind(keyType.Kind(), srckey.Elem(), key)
+	if err != nil {
+		return
+	}
+
+	dstvalue := reflect.New(valueType)
+	err = b.bind(valueType.Kind(), dstvalue.Elem(), value)
+	if err != nil {
+		return
+	}
+
+	dstmap.SetMapIndex(srckey.Elem(), dstvalue.Elem())
+	return
 }
 
 func (b binder) bindStruct(dstStructValue reflect.Value, src interface{}) (err error) {
