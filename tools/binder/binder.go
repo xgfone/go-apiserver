@@ -20,8 +20,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/xgfone/cast"
 	"github.com/xgfone/go-apiserver/internal/structs"
+	"github.com/xgfone/go-cast"
 )
 
 // Unmarshaler is an interface to unmarshal itself from the parameter.

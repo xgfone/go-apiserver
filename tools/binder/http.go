@@ -22,8 +22,8 @@ import (
 	"net/url"
 	"reflect"
 
-	"github.com/xgfone/cast"
 	"github.com/xgfone/go-apiserver/internal/structs"
+	"github.com/xgfone/go-cast"
 )
 
 // BindStructFromStringMap binds the struct to map[string]string.

@@ -25,23 +25,23 @@ import (
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
 	"github.com/xgfone/go-apiserver/tools/binder"
-	"github.com/xgfone/go-apiserver/tools/structfield"
+	"github.com/xgfone/go-defaults"
 )
 
 // Predefine some binder to bind the body, query and header of the request.
 var (
 	DefaultMuxBinder = NewMuxBinder()
 
-	DefaultQueryBinder Binder = BinderFunc(func(dst interface{}, r *http.Request) error {
+	DefaultQueryBinder Binder = BindFunc(func(dst interface{}, r *http.Request) error {
 		return binder.BindStructFromURLValues(dst, "query", r.URL.Query())
 	})
 
-	DefaultHeaderBinder Binder = BinderFunc(func(dst interface{}, r *http.Request) error {
+	DefaultHeaderBinder Binder = BindFunc(func(dst interface{}, r *http.Request) error {
 		return binder.BindStructFromHTTPHeader(dst, "header", r.Header)
 	})
 
 	DefaultValidateFunc = func(v interface{}, r *http.Request) error {
-		return structfield.Reflect(r, v)
+		return defaults.ValidateStruct(v)
 	}
 
 	BodyBinder   Binder = WrapBinder(DefaultMuxBinder, DefaultValidateFunc)
@@ -64,17 +64,17 @@ type Binder interface {
 	Bind(dst interface{}, req *http.Request) error
 }
 
-// BinderFunc is a function type implementing the interface Binder.
-type BinderFunc func(dst interface{}, req *http.Request) error
+// BindFunc is a function type implementing the interface Binder.
+type BindFunc func(dst interface{}, req *http.Request) error
 
 // Bind implements the interface Binder.
-func (f BinderFunc) Bind(dst interface{}, req *http.Request) error {
+func (f BindFunc) Bind(dst interface{}, req *http.Request) error {
 	return f(dst, req)
 }
 
 // JSONBinder returns a binder to bind the data to the request body as JSON.
 func JSONBinder() Binder {
-	return BinderFunc(func(v interface{}, r *http.Request) (err error) {
+	return BindFunc(func(v interface{}, r *http.Request) (err error) {
 		if r.ContentLength > 0 {
 			err = json.NewDecoder(r.Body).Decode(v)
 		}
@@ -84,7 +84,7 @@ func JSONBinder() Binder {
 
 // XMLBinder returns a binder to bind the data to the request body as XML.
 func XMLBinder() Binder {
-	return BinderFunc(func(v interface{}, r *http.Request) (err error) {
+	return BindFunc(func(v interface{}, r *http.Request) (err error) {
 		if r.ContentLength > 0 {
 			err = xml.NewDecoder(r.Body).Decode(v)
 		}
@@ -95,7 +95,7 @@ func XMLBinder() Binder {
 // FormBinder returns a binder to bind the data to the request body as Form,
 // which supports the struct tag "form".
 func FormBinder(maxMemory int64) Binder {
-	return BinderFunc(func(v interface{}, r *http.Request) (err error) {
+	return BindFunc(func(v interface{}, r *http.Request) (err error) {
 		switch ct := header.ContentType(r.Header); ct {
 		case header.MIMEMultipartForm:
 			err = r.ParseMultipartForm(maxMemory)
@@ -170,7 +170,7 @@ func (mb *MuxBinder) Bind(dst interface{}, req *http.Request) error {
 // WrapBinder wraps the binder and returns a new one that goes to handle
 // the result after binding the request.
 func WrapBinder(binder Binder, nextHandler func(interface{}, *http.Request) error) Binder {
-	return BinderFunc(func(dst interface{}, req *http.Request) (err error) {
+	return BindFunc(func(dst interface{}, req *http.Request) (err error) {
 		if err = binder.Bind(dst, req); err == nil {
 			err = nextHandler(dst, req)
 		}
