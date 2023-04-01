@@ -22,8 +22,8 @@ import (
 	"net/url"
 	"reflect"
 
-	"github.com/xgfone/go-apiserver/internal/structs"
 	"github.com/xgfone/go-cast"
+	"github.com/xgfone/go-structs/field"
 )
 
 // BindStructFromStringMap binds the struct to map[string]string.
@@ -44,7 +44,7 @@ func BindStructFromStringMap(structptr interface{}, tag string, data map[string]
 		return fmt.Errorf("BindStructFromStringMap: %T is not a pointer to struct", structptr)
 	}
 
-	for name, field := range structs.GetAllFieldsWithTag(vvalue.Type(), tag) {
+	for name, field := range field.GetAllFieldsWithTag(vvalue.Type(), tag) {
 		if !field.IsExported() {
 			continue
 		}
@@ -106,7 +106,7 @@ func bindStructFromMapStrings(structptr interface{}, fname, tag string, get func
 		return fmt.Errorf("%s: %T is not a pointer to struct", fname, structptr)
 	}
 
-	for name, field := range structs.GetAllFieldsWithTag(vvalue.Type(), tag) {
+	for name, field := range field.GetAllFieldsWithTag(vvalue.Type(), tag) {
 		if !field.IsExported() {
 			continue
 		}
@@ -152,7 +152,7 @@ func BindStructFromMultipartFileHeaders(structptr interface{}, tag string, fhs m
 		return fmt.Errorf("BindStructFromMultipartFileHeaders: %T is not a pointer to struct", structptr)
 	}
 
-	for name, field := range structs.GetAllFieldsWithTag(vvalue.Type(), tag) {
+	for name, field := range field.GetAllFieldsWithTag(vvalue.Type(), tag) {
 		if !field.IsExported() {
 			continue
 		}

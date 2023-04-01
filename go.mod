@@ -5,6 +5,7 @@ require (
 	github.com/xgfone/go-cast v0.7.0
 	github.com/xgfone/go-defaults v0.2.0
 	github.com/xgfone/go-generics v0.1.0
+	github.com/xgfone/go-structs v0.1.0
 	github.com/xgfone/predicate v1.3.2
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 )

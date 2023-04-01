@@ -6,6 +6,8 @@ github.com/xgfone/go-defaults v0.2.0 h1:1/k2GdF3X2HzBWtOu/jaLgK6E+7gd4Nq4q6rEzBl
 github.com/xgfone/go-defaults v0.2.0/go.mod h1:zwcnD8escc6E5QrCNKRLQddb4/hcUnUOM20kUeki18Y=
 github.com/xgfone/go-generics v0.1.0 h1:Uw6cqXZJRAa49wvwLF6S+mnuBhFZcCCUSJaNYo0LmMI=
 github.com/xgfone/go-generics v0.1.0/go.mod h1:8+Wd/5eVql1eKLRXbMuXi5Q3MZkRAFtiV05wAfVuvqU=
+github.com/xgfone/go-structs v0.1.0 h1:xsHyQHzroBnFZYLKSwoSDF/7Ghr5a/XqTOTIwCHjhZ4=
+github.com/xgfone/go-structs v0.1.0/go.mod h1:4W5xaQ/HEgGkb+HCQjdRYIg/zzQymJr2WXYQpb/O+pE=
 github.com/xgfone/predicate v1.3.2 h1:6jJf13CxW8Ft58pFh7FYmVcvsR0Pe+0dYyoBMOjNFxY=
 github.com/xgfone/predicate v1.3.2/go.mod h1:YWL+KK1KRUpxFkQybVQlyONTkYdNI6IpBYOmx/kF4l0=
 golang.org/x/exp v0.0.0-20230321023759-10a507213a29 h1:ooxPy7fPvB4kwsA2h+iBNHkAbp/4JxTSwCmvdjEYmug=

@@ -20,8 +20,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/xgfone/go-apiserver/internal/structs"
 	"github.com/xgfone/go-cast"
+	"github.com/xgfone/go-structs/field"
 )
 
 // Unmarshaler is an interface to unmarshal itself from the parameter.
@@ -55,7 +55,13 @@ type Unmarshaler interface {
 // And any pointer to the types above, and the interface BindUnmarshaler.
 func BindStructFromMap(structptr interface{}, tag string, data map[string]interface{}) error {
 	return bindStruct(structptr, data, func(sf reflect.StructField) (name, arg string) {
-		name, _, arg = structs.GetFieldTag(sf, tag)
+		switch name, arg = field.GetTag(sf, tag); name {
+		case "":
+			name = sf.Name
+		case "-":
+			name = ""
+		default:
+		}
 		return
 	})
 }
@@ -279,7 +285,7 @@ func (b binder) bindStruct(dstStructValue reflect.Value, src interface{}) (err e
 		return
 	}
 
-	fields := structs.GetAllFields(dstStructValue.Type())
+	fields := field.GetAllFields(dstStructValue.Type())
 	for index, field := range fields {
 		err = b.bindField(dstStructValue.Field(index), field, src)
 		if err != nil {

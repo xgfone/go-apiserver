@@ -26,6 +26,8 @@ import (
 	"github.com/xgfone/go-apiserver/http/herrors"
 	"github.com/xgfone/go-apiserver/tools/binder"
 	"github.com/xgfone/go-defaults"
+	"github.com/xgfone/go-defaults/assists"
+	"github.com/xgfone/go-structs"
 )
 
 // Predefine some binder to bind the body, query and header of the request.
@@ -54,6 +56,9 @@ func init() {
 	DefaultMuxBinder.Add(header.MIMEApplicationJSON, JSONBinder())
 	DefaultMuxBinder.Add(header.MIMEApplicationForm, FormBinder(10<<20))
 	DefaultMuxBinder.Add(header.MIMEMultipartForm, FormBinder(10<<20))
+	defaults.StructValidator.Set(assists.StructValidateFunc(func(v interface{}) error {
+		return structs.Reflect(nil, v)
+	}))
 }
 
 // Binder is used to bind the data to the http request.
