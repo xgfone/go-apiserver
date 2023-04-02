@@ -1,9 +1,11 @@
 github.com/xgfone/go-atexit v0.10.0 h1:lFvHqY+4eoKG7qU2goyNF4gLusJfLRHv8muZcrnL/9c=
 github.com/xgfone/go-atexit v0.10.0/go.mod h1:yN4Hf2wE06X4kJLL2qxBNKuJHTRdDRoifivfFoKdC8o=
-github.com/xgfone/go-cast v0.7.0 h1:pl7IF94w+OkwpWzKQ8wnpXD+qHFiQFJqMhmvk13PxjI=
-github.com/xgfone/go-cast v0.7.0/go.mod h1:FRbU3FALpDh1PW5SjIo6XeM5VPcEBZaOBMtFUfxfkiU=
-github.com/xgfone/go-defaults v0.2.0 h1:1/k2GdF3X2HzBWtOu/jaLgK6E+7gd4Nq4q6rEzBl2mU=
-github.com/xgfone/go-defaults v0.2.0/go.mod h1:zwcnD8escc6E5QrCNKRLQddb4/hcUnUOM20kUeki18Y=
+github.com/xgfone/go-binder v0.1.0 h1:rOfvUfZMVN9YlqNwEbE+0/8RwV5sYW61zp12UhBtoe8=
+github.com/xgfone/go-binder v0.1.0/go.mod h1:ipL8u87sMX+VET5QGbPc5FR7eC6AVFKKfyXCA77swvY=
+github.com/xgfone/go-cast v0.8.0 h1:LEuxDOUUykxMRQF3pgx7NCRNdzwBrZNyfQH2Kmasfd4=
+github.com/xgfone/go-cast v0.8.0/go.mod h1:aHO9rXhmN4IZ4d1UG35+6WEVbg5yyISynFQJCVltrsk=
+github.com/xgfone/go-defaults v0.2.1 h1:uFYkk09WKuXFfwlKmluUXSUv1TCH9uJilJEFEOdRm0k=
+github.com/xgfone/go-defaults v0.2.1/go.mod h1:zwcnD8escc6E5QrCNKRLQddb4/hcUnUOM20kUeki18Y=
 github.com/xgfone/go-generics v0.1.0 h1:Uw6cqXZJRAa49wvwLF6S+mnuBhFZcCCUSJaNYo0LmMI=
 github.com/xgfone/go-generics v0.1.0/go.mod h1:8+Wd/5eVql1eKLRXbMuXi5Q3MZkRAFtiV05wAfVuvqU=
 github.com/xgfone/go-structs v0.1.0 h1:xsHyQHzroBnFZYLKSwoSDF/7Ghr5a/XqTOTIwCHjhZ4=

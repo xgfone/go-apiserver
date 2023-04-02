@@ -24,7 +24,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
-	"github.com/xgfone/go-apiserver/tools/binder"
+	"github.com/xgfone/go-binder"
 	"github.com/xgfone/go-defaults"
 	"github.com/xgfone/go-defaults/assists"
 	"github.com/xgfone/go-structs"
@@ -35,11 +35,11 @@ var (
 	DefaultMuxBinder = NewMuxBinder()
 
 	DefaultQueryBinder Binder = BindFunc(func(dst interface{}, r *http.Request) error {
-		return binder.BindStructFromURLValues(dst, "query", r.URL.Query())
+		return binder.BindStructToURLValues(dst, "query", r.URL.Query())
 	})
 
 	DefaultHeaderBinder Binder = BindFunc(func(dst interface{}, r *http.Request) error {
-		return binder.BindStructFromHTTPHeader(dst, "header", r.Header)
+		return binder.BindStructToHTTPHeader(dst, "header", r.Header)
 	})
 
 	DefaultValidateFunc = func(v interface{}, r *http.Request) error {
@@ -118,9 +118,9 @@ func FormBinder(maxMemory int64) Binder {
 				fhs = r.MultipartForm.File
 			}
 
-			err = binder.BindStructFromURLValues(v, "form", r.Form)
+			err = binder.BindStructToURLValues(v, "form", r.Form)
 			if err == nil && len(fhs) > 0 {
-				err = binder.BindStructFromMultipartFileHeaders(v, "form", fhs)
+				err = binder.BindStructToMultipartFileHeaders(v, "form", fhs)
 			}
 		}
 
