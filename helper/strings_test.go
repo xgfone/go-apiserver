@@ -40,6 +40,36 @@ func TestRandomString(t *testing.T) {
 	}
 }
 
+func TestIsIntegerString(t *testing.T) {
+	if !IsIntegerString("123") {
+		t.Errorf("123: expect true, but got false")
+	}
+
+	if !IsIntegerString("+123") {
+		t.Errorf("+123: expect true, but got false")
+	}
+
+	if !IsIntegerString("-123") {
+		t.Errorf("-123: expect true, but got false")
+	}
+
+	if IsIntegerString("1-23") {
+		t.Errorf("1-23: expect false, but got true")
+	}
+
+	if IsIntegerString("1+23") {
+		t.Errorf("1+23: expect false, but got true")
+	}
+
+	if IsIntegerString("123-") {
+		t.Errorf("123-: expect false, but got true")
+	}
+
+	if IsIntegerString("123+") {
+		t.Errorf("123+: expect false, but got true")
+	}
+}
+
 func TestTruncateStringByLen(t *testing.T) {
 	if s := TruncateStringByLen("abc", 4); s != "abc" {
 		t.Errorf("expect '%s', but got '%s'", "abc", s)
