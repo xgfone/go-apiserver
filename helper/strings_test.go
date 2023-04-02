@@ -40,6 +40,20 @@ func TestRandomString(t *testing.T) {
 	}
 }
 
+func TestIsDigitString(t *testing.T) {
+	if !IsDigitString("123") {
+		t.Errorf("123: expect true, but got false")
+	}
+
+	if IsDigitString("+123") {
+		t.Errorf("+123: expect false, but got true")
+	}
+
+	if IsDigitString("-123") {
+		t.Errorf("-123: expect false, but got true")
+	}
+}
+
 func TestIsIntegerString(t *testing.T) {
 	if !IsIntegerString("123") {
 		t.Errorf("123: expect true, but got false")

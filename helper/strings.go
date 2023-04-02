@@ -32,6 +32,23 @@ func RandomString(n int, charset string) string {
 	return string(buf)
 }
 
+// IsDigitString reports whether the string s only contains the characters [0-9].
+func IsDigitString(s string) bool {
+	if s == "" {
+		return false
+	}
+
+	for i, _len := 0, len(s); i < _len; i++ {
+		switch s[i] {
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		default:
+			return false
+		}
+	}
+
+	return true
+}
+
 // IsIntegerString reports whether the string s is the integer or not.
 func IsIntegerString(s string) bool {
 	if s == "" {
