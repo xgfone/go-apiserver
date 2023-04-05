@@ -24,12 +24,12 @@ import (
 	"sync"
 
 	"github.com/xgfone/go-apiserver/helper"
-	"github.com/xgfone/go-apiserver/http/binder"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/herrors"
 	"github.com/xgfone/go-apiserver/http/render"
 	"github.com/xgfone/go-apiserver/internal/errors2"
 	"github.com/xgfone/go-apiserver/result"
+	"github.com/xgfone/go-binder"
 	"golang.org/x/exp/maps"
 )
 
@@ -240,18 +240,18 @@ type Context struct {
 
 	// Bind the value to the request body
 	//
-	// If nil, use binder.BodyBinder instead.
-	BodyBinder binder.Binder
+	// If nil, use binder.BodyDecoder instead.
+	BodyDecoder binder.Decoder
 
 	// Bind the value to the request query.
 	//
-	// If nil, use binder.QueryBinder instead.
-	QueryBinder binder.Binder
+	// If nil, use binder.QueryDecoder instead.
+	QueryDecoder binder.Decoder
 
 	// Bind the value to the request header.
 	//
-	// If nil, use binder.HeaderBinder instead.
-	HeaderBinder binder.Binder
+	// If nil, use binder.HeaderDecoder instead.
+	HeaderDecoder binder.Decoder
 
 	// HandleResponse is used to wrap the response and handle it by itself.
 	ResponseHandler ResponseHandler
@@ -296,39 +296,39 @@ func (c *Context) Reset() {
 	*c = Context{
 		Data:            c.Data,
 		Renderer:        c.Renderer,
-		BodyBinder:      c.BodyBinder,
-		QueryBinder:     c.QueryBinder,
-		HeaderBinder:    c.HeaderBinder,
+		BodyDecoder:     c.BodyDecoder,
+		QueryDecoder:    c.QueryDecoder,
+		HeaderDecoder:   c.HeaderDecoder,
 		ResponseHandler: c.ResponseHandler,
 	}
 }
 
 // BindBody extracts the data from the request body and assigns it to v.
 func (c *Context) BindBody(v interface{}) (err error) {
-	if c.BodyBinder == nil {
-		err = binder.BodyBinder.Bind(v, c.Request)
+	if c.BodyDecoder == nil {
+		err = binder.BodyDecoder.Decode(v, c.Request)
 	} else {
-		err = c.BodyBinder.Bind(v, c.Request)
+		err = c.BodyDecoder.Decode(v, c.Request)
 	}
 	return
 }
 
 // BindQuery extracts the data from the request query and assigns it to v.
 func (c *Context) BindQuery(v interface{}) (err error) {
-	if c.QueryBinder == nil {
-		err = binder.QueryBinder.Bind(v, c.Request)
+	if c.QueryDecoder == nil {
+		err = binder.QueryDecoder.Decode(v, c.Request)
 	} else {
-		err = c.QueryBinder.Bind(v, c.Request)
+		err = c.QueryDecoder.Decode(v, c.Request)
 	}
 	return
 }
 
 // BindHeader extracts the data from the request header and assigns it to v.
 func (c *Context) BindHeader(v interface{}) (err error) {
-	if c.HeaderBinder == nil {
-		err = binder.HeaderBinder.Bind(v, c.Request)
+	if c.HeaderDecoder == nil {
+		err = binder.HeaderDecoder.Decode(v, c.Request)
 	} else {
-		err = c.HeaderBinder.Bind(v, c.Request)
+		err = c.HeaderDecoder.Decode(v, c.Request)
 	}
 	return
 }
