@@ -248,11 +248,11 @@ import (
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
 	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
-	"github.com/xgfone/go-apiserver/upstream"
-	"github.com/xgfone/go-apiserver/upstream/balancer"
-	"github.com/xgfone/go-apiserver/upstream/healthcheck"
-	"github.com/xgfone/go-apiserver/upstream/httpserver"
-	"github.com/xgfone/go-apiserver/upstream/loadbalancer"
+	"github.com/xgfone/go-loadbalancer"
+	"github.com/xgfone/go-loadbalancer/balancer"
+	"github.com/xgfone/go-loadbalancer/endpoints/httpep"
+	"github.com/xgfone/go-loadbalancer/forwarder"
+	"github.com/xgfone/go-loadbalancer/healthcheck"
 )
 
 var (
@@ -283,7 +283,7 @@ func initAdminManageAPI(router *ruler.Router) {
 				Rule     string `json:"rule" validate:"required"`
 				Upstream struct {
 					ForwardPolicy string                  `json:"forwardPolicy" default:"weight_random"`
-					ForwardURL    httpserver.URL          `json:"forwardUrl"`
+					ForwardURL    httpep.URL              `json:"forwardUrl"`
 					HealthCheck   healthcheck.CheckConfig `json:"healthCheck"`
 
 					Servers []struct {
@@ -299,32 +299,32 @@ func initAdminManageAPI(router *ruler.Router) {
 				return
 			}
 
-			// Build the upstream servers.
-			servers := make(upstream.Servers, len(req.Upstream.Servers))
+			// Build the upstream backend servers.
+			endpoints := make(loadbalancer.Endpoints, len(req.Upstream.Servers))
 			for i, server := range req.Upstream.Servers {
-				config := httpserver.Config{URL: req.Upstream.ForwardURL}
+				config := httpep.Config{URL: req.Upstream.ForwardURL}
 				config.StaticWeight = server.Weight
 				config.URL.Port = server.Port
 				config.URL.IP = server.IP
 
-				wserver, err := config.NewServer()
+				endpoint, err := config.NewEndpoint()
 				if err != nil {
 					ctx.Text(400, "fail to build the upstream server: %s", err.Error())
 					return
 				}
 
-				servers[i] = wserver
+				endpoints[i] = endpoint
 			}
 
 			// Build the loadbalancer forwarder.
 			balancer, _ := balancer.Build(req.Upstream.ForwardPolicy, nil)
-			lb := loadbalancer.NewLoadBalancer(req.Rule, balancer)
+			forwarder := forwarder.NewForwarder(req.Rule, balancer)
 
-			healthcheck.DefaultHealthChecker.AddUpdater(lb.Name(), lb)
-			healthcheck.DefaultHealthChecker.UpsertServers(servers, req.Upstream.HealthCheck)
+			healthcheck.DefaultHealthChecker.AddUpdater(forwarder.Name(), forwarder)
+			healthcheck.DefaultHealthChecker.UpsertEndpoints(endpoints, req.Upstream.HealthCheck)
 
-			// Build the route and forward the request to loadbalancer.
-			err := router.Rule(req.Rule).HandlerFunc(lb.ServeHTTP)
+			// Build the route and forward the request to forwarder.
+			err := router.Rule(req.Rule).HandlerFunc(forwarder.ServeHTTP)
 			if err != nil {
 				ctx.Text(400, "invalid route rule '%s': %s", req.Rule, err.Error())
 			}
