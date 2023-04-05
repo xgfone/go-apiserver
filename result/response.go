@@ -28,6 +28,7 @@ type Responder interface {
 type Response struct {
 	RequestID string      `json:"RequestId,omitempty" yaml:"RequestId,omitempty" xml:"RequestId,omitempty"`
 	Error     error       `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
+	Type      string      `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
 	Data      interface{} `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
 }
 
@@ -48,6 +49,12 @@ func (r Response) WithData(data interface{}) Response {
 	return r
 }
 
+// WithType returns a new Response with the data type.
+func (r Response) WithType(_type string) Response {
+	r.Type = _type
+	return r
+}
+
 // WithError returns a new Response with the given error.
 func (r Response) WithError(err error) Response {
 	r.Error = err
@@ -58,16 +65,16 @@ func (r Response) WithError(err error) Response {
 func (r Response) Respond(responder Responder) { responder.Respond(r) }
 
 // Decode uses the decode function to decode the result to the response.
-func (r *Response) Decode(decode func(interface{}) error) (err error) {
+func (r *Response) Decode(decode func(interface{}) error) error {
 	return decode(r)
 }
 
 // DecodeJSON uses json decoder to decode from the reader into the response.
-func (r *Response) DecodeJSON(reader io.Reader) (err error) {
+func (r *Response) DecodeJSON(reader io.Reader) error {
 	return json.NewDecoder(reader).Decode(r)
 }
 
 // DecodeJSONBytes uses json decoder to decode the []byte data into the response.
-func (r *Response) DecodeJSONBytes(data []byte) (err error) {
+func (r *Response) DecodeJSONBytes(data []byte) error {
 	return json.Unmarshal(data, r)
 }
