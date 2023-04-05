@@ -27,7 +27,7 @@ import (
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/middleware/logger"
-	"github.com/xgfone/go-apiserver/upstream"
+	"github.com/xgfone/go-defaults"
 )
 
 // LogKvsAppender is used to append the extra log key-value contexts.
@@ -130,7 +130,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				kvs = append(kvs, "action", ctx.Action)
 			}
 
-			if reqid := upstream.GetRequestID(r.Context(), r); reqid != "" {
+			if reqid := defaults.GetRequestID(r.Context(), r); reqid != "" {
 				kvs = append(kvs, "reqid", reqid)
 			}
 

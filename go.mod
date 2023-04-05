@@ -3,7 +3,7 @@ module github.com/xgfone/go-apiserver
 require (
 	github.com/xgfone/go-atexit v0.10.0
 	github.com/xgfone/go-binder v0.1.0
-	github.com/xgfone/go-defaults v0.2.1
+	github.com/xgfone/go-defaults v0.3.0
 	github.com/xgfone/go-generics v0.1.0
 	github.com/xgfone/go-structs v0.1.0
 	github.com/xgfone/predicate v1.3.2
