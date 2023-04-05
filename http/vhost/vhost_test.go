@@ -39,7 +39,7 @@ func TestManager(t *testing.T) {
 	m.AddVHost(exactHost2, httpHandler(202))
 	m.AddVHost(suffixHost, httpHandler(203))
 
-	if vhosts := m.handler.Load().(vhostsWrapper).vhosts; len(vhosts) != 3 {
+	if vhosts := m.vhostsHandler.Load(); len(vhosts) != 3 {
 		t.Errorf("expect %d vhosts, but got %d: %v", 3, len(vhosts), vhosts)
 	} else {
 		for i, vhost := range vhosts {

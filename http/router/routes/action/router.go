@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,8 +27,6 @@ import (
 
 // HeaderAction represents the http header to store the action method.
 var HeaderAction = "X-Action"
-
-type actionsWrapper struct{ actions map[string]http.Handler }
 
 func notFoundHandler(resp http.ResponseWriter, req *http.Request) {
 	c := reqresp.GetContext(resp, req)
@@ -64,6 +62,7 @@ type Router struct {
 func NewRouter() *Router {
 	r := &Router{amaps: make(map[string]http.Handler, 16)}
 	r.NotFound = http.HandlerFunc(notFoundHandler)
+	r.actions.Store(map[string]http.Handler(nil))
 	r.updateActions()
 	return r
 }
@@ -93,7 +92,7 @@ func (r *Router) Route(rw http.ResponseWriter, req *http.Request, notFound http.
 
 	var ok bool
 	if len(ctx.Action) > 0 {
-		ctx.Handler, ok = r.actions.Load().(actionsWrapper).actions[ctx.Action]
+		ctx.Handler, ok = r.actions.Load().(map[string]http.Handler)[ctx.Action]
 	}
 
 	switch true {
@@ -223,10 +222,7 @@ func (r *Router) Unregister(action string) (ok bool) {
 	return
 }
 
-func (r *Router) updateActions() {
-	r.actions.Store(actionsWrapper{actions: maps.Clone(r.amaps)})
-}
-
+func (r *Router) updateActions() { r.actions.Store(maps.Clone(r.amaps)) }
 func (r *Router) checkAction(action string, handler http.Handler) {
 	if len(action) == 0 {
 		panic("action name is empty")

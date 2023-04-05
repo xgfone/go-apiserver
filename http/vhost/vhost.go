@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,10 +21,10 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/matcher"
+	"github.com/xgfone/go-atomicvalue"
 	"github.com/xgfone/go-generics/maps"
 )
 
@@ -87,9 +87,6 @@ func (hs vhosts) Less(i, j int) bool {
 	return false
 }
 
-type defaultVHost struct{ http.Handler }
-type vhostsWrapper struct{ vhosts }
-
 // DefaultManager is the default global virtual host manager.
 var DefaultManager = NewManager()
 
@@ -110,19 +107,20 @@ type Manager struct {
 	// Default: h.ServeHTTP(w, r) or handler.Handler404.ServeHTTP(w, r)
 	HandleHTTP func(w http.ResponseWriter, r *http.Request, vhost string, handler http.Handler)
 
-	lock   sync.RWMutex
-	vhosts map[string]vhost
+	lock      sync.RWMutex
+	vhostmaps map[string]vhost
 
-	handler      atomic.Value
-	defaultVHost atomic.Value
+	vhostsHandler  atomicvalue.Value[vhosts]
+	defaultHandler atomicvalue.Value[http.Handler]
 }
 
 // NewManager returns a new virtual host manager.
 func NewManager() *Manager {
-	m := &Manager{vhosts: make(map[string]vhost, 8)}
-	m.SetDefaultVHost(nil)
-	m.updateVHosts()
-	return m
+	return &Manager{
+		vhostmaps:      make(map[string]vhost, 8),
+		vhostsHandler:  atomicvalue.NewValue[vhosts](nil),
+		defaultHandler: atomicvalue.NewValue[http.Handler](nil),
+	}
 }
 
 func (m *Manager) getReqHost(r *http.Request) string {
@@ -133,9 +131,9 @@ func (m *Manager) getReqHost(r *http.Request) string {
 }
 
 func (m *Manager) updateVHosts() {
-	vhosts := vhosts(maps.Values(m.vhosts))
+	vhosts := vhosts(maps.Values(m.vhostmaps))
 	sort.Stable(vhosts)
-	m.handler.Store(vhostsWrapper{vhosts: vhosts})
+	m.vhostsHandler.Store(vhosts)
 }
 
 func (m *Manager) handlerHTTP(w http.ResponseWriter, r *http.Request, vhost string, h http.Handler) {
@@ -161,7 +159,7 @@ func (m *Manager) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 //
 // If no vhost matches the host, return ("", nil, false).
 func (m *Manager) MatchHost(host string) (vhost string, handler http.Handler, ok bool) {
-	vhosts := m.handler.Load().(vhostsWrapper).vhosts
+	vhosts := m.vhostsHandler.Load()
 	for i, _len := 0, len(vhosts); i < _len; i++ {
 		if vhosts[i].MatchHost(host) {
 			return vhosts[i].VHost, vhosts[i].Handler, true
@@ -172,12 +170,12 @@ func (m *Manager) MatchHost(host string) (vhost string, handler http.Handler, ok
 
 // GetDefaultVHost returns the default virtual host and handler.
 func (m *Manager) GetDefaultVHost() http.Handler {
-	return m.defaultVHost.Load().(defaultVHost).Handler
+	return m.defaultHandler.Load()
 }
 
 // SetDefaultVHost resets the default virtual host and handler.
 func (m *Manager) SetDefaultVHost(handler http.Handler) {
-	m.defaultVHost.Store(defaultVHost{Handler: handler})
+	m.defaultHandler.Store(handler)
 }
 
 // AddVHost adds the virtual host with the handler.
@@ -188,7 +186,7 @@ func (m *Manager) AddVHost(vhost string, handler http.Handler) (err error) {
 	vh := newVHost(vhost, handler)
 
 	m.lock.Lock()
-	if maps.Add(m.vhosts, vhost, vh) {
+	if maps.Add(m.vhostmaps, vhost, vh) {
 		m.updateVHosts()
 	} else {
 		err = fmt.Errorf("vhost '%s' has been added", vhost)
@@ -207,7 +205,7 @@ func (m *Manager) DelVHost(vhost string) (handler http.Handler) {
 	}
 
 	m.lock.Lock()
-	if vh, ok := maps.Pop(m.vhosts, vhost); ok {
+	if vh, ok := maps.Pop(m.vhostmaps, vhost); ok {
 		handler = vh.Handler
 		m.updateVHosts()
 	}
@@ -225,7 +223,7 @@ func (m *Manager) GetVHost(vhost string) (handler http.Handler) {
 	}
 
 	m.lock.RLock()
-	if vh, ok := m.vhosts[vhost]; ok {
+	if vh, ok := m.vhostmaps[vhost]; ok {
 		handler = vh.Handler
 	}
 	m.lock.RUnlock()
@@ -235,8 +233,8 @@ func (m *Manager) GetVHost(vhost string) (handler http.Handler) {
 // GetVHosts returns all the virtual hosts and handlers.
 func (m *Manager) GetVHosts() (vhosts map[string]http.Handler) {
 	m.lock.RLock()
-	vhosts = make(map[string]http.Handler, len(m.vhosts))
-	for host, vhost := range m.vhosts {
+	vhosts = make(map[string]http.Handler, len(m.vhostmaps))
+	for host, vhost := range m.vhostmaps {
 		vhosts[host] = vhost.Handler
 	}
 	m.lock.RUnlock()

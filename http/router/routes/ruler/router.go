@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,8 +39,6 @@ import (
 
 // DefaultRouter is the default global ruler router.
 var DefaultRouter = NewRouter()
-
-type routesWrapper struct{ Routes }
 
 // Router is used to manage a set of routes based on the ruler.
 type Router struct {
@@ -92,7 +90,7 @@ func (r *Router) Route(rw http.ResponseWriter, req *http.Request, notFound http.
 // MatchRoute uses the registered routes to match the http request,
 // and returns the matched route.
 func (r *Router) MatchRoute(rw http.ResponseWriter, req *http.Request) (Route, bool) {
-	routes := r.routes.Load().(routesWrapper).Routes
+	routes := r.routes.Load().(Routes)
 	for i, _len := 0, len(routes); i < _len; i++ {
 		if ok := routes[i].Matcher.Match(rw, req); ok {
 			return routes[i], true
@@ -113,7 +111,7 @@ func (r *Router) GetRoute(name string) (route Route, ok bool) {
 //
 // NOTICE: The returned routes must not be modified.
 func (r *Router) GetRoutes() (routes Routes) {
-	return slices.Clone(r.routes.Load().(routesWrapper).Routes)
+	return slices.Clone(r.routes.Load().(Routes))
 }
 
 // AddRoute adds the given route.
@@ -200,7 +198,7 @@ func (r *Router) checkRoute(route Route) error {
 func (r *Router) updateRoutes() {
 	routes := Routes(maps.Values(r.rmaps))
 	sort.Stable(routes)
-	r.routes.Store(routesWrapper{Routes: routes})
+	r.routes.Store(routes)
 }
 
 // AddDebugVarsRoute adds the debug route to serve the published vars

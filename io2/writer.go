@@ -17,7 +17,8 @@ package io2
 import (
 	"io"
 	"sync"
-	"sync/atomic"
+
+	"github.com/xgfone/go-atomicvalue"
 )
 
 var (
@@ -55,12 +56,10 @@ func SyncWriter(w io.Writer) (err error) {
 	return
 }
 
-type wrappedWriter struct{ io.Writer }
-
 // SwitchWriter is a writer proxy, which can be switch the writer to another
 // at run-time.
 type SwitchWriter struct {
-	w atomic.Value
+	w atomicvalue.Value[io.Writer]
 }
 
 // NewSwitchWriter returns a new SwitchWriter with w.
@@ -68,9 +67,7 @@ func NewSwitchWriter(w io.Writer) *SwitchWriter {
 	if w == nil {
 		panic("SwitchWriter: io.Writer is nil")
 	}
-	sw := new(SwitchWriter)
-	sw.w.Store(wrappedWriter{w})
-	return sw
+	return &SwitchWriter{w: atomicvalue.NewValue(w)}
 }
 
 // Write implements the interface io.Writer.
@@ -99,12 +96,15 @@ func (w *SwitchWriter) Run(f func(io.Writer)) {
 
 // Get returns the wrapped writer.
 func (w *SwitchWriter) Get() io.Writer {
-	return w.w.Load().(wrappedWriter).Writer
+	return w.w.Load()
 }
 
 // Swap swaps the old writer with the new writer.
 func (w *SwitchWriter) Swap(new io.Writer) (old io.Writer) {
-	return w.w.Swap(wrappedWriter{new}).(wrappedWriter).Writer
+	if new == nil {
+		panic("SwitchWriter.Swap: io.Writer is nil")
+	}
+	return w.w.Swap(new)
 }
 
 // SafeWriter is a writer to write the data concurrently and safely.

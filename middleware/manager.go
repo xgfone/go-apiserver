@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,68 +21,72 @@ import (
 	"net/http"
 	"sort"
 	"sync"
-	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/tcp"
+	"github.com/xgfone/go-atomicvalue"
 	"github.com/xgfone/go-generics/maps"
 )
 
 // DefaultManager is the default global middleware manager.
 var DefaultManager = NewManager(nil)
 
-type handlerWrapper struct{ Handler interface{} }
-type middlewaresWrapper struct{ Middlewares }
-
 // Manager is used to manage a group of the common middlewares,
 // which has also implemented the interface http.Handler and tcp.Handler
 // to be used as a HTTP or TCP Handler.
 type Manager struct {
-	orig    atomic.Value
-	handler atomic.Value
+	origHandler atomicvalue.Value[interface{}]
+	wrapHandler atomicvalue.Value[interface{}]
 
-	maps map[string]Middleware
 	lock sync.RWMutex
-	mdws atomic.Value
+	maps map[string]Middleware
+	mdws atomicvalue.Value[Middlewares]
 }
 
 // NewManager returns a new middleware manager.
 func NewManager(handler interface{}) *Manager {
-	m := &Manager{maps: make(map[string]Middleware, 8)}
-	m.orig.Store(handlerWrapper{Handler: handler})
-	m.updateMiddlewares()
-	return m
+	return &Manager{
+		maps: make(map[string]Middleware, 8),
+		mdws: atomicvalue.NewValue[Middlewares](nil),
+
+		origHandler: atomicvalue.NewValue(handler),
+		wrapHandler: atomicvalue.NewValue(handler),
+	}
 }
 
 func (m *Manager) updateHandler(handler interface{}) {
-	if handler != nil {
-		m.handler.Store(handlerWrapper{m.GetMiddlewares().Handler(handler)})
+	if handler == nil {
+		m.wrapHandler.Store(nil)
+	} else {
+		m.wrapHandler.Store(m.GetMiddlewares().Handler(handler))
 	}
 }
 
 func (m *Manager) updateMiddlewares() {
 	mdws := Middlewares(maps.Values(m.maps))
 	sort.Stable(mdws)
-	m.mdws.Store(middlewaresWrapper{mdws})
-	if handler := m.GetHandler(); handler != nil {
-		m.handler.Store(handlerWrapper{mdws.Handler(handler)})
+	m.mdws.Store(mdws)
+	if handler := m.GetHandler(); handler == nil {
+		m.wrapHandler.Store(nil)
+	} else {
+		m.wrapHandler.Store(mdws.Handler(handler))
 	}
 }
 
 // SwapHandler stores the new handler and returns the old.
 func (m *Manager) SwapHandler(new interface{}) (old interface{}) {
 	m.updateHandler(new)
-	return m.orig.Swap(new).(handlerWrapper).Handler
+	return m.origHandler.Swap(new)
 }
 
 // SetHandler resets the handler.
 func (m *Manager) SetHandler(handler interface{}) {
 	m.updateHandler(handler)
-	m.orig.Store(handlerWrapper{handler})
+	m.origHandler.Store(handler)
 }
 
 // GetHandler returns the handler.
 func (m *Manager) GetHandler() interface{} {
-	return m.orig.Load().(handlerWrapper).Handler
+	return m.origHandler.Load()
 }
 
 // Use is a convenient function to add a group of the given middlewares,
@@ -161,7 +165,7 @@ func (m *Manager) GetMiddleware(name string) Middleware {
 
 // GetMiddlewares returns all the middlewares.
 func (m *Manager) GetMiddlewares() Middlewares {
-	return m.mdws.Load().(middlewaresWrapper).Middlewares
+	return m.mdws.Load()
 }
 
 // WrapHandler uses the inner middlewares to wrap the given handler.
@@ -173,9 +177,7 @@ func (m *Manager) WrapHandler(handler interface{}) (wrappedHandler interface{}) 
 // by the middlewares.
 func (m *Manager) WrappedHandler() interface{} { return m.getHandler() }
 
-func (m *Manager) getHandler() interface{} {
-	return m.handler.Load().(handlerWrapper).Handler
-}
+func (m *Manager) getHandler() interface{} { return m.wrapHandler.Load() }
 
 // OnConnection implements the interface http.Handler.
 //

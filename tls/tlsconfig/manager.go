@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,25 +18,22 @@ package tlsconfig
 import (
 	"crypto/tls"
 	"sync"
-	"sync/atomic"
+
+	"github.com/xgfone/go-atomicvalue"
 )
 
 // DefaultManager is the default tls.Config manager.
 var DefaultManager = NewManager()
 
-type updaterWraper struct{ Updater }
-
 // Manager is used to manage a set of tls.Config.
 type Manager struct {
 	configs sync.Map
-	updater atomic.Value
+	updater atomicvalue.Value[Updater]
 }
 
 // NewManager returns a new TLS config manager.
 func NewManager() *Manager {
-	m := &Manager{}
-	m.SetUpdater(nil)
-	return m
+	return &Manager{updater: atomicvalue.NewValue[Updater](nil)}
 }
 
 func (m *Manager) updaterAddTLSConfig(name string, config *tls.Config) {
@@ -52,14 +49,10 @@ func (m *Manager) updaterDelCertificate(name string) {
 }
 
 // SetUpdater resets the tls config updater.
-func (m *Manager) SetUpdater(updater Updater) {
-	m.updater.Store(updaterWraper{updater})
-}
+func (m *Manager) SetUpdater(updater Updater) { m.updater.Store(updater) }
 
 // GetUpdater returns the tls config updater.
-func (m *Manager) GetUpdater() Updater {
-	return m.updater.Load().(updaterWraper).Updater
-}
+func (m *Manager) GetUpdater() Updater { return m.updater.Load() }
 
 // GetTLSConfigs returns all the tls configs.
 func (m *Manager) GetTLSConfigs() map[string]*tls.Config {

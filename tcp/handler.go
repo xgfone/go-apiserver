@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@ import (
 	"context"
 	"net"
 	"sync"
-	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/nets"
+	"github.com/xgfone/go-atomicvalue"
 )
 
 // Handler is used to handle the TCP connection.
@@ -43,40 +43,31 @@ type Handler interface {
 
 /* ------------------------------------------------------------------------- */
 
-type handlerWrapper struct{ Handler }
-
 var _ Handler = &SwitchHandler{}
 
 // SwitchHandler is a switch handler, which can switch the handler to any one.
-type SwitchHandler struct{ handler atomic.Value }
+type SwitchHandler struct{ handler atomicvalue.Value[Handler] }
 
 // NewSwitchHandler returns a new switch handler with the initial handler.
 func NewSwitchHandler(handler Handler) *SwitchHandler {
 	if handler == nil {
 		panic("SwitchHandler: the tcp handler is nil")
 	}
-
-	sh := new(SwitchHandler)
-	sh.Set(handler)
-	return sh
+	return &SwitchHandler{handler: atomicvalue.NewValue(handler)}
 }
 
 // Get returns the current handler.
-func (sh *SwitchHandler) Get() Handler {
-	return sh.handler.Load().(handlerWrapper).Handler
-}
+func (sh *SwitchHandler) Get() Handler { return sh.handler.Load() }
 
 // Set sets the tcp handler to new.
-func (sh *SwitchHandler) Set(new Handler) {
-	sh.handler.Store(handlerWrapper{new})
-}
+func (sh *SwitchHandler) Set(new Handler) { sh.handler.Store(new) }
 
 // Swap stores the new handler and returns the old.
 func (sh *SwitchHandler) Swap(new Handler) (old Handler) {
 	if new == nil {
-		panic("SwitchHandler: the new handler is nil")
+		panic("SwitchHandler.Swap: the new handler is nil")
 	}
-	return sh.handler.Swap(handlerWrapper{new}).(handlerWrapper).Handler
+	return sh.handler.Swap(new)
 }
 
 // OnConnection implements the interface Handler, which will forward the call

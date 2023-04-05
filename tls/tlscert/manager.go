@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"sync"
-	"sync/atomic"
 
+	"github.com/xgfone/go-atomicvalue"
 	"github.com/xgfone/go-generics/maps"
 )
 
@@ -28,24 +28,22 @@ var DefaultManager = NewManager()
 
 var _ Updater = &Manager{}
 
-type certsWrapper struct{ Certs []Certificate }
-type updaterWraper struct{ Updater }
-
 // Manager is used to manage a set of the certificates,
 // which implements the interface Updater.
 type Manager struct {
 	clock   sync.RWMutex
 	cmaps   map[string]Certificate
-	certs   atomic.Value
-	updater atomic.Value
+	certs   atomicvalue.Value[[]Certificate]
+	updater atomicvalue.Value[Updater]
 }
 
 // NewManager returns a new certificate manager.
 func NewManager() *Manager {
-	m := &Manager{cmaps: make(map[string]Certificate, 8)}
-	m.certs.Store(certsWrapper{})
-	m.SetUpdater(nil)
-	return m
+	return &Manager{
+		cmaps:   make(map[string]Certificate, 8),
+		certs:   atomicvalue.NewValue[[]Certificate](nil),
+		updater: atomicvalue.NewValue[Updater](nil),
+	}
 }
 
 func (m *Manager) updaterAddCertificate(name string, cert Certificate) {
@@ -62,12 +60,12 @@ func (m *Manager) updaterDelCertificate(name string) {
 
 // SetUpdater resets the certificate updater.
 func (m *Manager) SetUpdater(updater Updater) {
-	m.updater.Store(updaterWraper{updater})
+	m.updater.Store(updater)
 }
 
 // GetUpdater returns the certificate updater.
 func (m *Manager) GetUpdater() Updater {
-	return m.updater.Load().(updaterWraper).Updater
+	return m.updater.Load()
 }
 
 // GetCertificates returns all the certificates.
@@ -121,12 +119,12 @@ func (m *Manager) DelCertificate(name string) {
 }
 
 func (m *Manager) updateCertificates() {
-	m.certs.Store(certsWrapper{maps.Values(m.cmaps)})
+	m.certs.Store(maps.Values(m.cmaps))
 }
 
 // FindCertificate traverses all the certificates and finds the matched certificate.
 func (m *Manager) FindCertificate(chi *tls.ClientHelloInfo) (cert Certificate, ok bool) {
-	certs := m.certs.Load().(certsWrapper).Certs
+	certs := m.certs.Load()
 	for i, _len := 0, len(certs); i < _len; i++ {
 		if err := chi.SupportsCertificate(certs[i].TLSCert); err == nil {
 			return certs[i], true
@@ -146,7 +144,7 @@ func (m *Manager) GetTLSCertificate(chi *tls.ClientHelloInfo) (*tls.Certificate,
 
 // GetTLSCertificates returns all the certificates as []tls.Certificate.
 func (m *Manager) GetTLSCertificates() (certificates []tls.Certificate) {
-	certs := m.certs.Load().(certsWrapper).Certs
+	certs := m.certs.Load()
 	certificates = make([]tls.Certificate, len(certs))
 	for i, _len := 0, len(certs); i < _len; i++ {
 		certificates[i] = *certs[i].TLSCert

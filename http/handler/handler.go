@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,8 @@ package handler
 
 import (
 	"net/http"
-	"sync/atomic"
+
+	"github.com/xgfone/go-atomicvalue"
 )
 
 // Pre-define some http handlers.
@@ -36,41 +37,34 @@ var (
 	})
 )
 
-type httpHandlerWrapper struct{ http.Handler }
-
 // SwitchHandler is a HTTP handler that is used to switch the real handler.
-type SwitchHandler struct{ handler atomic.Value }
+type SwitchHandler struct {
+	handler atomicvalue.Value[http.Handler]
+}
 
 // NewSwitchHandler returns a new switch handler with the initial handler.
 func NewSwitchHandler(handler http.Handler) *SwitchHandler {
 	if handler == nil {
 		panic("SwitchHandler: the http handler is nil")
 	}
-
-	sh := &SwitchHandler{}
-	sh.handler.Store(httpHandlerWrapper{handler})
-	return sh
+	return &SwitchHandler{handler: atomicvalue.NewValue(handler)}
 }
 
 // Set sets the http handler to new.
-func (sh *SwitchHandler) Set(new http.Handler) {
-	sh.handler.Store(httpHandlerWrapper{new})
-}
+func (sh *SwitchHandler) Set(new http.Handler) { sh.handler.Store(new) }
 
 // Get returns the current handler.
-func (sh *SwitchHandler) Get() http.Handler {
-	return sh.handler.Load().(httpHandlerWrapper).Handler
-}
+func (sh *SwitchHandler) Get() http.Handler { return sh.handler.Load() }
 
 // Swap stores the new handler and returns the old.
 func (sh *SwitchHandler) Swap(new http.Handler) (old http.Handler) {
 	if new == nil {
 		panic("SwitchHandler.Swap: the new http handler is nil")
 	}
-	return sh.handler.Swap(httpHandlerWrapper{new}).(httpHandlerWrapper).Handler
+	return sh.handler.Swap(new)
 }
 
 // ServeHTTP implements the interface http.Handler.
 func (sh *SwitchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	sh.handler.Load().(httpHandlerWrapper).Handler.ServeHTTP(w, r)
+	sh.handler.Load().ServeHTTP(w, r)
 }
