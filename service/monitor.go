@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/log"
-	atomic2 "github.com/xgfone/go-apiserver/tools/atomic"
+	"github.com/xgfone/go-atomicvalue"
 )
 
 // DefaultCheckConfig is the global default check configuration.
@@ -62,8 +62,8 @@ type Monitor struct {
 	state   int32
 	failure int
 	cconfig atomic.Value
-	checker atomic2.Value
-	service atomic2.Value
+	checker atomicvalue.Value[Checker]
+	service atomicvalue.Value[Service]
 	setsvc  chan struct{}
 }
 
@@ -109,7 +109,7 @@ func (m *Monitor) SetCheckConfig(c CheckConfig) {
 
 // GetChecker returns the stored checker.
 func (m *Monitor) GetChecker() Checker {
-	return m.checker.Load().(Checker)
+	return m.checker.Load()
 }
 
 // SetChecker resets the checker.
@@ -122,7 +122,7 @@ func (m *Monitor) SetChecker(c Checker) {
 
 // GetService returns the stored service.
 func (m *Monitor) GetService() Service {
-	return m.service.Load().(Service)
+	return m.service.Load()
 }
 
 // SetService resets the service.

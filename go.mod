@@ -2,6 +2,7 @@ module github.com/xgfone/go-apiserver
 
 require (
 	github.com/xgfone/go-atexit v0.10.0
+	github.com/xgfone/go-atomicvalue v0.2.0
 	github.com/xgfone/go-binder v0.2.0
 	github.com/xgfone/go-defaults v0.3.0
 	github.com/xgfone/go-generics v0.1.0
