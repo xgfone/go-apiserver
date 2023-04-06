@@ -20,6 +20,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/xgfone/go-checker"
 )
 
 func ExampleMonitor() {
@@ -29,8 +31,8 @@ func ExampleMonitor() {
 	service := NewService(func() { activate(1) }, func() { activate(0) })
 
 	vip := "127.0.0.1"
-	checker := NewVipChecker(vip, "")
-	monitor := NewMonitor(service, checker, nil)
+	checker := checker.NewVipCondition(vip, "")
+	monitor := NewMonitor(service, checker)
 
 	// The service is not activated before activating the monitor.
 	fmt.Println(isActivated()) // false
@@ -55,8 +57,8 @@ func ExampleMonitor() {
 
 func TestMonitorCheckerExist(t *testing.T) {
 	service := newTestService("test")
-	checker := CheckerFunc(func(context.Context) (bool, error) { return true, nil })
-	monitor := NewMonitor(service, checker, nil)
+	checker := CheckerFunc(func(context.Context) bool { return true })
+	monitor := NewMonitor(service, checker)
 
 	monitor.Activate()
 	time.Sleep(time.Millisecond * 100)
@@ -85,8 +87,8 @@ func TestMonitorCheckerExist(t *testing.T) {
 
 func TestMonitorCheckerNotExist(t *testing.T) {
 	service := newTestService("test")
-	checker := CheckerFunc(func(context.Context) (bool, error) { return false, nil })
-	monitor := NewMonitor(service, checker, nil)
+	checker := CheckerFunc(func(context.Context) bool { return false })
+	monitor := NewMonitor(service, checker)
 
 	monitor.Activate()
 	time.Sleep(time.Millisecond * 100)
