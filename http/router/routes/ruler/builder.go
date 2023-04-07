@@ -1,4 +1,4 @@
-// Copyright 2021~2022 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package ruler
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/xgfone/go-apiserver/http/matcher"
 	"github.com/xgfone/go-apiserver/http/reqresp"
@@ -39,6 +40,12 @@ func (r *Router) Matcher(matcher matcher.Matcher) RouteBuilder {
 // which is equal to NewRouteBuilder(r).Rule(matcherRule).
 func (r *Router) Rule(matcherRule string) RouteBuilder {
 	return NewRouteBuilder(r).Rule(matcherRule)
+}
+
+// Group returns a route builder with the prefix path group,
+// which is equal to NewRouteBuilder(r).Group(pathPrefix).
+func (r *Router) Group(pathPrefix string) RouteBuilder {
+	return NewRouteBuilder(r).Group(pathPrefix)
 }
 
 // Path returns a route builder with the path matcher,
@@ -67,6 +74,7 @@ func (r *Router) HostRegexp(regexpHost string) RouteBuilder {
 
 // RouteBuilder is used to build the route.
 type RouteBuilder struct {
+	group    string
 	manager  *Router
 	mdws     middleware.Middlewares
 	name     string
@@ -136,9 +144,41 @@ func (b RouteBuilder) Rule(matcherRule string) RouteBuilder {
 	return b
 }
 
+// Group appends the prefix of the paths of a group of routes,
+// which will add the prefix into the path of each route
+// when registering it.
+//
+// NOTICE: pathPrefix must be empty or start with '/'.
+func (b RouteBuilder) Group(pathPrefix string) RouteBuilder {
+	if b.err != nil {
+		return b
+	}
+
+	if pathPrefix == "" {
+		return b
+	} else if pathPrefix[0] != '/' {
+		b.err = errors.New("the route path group must start with '/'")
+		return b
+	}
+
+	pathPrefix = strings.TrimRight(pathPrefix, "/")
+	if b.group == "" {
+		b.group = pathPrefix
+	} else if pathPrefix != "" {
+		b.group += pathPrefix
+	}
+	return b
+}
+
 // Path is the same as b.And(matcher.Path(path)).
+//
+// NOTICE: if the path prefix group is set, it will add the prefix into path.
 func (b RouteBuilder) Path(path string) RouteBuilder {
 	if b.err == nil {
+		if b.group != "" {
+			path = b.group + path
+		}
+
 		var m matcher.Matcher
 		if m, b.err = matcher.Path(path); b.err == nil {
 			b = b.And(m)
@@ -148,8 +188,14 @@ func (b RouteBuilder) Path(path string) RouteBuilder {
 }
 
 // PathPrefix is the same as b.And(matcher.PathPrefix(pathPrefix)).
+//
+// NOTICE: if the path prefix group is set, it will add the prefix into pathPrefix.
 func (b RouteBuilder) PathPrefix(pathPrefix string) RouteBuilder {
 	if b.err == nil {
+		if b.group != "" {
+			pathPrefix = b.group + pathPrefix
+		}
+
 		var m matcher.Matcher
 		if m, b.err = matcher.PathPrefix(pathPrefix); b.err == nil {
 			b = b.And(m)
