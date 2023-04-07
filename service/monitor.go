@@ -22,17 +22,6 @@ import (
 	"github.com/xgfone/go-checker"
 )
 
-// Checker is used to check whether a condition is ok.
-type Checker = checker.Condition
-
-// CheckerFunc is the checker function.
-type CheckerFunc = checker.ConditionFunc
-
-// NothingChecker returns a new nothing checker that always returns false.
-func NothingChecker() Checker {
-	return checker.ConditionFunc(func(context.Context) (ok bool) { return })
-}
-
 // Monitor is used to control that a group of services activate or deactivate.
 type Monitor struct {
 	clock  sync.RWMutex
@@ -43,13 +32,11 @@ type Monitor struct {
 }
 
 // NewMonitor returns a new service monitor with checker.DefaultConfig.
-func NewMonitor(svc Service, c Checker) *Monitor {
-	if c == nil {
-		panic("service.Monitor: the checker must not be nil")
-	}
-
+//
+// If cond is nil use checker.DefaultCondition instead.
+func NewMonitor(svc Service, cond checker.Condition) *Monitor {
 	m := new(Monitor)
-	m.checker = checker.NewChecker("servicemonitor", c, m.activate)
+	m.checker = checker.NewChecker("servicemonitor", cond, m.activate)
 	m.SetService(svc)
 	return m
 }
@@ -61,10 +48,10 @@ func (m *Monitor) GetCheckerConfig() checker.Config { return m.checker.Config() 
 func (m *Monitor) SetCheckerConfig(config checker.Config) { m.checker.SetConfig(config) }
 
 // GetChecker returns the stored checker.
-func (m *Monitor) GetChecker() Checker { return m.checker.Condition() }
+func (m *Monitor) GetChecker() checker.Condition { return m.checker.Condition() }
 
 // SetChecker resets the checker.
-func (m *Monitor) SetChecker(c Checker) {
+func (m *Monitor) SetChecker(c checker.Condition) {
 	if c == nil {
 		panic("service.Monitor: the checker must not be nil")
 	}

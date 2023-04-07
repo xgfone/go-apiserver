@@ -57,7 +57,7 @@ func ExampleMonitor() {
 
 func TestMonitorCheckerExist(t *testing.T) {
 	service := newTestService("test")
-	checker := CheckerFunc(func(context.Context) bool { return true })
+	checker := checker.ConditionFunc(func(context.Context) bool { return true })
 	monitor := NewMonitor(service, checker)
 
 	monitor.Activate()
@@ -87,7 +87,7 @@ func TestMonitorCheckerExist(t *testing.T) {
 
 func TestMonitorCheckerNotExist(t *testing.T) {
 	service := newTestService("test")
-	checker := CheckerFunc(func(context.Context) bool { return false })
+	checker := checker.ConditionFunc(func(context.Context) bool { return false })
 	monitor := NewMonitor(service, checker)
 
 	monitor.Activate()
