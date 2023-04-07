@@ -83,7 +83,11 @@ func (r *Route) Use(mws ...middleware.Middleware) {
 
 func (r Route) less(o Route) bool {
 	if r.Priority == o.Priority {
-		return r.Name < o.Name
+		rlen, olen := len(r.Name), len(o.Name)
+		if rlen == olen {
+			return r.Name < o.Name
+		}
+		return rlen < olen
 	}
 	return r.Priority < o.Priority
 }
