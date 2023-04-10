@@ -80,13 +80,10 @@ func (w *SwitchWriter) Close() error {
 	return Close(w.Get())
 }
 
-// Sync calls the Sync method if the inner writer has implemented the interface
-// { Sync() error }. Or, do nothing and return nil.
+// Sync calls the Sync method of the inner writer.
+// In fact, it uses SyncWriter to synchronize the inner writer.
 func (w *SwitchWriter) Sync() error {
-	if ws, ok := w.Get().(interface{ Sync() error }); ok {
-		return ws.Sync()
-	}
-	return nil
+	return SyncWriter(w.Get())
 }
 
 // Run executes the function f with the inner writer.
@@ -135,16 +132,12 @@ func (w *SafeWriter) Close() error {
 	return Close(w.w)
 }
 
-// Sync calls the Sync method if the inner writer has implemented the interface
-// { Sync() error }. Or, do nothing and return nil.
+// Sync calls the Sync method of the inner writer.
+// In fact, it uses SyncWriter to synchronize the inner writer.
 func (w *SafeWriter) Sync() error {
 	w.m.Lock()
 	defer w.m.Unlock()
-
-	if ws, ok := w.w.(interface{ Sync() error }); ok {
-		return ws.Sync()
-	}
-	return nil
+	return SyncWriter(w.w)
 }
 
 // Run executes the function f with the inner writer.
