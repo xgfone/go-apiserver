@@ -77,7 +77,7 @@ func (w *SwitchWriter) Write(b []byte) (int, error) {
 
 // Close implements the interface io.Closer.
 func (w *SwitchWriter) Close() error {
-	return Close(w.w)
+	return Close(w.Get())
 }
 
 // Sync calls the Sync method if the inner writer has implemented the interface
@@ -156,5 +156,8 @@ func (w *SafeWriter) Run(f func(io.Writer)) {
 
 // Get returns the wrapped writer.
 func (w *SafeWriter) Get() io.Writer {
-	return w.w
+	w.m.Lock()
+	_w := w.w
+	w.m.Unlock()
+	return _w
 }
