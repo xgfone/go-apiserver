@@ -17,6 +17,8 @@ package io2
 import (
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 
 	"github.com/xgfone/go-apiserver/internal/writer"
 )
@@ -28,9 +30,9 @@ import (
 // such as "123", "123M, 123G". Valid size units contain "b", "B", "k", "K",
 // "m", "M", "g", "G", "t", "T", "p", "P", "e", "E". The lower units are 1000x,
 // and the upper units are 1024x.
-func NewFileWriter(filepath, filesize string, filenum int) (io.WriteCloser, error) {
-	if filepath == "" {
-		return nil, errors.New("the log filepath must not be empty")
+func NewFileWriter(filename, filesize string, filenum int) (io.WriteCloser, error) {
+	if filename == "" {
+		return nil, errors.New("the log filename must not be empty")
 	}
 
 	size, err := writer.ParseSize(filesize)
@@ -38,5 +40,8 @@ func NewFileWriter(filepath, filesize string, filenum int) (io.WriteCloser, erro
 		return nil, err
 	}
 
-	return writer.NewSizedRotatingFile(filepath, int(size), filenum), nil
+	if err := os.MkdirAll(filepath.Dir(filename), 0600); err != nil {
+		return nil, err
+	}
+	return writer.NewSizedRotatingFile(filename, int(size), filenum), nil
 }
