@@ -7,7 +7,7 @@ require (
 	github.com/xgfone/go-defaults v0.3.0
 	github.com/xgfone/go-generics v0.1.0
 	github.com/xgfone/predicate v1.3.3
-	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
+	golang.org/x/exp v0.0.0-20230420155350-5d9e357047b1
 )
 
 require (
