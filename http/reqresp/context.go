@@ -30,6 +30,7 @@ import (
 	"github.com/xgfone/go-apiserver/internal/errors2"
 	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-binder"
+	"github.com/xgfone/go-cast"
 	"golang.org/x/exp/maps"
 )
 
@@ -375,12 +376,30 @@ func (c *Context) Scheme() string {
 // Data
 // ---------------------------------------------------------------------------
 
-// GetDataString returns the value as the string by the key from the field Data.
+// GetDataInt64 returns the value as int64 by the key from the field Data.
+func (c *Context) GetDataInt64(key string) (value int64, exist bool, err error) {
+	v, exist := c.Data[key]
+	if exist {
+		value, err = cast.ToInt64(v)
+	}
+	return
+}
+
+// GetDataUint64 returns the value as uint64 by the key from the field Data.
+func (c *Context) GetDataUint64(key string) (value uint64, exist bool, err error) {
+	v, exist := c.Data[key]
+	if exist {
+		value, err = cast.ToUint64(v)
+	}
+	return
+}
+
+// GetDataString returns the value as string by the key from the field Data.
 //
 // If the key does not exist, return "".
 func (c *Context) GetDataString(key string) string {
 	if value, ok := c.Data[key]; ok {
-		return value.(string)
+		return cast.Must(cast.ToString(value))
 	}
 	return ""
 }
@@ -426,6 +445,16 @@ func (c *Context) GetQueries() (query url.Values) {
 // by the key.
 func (c *Context) GetQuery(key string) (value string) {
 	return c.GetQueries().Get(key)
+}
+
+// GetQueryInt64 returns the value as int64 by the key from the field Data.
+func (c *Context) GetQueryInt64(key string) (value int64, err error) {
+	return cast.ToInt64(c.GetQuery(key))
+}
+
+// GetQueryUint64 returns the value as uint64 by the key from the field Data.
+func (c *Context) GetQueryUint64(key string) (value uint64, err error) {
+	return cast.ToUint64(c.GetQuery(key))
 }
 
 // ---------------------------------------------------------------------------
