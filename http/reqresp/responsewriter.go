@@ -153,9 +153,6 @@ func NewResponseWriterWithWriteResponse(w http.ResponseWriter,
 	rw := &responseWriter{ResponseWriter: w, wrappedWrite: write}
 
 	var index int
-	if _, ok := w.(http.CloseNotifier); ok {
-		index += closeNotifier
-	}
 	if _, ok := w.(http.Flusher); ok {
 		index += flusher
 	}
@@ -177,98 +174,50 @@ func newResponseWriter(rw *responseWriter, index int) ResponseWriter {
 	case 0:
 		return rw
 
-	case closeNotifier: // 1
+	case flusher: // 1
 		return (*rw1)(rw)
 
-	case flusher: // 2
+	case hijacker: // 2
 		return (*rw2)(rw)
 
-	case flusher + closeNotifier: // 3
+	case hijacker + flusher: // 3
 		return (*rw3)(rw)
 
-	case hijacker: // 4
+	case readerFrom: // 4
 		return (*rw4)(rw)
 
-	case hijacker + closeNotifier: // 5
+	case readerFrom + flusher: // 5
 		return (*rw5)(rw)
 
-	case hijacker + flusher: // 6
+	case readerFrom + hijacker: // 6
 		return (*rw6)(rw)
 
-	case hijacker + flusher + closeNotifier: // 7
+	case readerFrom + hijacker + flusher: // 7
 		return (*rw7)(rw)
 
-	case readerFrom: // 8
+	case pusher: // 8
 		return (*rw8)(rw)
 
-	case readerFrom + closeNotifier: // 9
+	case pusher + flusher: // 9
 		return (*rw9)(rw)
 
-	case readerFrom + flusher: // 10
+	case pusher + hijacker: // 10
 		return (*rw10)(rw)
 
-	case readerFrom + flusher + closeNotifier: // 11
+	case pusher + hijacker + flusher: // 11
 		return (*rw11)(rw)
 
-	case readerFrom + hijacker: // 12
+	case pusher + readerFrom: // 12
 		return (*rw12)(rw)
 
-	case readerFrom + hijacker + closeNotifier: // 13
+	case pusher + readerFrom + flusher: // 13
 		return (*rw13)(rw)
 
-	case readerFrom + hijacker + flusher: // 14
+	case pusher + readerFrom + hijacker: // 14
 		return (*rw14)(rw)
 
-	case readerFrom + hijacker + flusher + closeNotifier: // 15
+	case pusher + readerFrom + hijacker + flusher: // 15
 		return (*rw15)(rw)
-
-	case pusher: // 16
-		return (*rw16)(rw)
-
-	case pusher + closeNotifier: // 17
-		return (*rw17)(rw)
-
-	case pusher + flusher: // 18
-		return (*rw18)(rw)
-
-	case pusher + flusher + closeNotifier: // 19
-		return (*rw19)(rw)
-
-	case pusher + hijacker: // 20
-		return (*rw20)(rw)
-
-	case pusher + hijacker + closeNotifier: // 21
-		return (*rw21)(rw)
-
-	case pusher + hijacker + flusher: // 22
-		return (*rw22)(rw)
-
-	case pusher + hijacker + flusher + closeNotifier: //23
-		return (*rw23)(rw)
-
-	case pusher + readerFrom: // 24
-		return (*rw24)(rw)
-
-	case pusher + readerFrom + closeNotifier: // 25
-		return (*rw25)(rw)
-
-	case pusher + readerFrom + flusher: // 26
-		return (*rw26)(rw)
-
-	case pusher + readerFrom + flusher + closeNotifier: // 27
-		return (*rw27)(rw)
-
-	case pusher + readerFrom + hijacker: // 28
-		return (*rw28)(rw)
-
-	case pusher + readerFrom + hijacker + closeNotifier: // 29
-		return (*rw29)(rw)
-
-	case pusher + readerFrom + hijacker + flusher: // 30
-		return (*rw30)(rw)
-
-	case pusher + readerFrom + hijacker + flusher + closeNotifier: // 31
-		return (*rw31)(rw)
 
 	default:
 		panic(fmt.Errorf("unknown ResponseWriter index '%d'", index))
@@ -278,16 +227,11 @@ func newResponseWriter(rw *responseWriter, index int) ResponseWriter {
 /// ----------------------------------------------------------------------- ///
 
 const (
-	closeNotifier = 1 << iota
-	flusher
+	flusher = 1 << iota
 	hijacker
 	readerFrom
 	pusher
 )
-
-func rwCloseNotify(rw *responseWriter) <-chan bool {
-	return rw.ResponseWriter.(http.CloseNotifier).CloseNotify()
-}
 
 func rwFlush(rw *responseWriter) {
 	if rw.statusCode == 0 {
@@ -317,8 +261,8 @@ func rwReadFrom(rw *responseWriter, r io.Reader) (n int64, err error) {
 /// ----------------------------------------------------------------------- ///
 
 var (
-	_ ResponseWriter     = &rw1{}
-	_ http.CloseNotifier = &rw1{} // 1
+	_ ResponseWriter = &rw1{}
+	_ http.Flusher   = &rw1{} // 1
 )
 
 type rw1 responseWriter
@@ -333,13 +277,13 @@ func (w *rw1) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw1) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw1) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw1) CloseNotify() <-chan bool { return rwCloseNotify(w.rw()) }
+func (w *rw1) Flush() { rwFlush(w.rw()) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
 	_ ResponseWriter = &rw2{}
-	_ http.Flusher   = &rw2{} // 2
+	_ http.Hijacker  = &rw2{} // 2
 )
 
 type rw2 responseWriter
@@ -354,14 +298,14 @@ func (w *rw2) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw2) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw2) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw2) Flush() { rwFlush(w.rw()) }
+func (w *rw2) Hijack() (net.Conn, *bufio.ReadWriter, error) { return rwHijack(w.rw()) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
-	_ ResponseWriter     = &rw3{}
-	_ http.CloseNotifier = &rw3{} // 1
-	_ http.Flusher       = &rw3{} // 2
+	_ ResponseWriter = &rw3{}
+	_ http.Flusher   = &rw3{} // 1
+	_ http.Hijacker  = &rw3{} // 2
 )
 
 type rw3 responseWriter
@@ -376,14 +320,14 @@ func (w *rw3) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw3) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw3) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw3) CloseNotify() <-chan bool { return rwCloseNotify(w.rw()) }
-func (w *rw3) Flush()                   { rwFlush(w.rw()) }
+func (w *rw3) Flush()                                       { rwFlush(w.rw()) }
+func (w *rw3) Hijack() (net.Conn, *bufio.ReadWriter, error) { return rwHijack(w.rw()) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
 	_ ResponseWriter = &rw4{}
-	_ http.Hijacker  = &rw4{} // 4
+	_ io.ReaderFrom  = &rw4{} // 4
 )
 
 type rw4 responseWriter
@@ -398,14 +342,14 @@ func (w *rw4) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw4) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw4) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw4) Hijack() (net.Conn, *bufio.ReadWriter, error) { return rwHijack(w.rw()) }
+func (w *rw4) ReadFrom(r io.Reader) (int64, error) { return rwReadFrom(w.rw(), r) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
-	_ ResponseWriter     = &rw5{}
-	_ http.CloseNotifier = &rw5{} // 1
-	_ http.Hijacker      = &rw5{} // 4
+	_ ResponseWriter = &rw5{}
+	_ http.Flusher   = &rw5{} // 1
+	_ io.ReaderFrom  = &rw5{} // 4
 )
 
 type rw5 responseWriter
@@ -420,15 +364,15 @@ func (w *rw5) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw5) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw5) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw5) CloseNotify() <-chan bool                     { return rwCloseNotify(w.rw()) }
-func (w *rw5) Hijack() (net.Conn, *bufio.ReadWriter, error) { return rwHijack(w.rw()) }
+func (w *rw5) Flush()                              { rwFlush(w.rw()) }
+func (w *rw5) ReadFrom(r io.Reader) (int64, error) { return rwReadFrom(w.rw(), r) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
 	_ ResponseWriter = &rw6{}
-	_ http.Flusher   = &rw6{} // 2
-	_ http.Hijacker  = &rw6{} // 4
+	_ http.Hijacker  = &rw6{} // 2
+	_ io.ReaderFrom  = &rw6{} // 4
 )
 
 type rw6 responseWriter
@@ -443,16 +387,16 @@ func (w *rw6) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw6) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw6) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw6) Flush()                                       { rwFlush(w.rw()) }
 func (w *rw6) Hijack() (net.Conn, *bufio.ReadWriter, error) { return rwHijack(w.rw()) }
+func (w *rw6) ReadFrom(r io.Reader) (int64, error)          { return rwReadFrom(w.rw(), r) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
-	_ ResponseWriter     = &rw7{}
-	_ http.CloseNotifier = &rw7{} // 1
-	_ http.Flusher       = &rw7{} // 2
-	_ http.Hijacker      = &rw7{} // 4
+	_ ResponseWriter = &rw7{}
+	_ http.Flusher   = &rw7{} // 1
+	_ http.Hijacker  = &rw7{} // 2
+	_ io.ReaderFrom  = &rw7{} // 4
 )
 
 type rw7 responseWriter
@@ -467,15 +411,15 @@ func (w *rw7) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw7) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw7) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw7) CloseNotify() <-chan bool                     { return rwCloseNotify(w.rw()) }
 func (w *rw7) Flush()                                       { rwFlush(w.rw()) }
 func (w *rw7) Hijack() (net.Conn, *bufio.ReadWriter, error) { return rwHijack(w.rw()) }
+func (w *rw7) ReadFrom(r io.Reader) (int64, error)          { return rwReadFrom(w.rw(), r) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
 	_ ResponseWriter = &rw8{}
-	_ io.ReaderFrom  = &rw8{} // 8
+	_ http.Pusher    = &rw8{} // 8
 )
 
 type rw8 responseWriter
@@ -490,14 +434,14 @@ func (w *rw8) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw8) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw8) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw8) ReadFrom(r io.Reader) (int64, error) { return rwReadFrom(w.rw(), r) }
+func (w *rw8) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
-	_ ResponseWriter     = &rw9{}
-	_ http.CloseNotifier = &rw9{} // 1
-	_ io.ReaderFrom      = &rw9{} // 8
+	_ ResponseWriter = &rw9{}
+	_ http.Flusher   = &rw9{} // 1
+	_ http.Pusher    = &rw9{} // 8
 )
 
 type rw9 responseWriter
@@ -512,15 +456,15 @@ func (w *rw9) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw9) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw9) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw9) CloseNotify() <-chan bool            { return rwCloseNotify(w.rw()) }
-func (w *rw9) ReadFrom(r io.Reader) (int64, error) { return rwReadFrom(w.rw(), r) }
+func (w *rw9) Flush()                                           { rwFlush(w.rw()) }
+func (w *rw9) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
 	_ ResponseWriter = &rw10{}
-	_ http.Flusher   = &rw10{} // 2
-	_ io.ReaderFrom  = &rw10{} // 8
+	_ http.Hijacker  = &rw10{} // 2
+	_ http.Pusher    = &rw10{} // 8
 )
 
 type rw10 responseWriter
@@ -535,16 +479,16 @@ func (w *rw10) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw10) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw10) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw10) Flush()                              { rwFlush(w.rw()) }
-func (w *rw10) ReadFrom(r io.Reader) (int64, error) { return rwReadFrom(w.rw(), r) }
+func (w *rw10) Hijack() (net.Conn, *bufio.ReadWriter, error)     { return rwHijack(w.rw()) }
+func (w *rw10) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
-	_ ResponseWriter     = &rw11{}
-	_ http.CloseNotifier = &rw11{} // 1
-	_ http.Flusher       = &rw11{} // 2
-	_ io.ReaderFrom      = &rw11{} // 8
+	_ ResponseWriter = &rw11{}
+	_ http.Flusher   = &rw11{} // 1
+	_ http.Hijacker  = &rw11{} // 2
+	_ http.Pusher    = &rw11{} // 8
 )
 
 type rw11 responseWriter
@@ -559,16 +503,16 @@ func (w *rw11) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw11) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw11) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw11) CloseNotify() <-chan bool            { return rwCloseNotify(w.rw()) }
-func (w *rw11) Flush()                              { rwFlush(w.rw()) }
-func (w *rw11) ReadFrom(r io.Reader) (int64, error) { return rwReadFrom(w.rw(), r) }
+func (w *rw11) Flush()                                           { rwFlush(w.rw()) }
+func (w *rw11) Hijack() (net.Conn, *bufio.ReadWriter, error)     { return rwHijack(w.rw()) }
+func (w *rw11) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
 	_ ResponseWriter = &rw12{}
-	_ http.Hijacker  = &rw12{} // 4
-	_ io.ReaderFrom  = &rw12{} // 8
+	_ io.ReaderFrom  = &rw12{} // 4
+	_ http.Pusher    = &rw12{} // 8
 )
 
 type rw12 responseWriter
@@ -583,16 +527,16 @@ func (w *rw12) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw12) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw12) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw12) Hijack() (net.Conn, *bufio.ReadWriter, error) { return rwHijack(w.rw()) }
-func (w *rw12) ReadFrom(r io.Reader) (int64, error)          { return rwReadFrom(w.rw(), r) }
+func (w *rw12) ReadFrom(r io.Reader) (int64, error)              { return rwReadFrom(w.rw(), r) }
+func (w *rw12) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
-	_ ResponseWriter     = &rw13{}
-	_ http.CloseNotifier = &rw13{} // 1
-	_ http.Hijacker      = &rw13{} // 4
-	_ io.ReaderFrom      = &rw13{} // 8
+	_ ResponseWriter = &rw13{}
+	_ http.Flusher   = &rw13{} // 1
+	_ io.ReaderFrom  = &rw13{} // 4
+	_ http.Pusher    = &rw13{} // 8
 )
 
 type rw13 responseWriter
@@ -607,17 +551,17 @@ func (w *rw13) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw13) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw13) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw13) CloseNotify() <-chan bool                     { return rwCloseNotify(w.rw()) }
-func (w *rw13) Hijack() (net.Conn, *bufio.ReadWriter, error) { return rwHijack(w.rw()) }
-func (w *rw13) ReadFrom(r io.Reader) (int64, error)          { return rwReadFrom(w.rw(), r) }
+func (w *rw13) Flush()                                           { rwFlush(w.rw()) }
+func (w *rw13) ReadFrom(r io.Reader) (int64, error)              { return rwReadFrom(w.rw(), r) }
+func (w *rw13) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
 	_ ResponseWriter = &rw14{}
-	_ http.Flusher   = &rw14{} // 2
-	_ http.Hijacker  = &rw14{} // 4
-	_ io.ReaderFrom  = &rw14{} // 8
+	_ http.Hijacker  = &rw14{} // 2
+	_ io.ReaderFrom  = &rw14{} // 4
+	_ http.Pusher    = &rw14{} // 8
 )
 
 type rw14 responseWriter
@@ -632,18 +576,18 @@ func (w *rw14) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw14) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw14) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw14) Flush()                                       { rwFlush(w.rw()) }
-func (w *rw14) Hijack() (net.Conn, *bufio.ReadWriter, error) { return rwHijack(w.rw()) }
-func (w *rw14) ReadFrom(r io.Reader) (int64, error)          { return rwReadFrom(w.rw(), r) }
+func (w *rw14) Hijack() (net.Conn, *bufio.ReadWriter, error)     { return rwHijack(w.rw()) }
+func (w *rw14) ReadFrom(r io.Reader) (int64, error)              { return rwReadFrom(w.rw(), r) }
+func (w *rw14) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
 
 /// ----------------------------------------------------------------------- ///
 
 var (
-	_ ResponseWriter     = &rw15{}
-	_ http.CloseNotifier = &rw15{} // 1
-	_ http.Flusher       = &rw15{} // 2
-	_ http.Hijacker      = &rw15{} // 4
-	_ io.ReaderFrom      = &rw15{} // 8
+	_ ResponseWriter = &rw15{}
+	_ http.Flusher   = &rw15{} // 1
+	_ http.Hijacker  = &rw15{} // 2
+	_ io.ReaderFrom  = &rw15{} // 4
+	_ http.Pusher    = &rw15{} // 8
 )
 
 type rw15 responseWriter
@@ -658,407 +602,7 @@ func (w *rw15) Write(p []byte) (int, error)       { return w.rw().Write(p) }
 func (w *rw15) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
 func (w *rw15) WriteHeader(code int)              { w.rw().WriteHeader(code) }
 
-func (w *rw15) CloseNotify() <-chan bool                     { return rwCloseNotify(w.rw()) }
-func (w *rw15) Flush()                                       { rwFlush(w.rw()) }
-func (w *rw15) Hijack() (net.Conn, *bufio.ReadWriter, error) { return rwHijack(w.rw()) }
-func (w *rw15) ReadFrom(r io.Reader) (int64, error)          { return rwReadFrom(w.rw(), r) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter = &rw16{}
-	_ http.Pusher    = &rw16{} // 16
-)
-
-type rw16 responseWriter
-
-func (w *rw16) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw16) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw16) Written() int64                    { return w.rw().Written() }
-func (w *rw16) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw16) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw16) Header() http.Header               { return w.rw().Header() }
-func (w *rw16) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw16) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw16) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw16) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter     = &rw17{}
-	_ http.CloseNotifier = &rw17{} // 1
-	_ http.Pusher        = &rw17{} // 16
-)
-
-type rw17 responseWriter
-
-func (w *rw17) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw17) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw17) Written() int64                    { return w.rw().Written() }
-func (w *rw17) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw17) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw17) Header() http.Header               { return w.rw().Header() }
-func (w *rw17) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw17) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw17) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw17) CloseNotify() <-chan bool                         { return rwCloseNotify(w.rw()) }
-func (w *rw17) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter = &rw18{}
-	_ http.Flusher   = &rw18{} // 2
-	_ http.Pusher    = &rw18{} // 16
-)
-
-type rw18 responseWriter
-
-func (w *rw18) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw18) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw18) Written() int64                    { return w.rw().Written() }
-func (w *rw18) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw18) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw18) Header() http.Header               { return w.rw().Header() }
-func (w *rw18) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw18) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw18) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw18) Flush()                                           { rwFlush(w.rw()) }
-func (w *rw18) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter     = &rw19{}
-	_ http.CloseNotifier = &rw19{} // 1
-	_ http.Flusher       = &rw19{} // 2
-	_ http.Pusher        = &rw19{} // 16
-)
-
-type rw19 responseWriter
-
-func (w *rw19) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw19) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw19) Written() int64                    { return w.rw().Written() }
-func (w *rw19) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw19) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw19) Header() http.Header               { return w.rw().Header() }
-func (w *rw19) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw19) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw19) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw19) CloseNotify() <-chan bool                         { return rwCloseNotify(w.rw()) }
-func (w *rw19) Flush()                                           { rwFlush(w.rw()) }
-func (w *rw19) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter = &rw20{}
-	_ http.Hijacker  = &rw20{} // 4
-	_ http.Pusher    = &rw20{} // 16
-)
-
-type rw20 responseWriter
-
-func (w *rw20) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw20) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw20) Written() int64                    { return w.rw().Written() }
-func (w *rw20) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw20) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw20) Header() http.Header               { return w.rw().Header() }
-func (w *rw20) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw20) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw20) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw20) Hijack() (net.Conn, *bufio.ReadWriter, error)     { return rwHijack(w.rw()) }
-func (w *rw20) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter     = &rw21{}
-	_ http.CloseNotifier = &rw21{} // 1
-	_ http.Hijacker      = &rw21{} // 4
-	_ http.Pusher        = &rw21{} // 16
-)
-
-type rw21 responseWriter
-
-func (w *rw21) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw21) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw21) Written() int64                    { return w.rw().Written() }
-func (w *rw21) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw21) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw21) Header() http.Header               { return w.rw().Header() }
-func (w *rw21) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw21) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw21) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw21) CloseNotify() <-chan bool                         { return rwCloseNotify(w.rw()) }
-func (w *rw21) Hijack() (net.Conn, *bufio.ReadWriter, error)     { return rwHijack(w.rw()) }
-func (w *rw21) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter = &rw22{}
-	_ http.Flusher   = &rw22{} // 2
-	_ http.Hijacker  = &rw22{} // 4
-	_ http.Pusher    = &rw22{} // 16
-)
-
-type rw22 responseWriter
-
-func (w *rw22) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw22) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw22) Written() int64                    { return w.rw().Written() }
-func (w *rw22) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw22) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw22) Header() http.Header               { return w.rw().Header() }
-func (w *rw22) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw22) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw22) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw22) Flush()                                           { rwFlush(w.rw()) }
-func (w *rw22) Hijack() (net.Conn, *bufio.ReadWriter, error)     { return rwHijack(w.rw()) }
-func (w *rw22) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter     = &rw23{}
-	_ http.CloseNotifier = &rw23{} // 1
-	_ http.Flusher       = &rw23{} // 2
-	_ http.Hijacker      = &rw23{} // 4
-	_ http.Pusher        = &rw23{} // 16
-)
-
-type rw23 responseWriter
-
-func (w *rw23) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw23) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw23) Written() int64                    { return w.rw().Written() }
-func (w *rw23) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw23) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw23) Header() http.Header               { return w.rw().Header() }
-func (w *rw23) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw23) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw23) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw23) CloseNotify() <-chan bool                         { return rwCloseNotify(w.rw()) }
-func (w *rw23) Flush()                                           { rwFlush(w.rw()) }
-func (w *rw23) Hijack() (net.Conn, *bufio.ReadWriter, error)     { return rwHijack(w.rw()) }
-func (w *rw23) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter = &rw24{}
-	_ io.ReaderFrom  = &rw24{} // 8
-	_ http.Pusher    = &rw24{} // 16
-)
-
-type rw24 responseWriter
-
-func (w *rw24) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw24) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw24) Written() int64                    { return w.rw().Written() }
-func (w *rw24) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw24) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw24) Header() http.Header               { return w.rw().Header() }
-func (w *rw24) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw24) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw24) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw24) ReadFrom(r io.Reader) (int64, error)              { return rwReadFrom(w.rw(), r) }
-func (w *rw24) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter     = &rw25{}
-	_ http.CloseNotifier = &rw25{} // 1
-	_ io.ReaderFrom      = &rw25{} // 8
-	_ http.Pusher        = &rw25{} // 16
-)
-
-type rw25 responseWriter
-
-func (w *rw25) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw25) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw25) Written() int64                    { return w.rw().Written() }
-func (w *rw25) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw25) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw25) Header() http.Header               { return w.rw().Header() }
-func (w *rw25) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw25) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw25) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw25) CloseNotify() <-chan bool                         { return rwCloseNotify(w.rw()) }
-func (w *rw25) ReadFrom(r io.Reader) (int64, error)              { return rwReadFrom(w.rw(), r) }
-func (w *rw25) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter = &rw26{}
-	_ http.Flusher   = &rw26{} // 2
-	_ io.ReaderFrom  = &rw26{} // 8
-	_ http.Pusher    = &rw26{} // 16
-)
-
-type rw26 responseWriter
-
-func (w *rw26) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw26) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw26) Written() int64                    { return w.rw().Written() }
-func (w *rw26) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw26) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw26) Header() http.Header               { return w.rw().Header() }
-func (w *rw26) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw26) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw26) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw26) Flush()                                           { rwFlush(w.rw()) }
-func (w *rw26) ReadFrom(r io.Reader) (int64, error)              { return rwReadFrom(w.rw(), r) }
-func (w *rw26) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter     = &rw27{}
-	_ http.CloseNotifier = &rw27{} // 1
-	_ http.Flusher       = &rw27{} // 2
-	_ io.ReaderFrom      = &rw27{} // 8
-	_ http.Pusher        = &rw27{} // 16
-)
-
-type rw27 responseWriter
-
-func (w *rw27) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw27) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw27) Written() int64                    { return w.rw().Written() }
-func (w *rw27) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw27) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw27) Header() http.Header               { return w.rw().Header() }
-func (w *rw27) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw27) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw27) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw27) CloseNotify() <-chan bool                         { return rwCloseNotify(w.rw()) }
-func (w *rw27) Flush()                                           { rwFlush(w.rw()) }
-func (w *rw27) ReadFrom(r io.Reader) (int64, error)              { return rwReadFrom(w.rw(), r) }
-func (w *rw27) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter = &rw28{}
-	_ http.Hijacker  = &rw28{} // 4
-	_ io.ReaderFrom  = &rw28{} // 8
-	_ http.Pusher    = &rw28{} // 16
-)
-
-type rw28 responseWriter
-
-func (w *rw28) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw28) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw28) Written() int64                    { return w.rw().Written() }
-func (w *rw28) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw28) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw28) Header() http.Header               { return w.rw().Header() }
-func (w *rw28) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw28) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw28) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw28) Hijack() (net.Conn, *bufio.ReadWriter, error)     { return rwHijack(w.rw()) }
-func (w *rw28) ReadFrom(r io.Reader) (int64, error)              { return rwReadFrom(w.rw(), r) }
-func (w *rw28) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter     = &rw29{}
-	_ http.CloseNotifier = &rw29{} // 1
-	_ http.Hijacker      = &rw29{} // 4
-	_ io.ReaderFrom      = &rw29{} // 8
-	_ http.Pusher        = &rw29{} // 16
-)
-
-type rw29 responseWriter
-
-func (w *rw29) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw29) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw29) Written() int64                    { return w.rw().Written() }
-func (w *rw29) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw29) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw29) Header() http.Header               { return w.rw().Header() }
-func (w *rw29) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw29) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw29) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw29) CloseNotify() <-chan bool                         { return rwCloseNotify(w.rw()) }
-func (w *rw29) Hijack() (net.Conn, *bufio.ReadWriter, error)     { return rwHijack(w.rw()) }
-func (w *rw29) ReadFrom(r io.Reader) (int64, error)              { return rwReadFrom(w.rw(), r) }
-func (w *rw29) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter = &rw30{}
-	_ http.Flusher   = &rw30{} // 2
-	_ http.Hijacker  = &rw30{} // 4
-	_ io.ReaderFrom  = &rw30{} // 8
-	_ http.Pusher    = &rw30{} // 16
-)
-
-type rw30 responseWriter
-
-func (w *rw30) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw30) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw30) Written() int64                    { return w.rw().Written() }
-func (w *rw30) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw30) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw30) Header() http.Header               { return w.rw().Header() }
-func (w *rw30) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw30) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw30) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw30) Flush()                                           { rwFlush(w.rw()) }
-func (w *rw30) Hijack() (net.Conn, *bufio.ReadWriter, error)     { return rwHijack(w.rw()) }
-func (w *rw30) ReadFrom(r io.Reader) (int64, error)              { return rwReadFrom(w.rw(), r) }
-func (w *rw30) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
-
-/// ----------------------------------------------------------------------- ///
-
-var (
-	_ ResponseWriter     = &rw31{}
-	_ http.CloseNotifier = &rw31{} // 1
-	_ http.Flusher       = &rw31{} // 2
-	_ http.Hijacker      = &rw31{} // 4
-	_ io.ReaderFrom      = &rw31{} // 8
-	_ http.Pusher        = &rw31{} // 16
-)
-
-type rw31 responseWriter
-
-func (w *rw31) rw() *responseWriter               { return (*responseWriter)(w) }
-func (w *rw31) Unwrap() http.ResponseWriter       { return w.rw().ResponseWriter }
-func (w *rw31) Written() int64                    { return w.rw().Written() }
-func (w *rw31) StatusCode() int                   { return w.rw().StatusCode() }
-func (w *rw31) WroteHeader() bool                 { return w.rw().WroteHeader() }
-func (w *rw31) Header() http.Header               { return w.rw().Header() }
-func (w *rw31) Write(p []byte) (int, error)       { return w.rw().Write(p) }
-func (w *rw31) WriteString(s string) (int, error) { return w.rw().WriteString(s) }
-func (w *rw31) WriteHeader(code int)              { w.rw().WriteHeader(code) }
-
-func (w *rw31) CloseNotify() <-chan bool                         { return rwCloseNotify(w.rw()) }
-func (w *rw31) Flush()                                           { rwFlush(w.rw()) }
-func (w *rw31) Hijack() (net.Conn, *bufio.ReadWriter, error)     { return rwHijack(w.rw()) }
-func (w *rw31) ReadFrom(r io.Reader) (int64, error)              { return rwReadFrom(w.rw(), r) }
-func (w *rw31) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }
+func (w *rw15) Flush()                                           { rwFlush(w.rw()) }
+func (w *rw15) Hijack() (net.Conn, *bufio.ReadWriter, error)     { return rwHijack(w.rw()) }
+func (w *rw15) ReadFrom(r io.Reader) (int64, error)              { return rwReadFrom(w.rw(), r) }
+func (w *rw15) Push(target string, opts *http.PushOptions) error { return rwPush(w.rw(), target, opts) }

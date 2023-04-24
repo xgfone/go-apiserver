@@ -75,9 +75,6 @@ func BenchmarkResponseWriter(b *testing.B) {
 		if _, ok := w.(http.Flusher); !ok {
 			panic("not http.Flusher")
 		}
-		if _, ok := w.(http.CloseNotifier); !ok {
-			panic("not http.CloseNotifier")
-		}
 		if _, ok := w.(http.Hijacker); ok {
 			panic("not expected http.Hijacker")
 		}
