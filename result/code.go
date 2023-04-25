@@ -19,7 +19,7 @@ const (
 	CodeInvalidAction  = "InvalidAction"
 	CodeInvalidVersion = "InvalidVersion"
 	CodeInvalidParams  = "InvalidParams"
-	CodeInvalidAuth    = "InvalidAuth"
+	CodeInvalidCaptcha = "InvalidCaptcha"
 
 	CodeUnsupportedProtocol  = "UnsupportedProtocol"
 	CodeUnsupportedOperation = "UnsupportedOperation"
@@ -30,9 +30,13 @@ const (
 	CodeUnallowedOperation    = "UnallowedOperation"
 	CodeFailedOperation       = "FailedOperation"
 
-	CodeAuthFailureTokenFailure     = "AuthFailure.TokenFailure"
-	CodeAuthFailureSignatureFailure = "AuthFailure.SignatureFailure"
-	CodeAuthFailureSignatureExpire  = "AuthFailure.SignatureExpire"
+	CodeAuthFailure                 = "AuthFailure"
+	CodeAuthFailureMissing          = "AuthFailure.Missing"
+	CodeAuthFailureInvalid          = "AuthFailure.Invalid"
+	CodeAuthFailureInvalidToken     = "AuthFailure.Invalid.Token"
+	CodeAuthFailureInvalidCookie    = "AuthFailure.Invalid.Cookie"
+	CodeAuthFailureInvalidAPIKey    = "AuthFailure.Invalid.ApiKey"
+	CodeAuthFailureInvalidSignature = "AuthFailure.Invalid.Signature"
 
 	CodeInternalServerError = "InternalServerError"
 	CodeServiceUnavailable  = "ServiceUnavailable"
@@ -54,7 +58,7 @@ var (
 	ErrInvalidAction    = NewError(CodeInvalidAction, "invalid action")
 	ErrInvalidVersion   = NewError(CodeInvalidVersion, "invalid version")
 	ErrInvalidParameter = NewError(CodeInvalidParams, "invalid parameter")
-	ErrInvalidAuth      = NewError(CodeInvalidAuth, "invalid auth")
+	ErrInvalidCaptcha   = NewError(CodeInvalidCaptcha, "invalid captcha")
 
 	ErrUnsupportedProtocol  = NewError(CodeUnsupportedProtocol, "protocol is unsupported")
 	ErrUnsupportedOperation = NewError(CodeUnsupportedOperation, "operation is unsupported")
@@ -65,9 +69,13 @@ var (
 	ErrUnallowedOperation    = NewError(CodeUnallowedOperation, "operation is not allowed")
 	ErrFailedOperation       = NewError(CodeFailedOperation, "operation failed")
 
-	ErrAuthFailureTokenFailure     = NewError(CodeAuthFailureTokenFailure, "token verification failed")
-	ErrAuthFailureSignatureFailure = NewError(CodeAuthFailureSignatureFailure, "signature verification failed")
-	ErrAuthFailureSignatureExpire  = NewError(CodeAuthFailureSignatureExpire, "signature is expired")
+	ErrAuthFailure                 = NewError(CodeAuthFailure, "authorization failure")
+	ErrAuthFailureMissing          = NewError(CodeAuthFailureMissing, "missing authorization")
+	ErrAuthFailureInvalid          = NewError(CodeAuthFailureInvalid, "invalid authorization")
+	ErrAuthFailureInvalidToken     = NewError(CodeAuthFailureInvalidToken, "invalid authorization token")
+	ErrAuthFailureInvalidCookie    = NewError(CodeAuthFailureInvalidCookie, "invalid authorization cookie")
+	ErrAuthFailureInvalidAPIKey    = NewError(CodeAuthFailureInvalidAPIKey, "invalid authorization apikey")
+	ErrAuthFailureInvalidSignature = NewError(CodeAuthFailureInvalidSignature, "invalid authorization signature")
 
 	ErrInternalServerError = NewError(CodeInternalServerError, "internal server error")
 	ErrServiceUnavailable  = NewError(CodeServiceUnavailable, "service is unavailable")
