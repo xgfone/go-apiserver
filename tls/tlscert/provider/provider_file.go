@@ -17,7 +17,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sync"
 	"time"
@@ -226,7 +225,7 @@ func readChangedFile(filename string, last time.Time) ([]byte, time.Time, error)
 		return nil, time.Time{}, nil
 	}
 
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, time.Time{}, err
 	}

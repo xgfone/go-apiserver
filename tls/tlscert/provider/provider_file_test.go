@@ -16,7 +16,6 @@ package provider
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -76,7 +75,7 @@ func TestFileProvider(t *testing.T) {
 }
 
 func createFile(t *testing.T, filename, filedata string) {
-	if err := ioutil.WriteFile(filename, []byte(filedata), 0600); err != nil {
+	if err := os.WriteFile(filename, []byte(filedata), 0600); err != nil {
 		t.Fatal(err)
 	}
 }
