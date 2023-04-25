@@ -38,6 +38,11 @@ func (m middleware) Name() string                      { return m.name }
 func (m middleware) Priority() int                     { return m.priority }
 func (m middleware) Handler(h interface{}) interface{} { return m.handler(h) }
 
+// New is short for NewMiddleware.
+func New(name string, prio int, f func(h interface{}) interface{}) Middleware {
+	return NewMiddleware(name, prio, f)
+}
+
 // NewMiddleware returns a new common handler middleware.
 func NewMiddleware(name string, prio int, f func(h interface{}) interface{}) Middleware {
 	return middleware{name: name, priority: prio, handler: f}
