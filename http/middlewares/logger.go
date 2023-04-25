@@ -120,7 +120,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 			kvs = append(kvs,
 				"raddr", r.RemoteAddr,
 				"method", r.Method,
-				"uri", r.RequestURI,
+				"uri", r.URL.Path,
 				"code", code,
 				"start", start.Unix(),
 				"cost", cost.String(),
