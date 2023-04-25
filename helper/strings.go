@@ -19,8 +19,15 @@ import (
 	"unicode/utf8"
 )
 
-// DefaultCharset is the default charset to generate the random string.
-var DefaultCharset = "0123456789abcdefghijklmnopqrstuvwxyz"
+// Pre-define some charsets to generate the random string.
+var (
+	DefaultCharset  = "0123456789abcdefghijklmnopqrstuvwxyz"
+	AlphaNumCharset = DefaultCharset + "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	HexCharset      = "0123456789abcdefABCDEF"
+	HexLowerCharset = "0123456789abcdef"
+	HexUpperCharset = "0123456789ABCDEF"
+)
 
 // RandomString generates a random string with the length from the given charsets.
 func RandomString(n int, charset string) string {
