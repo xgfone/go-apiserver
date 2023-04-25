@@ -22,7 +22,7 @@ import (
 
 var trimPrefixes = []string{"/pkg/mod/", "/src/"}
 
-// TrimPkgFile trims the "src/" or "pkg/mod/" prefix path of the package file.
+// TrimPkgFile trims the "/src/" or "/pkg/mod/" prefix path of the package file.
 func TrimPkgFile(file string) string {
 	for _, mark := range trimPrefixes {
 		if index := strings.Index(file, mark); index > -1 {
