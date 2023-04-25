@@ -90,6 +90,9 @@ func NewRouteBuilder(r *Router) RouteBuilder {
 	return RouteBuilder{manager: r, panic: true}
 }
 
+// GetGroup returns the group of the route builder.
+func (b RouteBuilder) GetGroup() string { return b.group }
+
 // SetPanic sets the flag to panic when failing to add the route.
 //
 // Default: true
