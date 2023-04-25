@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
+	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-generics/maps"
 )
@@ -53,6 +54,11 @@ type Router struct {
 	// Default: c.Failure(result.ErrInvalidAction)
 	NotFound http.Handler
 
+	// Middlewares is used to manage the middlewares and applied to each route
+	// when registering it. So, the middlewares will be run after routing
+	// and never be run if not found the route.
+	Middlewares *middleware.Manager
+
 	alock   sync.RWMutex
 	amaps   map[string]http.Handler
 	actions atomic.Value
@@ -61,6 +67,7 @@ type Router struct {
 // NewRouter returns a new http router based on the action.
 func NewRouter() *Router {
 	r := &Router{amaps: make(map[string]http.Handler, 16)}
+	r.Middlewares = middleware.NewManager(nil)
 	r.NotFound = http.HandlerFunc(notFoundHandler)
 	r.actions.Store(map[string]http.Handler(nil))
 	r.updateActions()
@@ -166,7 +173,7 @@ func (r *Router) RegisterFunc(action string, handler http.HandlerFunc) (ok bool)
 
 // Register registers the action and the handler.
 func (r *Router) Register(action string, handler http.Handler) (ok bool) {
-	r.checkAction(action, handler)
+	handler = r.checkAction(action, handler)
 
 	r.alock.Lock()
 	if maps.Add(r.amaps, action, handler) {
@@ -185,7 +192,7 @@ func (r *Router) Update(actions map[string]http.Handler) {
 	}
 
 	for action, handler := range actions {
-		r.checkAction(action, handler)
+		actions[action] = r.checkAction(action, handler)
 	}
 
 	r.alock.Lock()
@@ -197,7 +204,7 @@ func (r *Router) Update(actions map[string]http.Handler) {
 // Reset discards all the original actions and resets them to actions.
 func (r *Router) Reset(actions map[string]http.Handler) {
 	for action, handler := range actions {
-		r.checkAction(action, handler)
+		actions[action] = r.checkAction(action, handler)
 	}
 
 	r.alock.Lock()
@@ -223,7 +230,7 @@ func (r *Router) Unregister(action string) (ok bool) {
 }
 
 func (r *Router) updateActions() { r.actions.Store(maps.Clone(r.amaps)) }
-func (r *Router) checkAction(action string, handler http.Handler) {
+func (r *Router) checkAction(action string, handler http.Handler) http.Handler {
 	if len(action) == 0 {
 		panic("action name is empty")
 	}
@@ -231,4 +238,6 @@ func (r *Router) checkAction(action string, handler http.Handler) {
 	if handler == nil {
 		panic("action handler is nil")
 	}
+
+	return r.Middlewares.WrapHandler(handler).(http.Handler)
 }

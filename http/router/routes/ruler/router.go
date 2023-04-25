@@ -33,6 +33,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router/routes/action"
 	"github.com/xgfone/go-apiserver/internal/ruler"
+	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-generics/maps"
 	"github.com/xgfone/go-generics/slices"
 )
@@ -54,6 +55,11 @@ type Router struct {
 	// Default: handler.Handler404
 	NotFound http.Handler
 
+	// Middlewares is used to manage the middlewares and applied to each route
+	// when registering it. So, the middlewares will be run after routing
+	// and never be run if not found the route.
+	Middlewares *middleware.Manager
+
 	rlock  sync.RWMutex
 	rmaps  map[string]Route
 	routes atomic.Value
@@ -62,6 +68,7 @@ type Router struct {
 // NewRouter returns a new route manager.
 func NewRouter() *Router {
 	r := &Router{rmaps: make(map[string]Route, 16)}
+	r.Middlewares = middleware.NewManager(nil)
 	r.BuildMatcherRule = ruler.Build
 	r.updateRoutes()
 	return r
@@ -116,7 +123,7 @@ func (r *Router) GetRoutes() (routes Routes) {
 
 // AddRoute adds the given route.
 func (r *Router) AddRoute(route Route) (err error) {
-	if err = r.checkRoute(route); err != nil {
+	if err = r.checkRoute(&route); err != nil {
 		return
 	}
 
@@ -177,20 +184,24 @@ func (r *Router) ResetRoutes(routes ...Route) (err error) {
 
 func (r *Router) checkRoutes(routes Routes) (err error) {
 	for _len := len(routes) - 1; _len >= 0; _len-- {
-		if err = r.checkRoute(routes[_len]); err != nil {
+		if err = r.checkRoute(&routes[_len]); err != nil {
 			break
 		}
 	}
 	return
 }
 
-func (r *Router) checkRoute(route Route) error {
+func (r *Router) checkRoute(route *Route) error {
 	if len(route.Name) == 0 {
 		return errors.New("the route name is empty")
 	} else if route.Handler == nil {
 		return errors.New("the route handler is nil")
 	} else if route.Matcher == nil {
 		return errors.New("the route matcher is nil")
+	}
+
+	if mdws := r.Middlewares.GetMiddlewares(); len(mdws) > 0 {
+		route.Use(mdws...)
 	}
 	return nil
 }
