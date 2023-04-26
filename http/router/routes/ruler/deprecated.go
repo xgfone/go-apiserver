@@ -14,6 +14,21 @@
 
 package ruler
 
-import . "github.com/xgfone/go-apiserver/http/router/ruler"
+import "github.com/xgfone/go-apiserver/http/router/ruler"
 
-func init() { DefaultRouter.GetRoutes() }
+// Re-export the global variables and functions.
+var (
+	DefaultRouter = ruler.DefaultRouter
+
+	NewRoute        = ruler.NewRoute
+	NewRouter       = ruler.NewRouter
+	NewRouteBuilder = ruler.NewRouteBuilder
+)
+
+// Re-export the types.
+type (
+	Route        = ruler.Route
+	Routes       = ruler.Routes
+	Router       = ruler.Router
+	RouteBuilder = ruler.RouteBuilder
+)

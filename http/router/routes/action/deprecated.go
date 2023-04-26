@@ -14,6 +14,17 @@
 
 package action
 
-import . "github.com/xgfone/go-apiserver/http/router/action"
+import "github.com/xgfone/go-apiserver/http/router/action"
 
-func init() { DefaultRouter.GetActions() }
+// Re-export the global variables and functions.
+var (
+	DefaultRouter = action.DefaultRouter
+	HeaderAction  = action.HeaderAction
+
+	NewRouter = action.NewRouter
+)
+
+// Re-export the types.
+type (
+	Router = action.Router
+)
