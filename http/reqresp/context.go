@@ -95,11 +95,20 @@ func NewContextAllocator(dataCap int) ContextAllocator {
 // Notice: if Context.Any has implemented the interface { Reset() },
 // it will be called when releasing the request context.
 func NewContextAllocatorWithResponseHandler(dataCap int, handler ResponseHandler) ContextAllocator {
+	return NewContextAllocatorWithUpdater(dataCap, func(c *Context) { c.ResponseHandler = handler })
+}
+
+func NewContextAllocatorWithUpdater(dataCap int, update func(*Context)) ContextAllocator {
 	var alloc contextAllocator
-	alloc.ctxPool.New = func() interface{} {
-		return &Context{
-			ResponseHandler: handler,
-			Data:            make(map[string]interface{}, dataCap),
+	if update == nil {
+		alloc.ctxPool.New = func() interface{} {
+			return &Context{Data: make(map[string]interface{}, dataCap)}
+		}
+	} else {
+		alloc.ctxPool.New = func() interface{} {
+			c := &Context{Data: make(map[string]interface{}, dataCap)}
+			update(c)
+			return c
 		}
 	}
 	return &alloc
@@ -149,19 +158,32 @@ func GetContextFromCtx(ctx context.Context) *Context {
 }
 
 func handleContextResult(c *Context) {
+	switch e := c.Err.(type) {
+	case nil:
+		c.WriteHeader(200)
+	case result.Error:
+		c.JSON(200, e)
+	case http.Handler:
+		e.ServeHTTP(c.ResponseWriter, c.Request)
+	default:
+		c.Text(500, c.Err.Error())
+	}
+}
+
+func handleDefault(c *Context) {
 	if !c.WroteHeader() {
-		switch e := c.Err.(type) {
-		case nil:
-			c.WriteHeader(200)
-		case result.Error:
-			c.JSON(200, e)
-		case http.Handler:
-			e.ServeHTTP(c.ResponseWriter, c.Request)
-		default:
-			c.Text(500, c.Err.Error())
+		if c.DefaultHandler != nil {
+			c.DefaultHandler(c)
+		} else if DefaultHandler != nil {
+			DefaultHandler(c)
+		} else {
+			handleContextResult(c)
 		}
 	}
 }
+
+// DefaultHandler is used to handle the response if not wrote the response header.
+var DefaultHandler func(*Context) = handleContextResult
 
 // Handler is a handler to handle the http request.
 type Handler func(*Context)
@@ -176,7 +198,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer DefaultContextAllocator.Release(c)
 	}
 	h(c)
-	handleContextResult(c)
+	handleDefault(c)
 }
 
 // HandlerWithError is a handler to handle the http request with the error.
@@ -192,7 +214,7 @@ func (h HandlerWithError) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer DefaultContextAllocator.Release(c)
 	}
 	c.UpdateError(h(c))
-	handleContextResult(c)
+	handleDefault(c)
 }
 
 var (
@@ -255,6 +277,9 @@ type Context struct {
 
 	// HandleResponse is used to wrap the response and handle it by itself.
 	ResponseHandler ResponseHandler
+
+	// DefaultHandler is used to handle the response if not wrote the response header.
+	DefaultHandler func(*Context)
 
 	// Query and Cookies are used to cache the parsed request query and cookies.
 	Cookies []*http.Cookie
