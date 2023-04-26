@@ -64,72 +64,22 @@ func (e Error) StatusCode() int { return e.Code }
 
 // CodeError implements the interface result.CodeError
 // to convert itself to result.Error.
+//
+// If e.Err is a result.Error, return it directly.
 func (e Error) CodeError() result.Error {
 	if e == ErrMissingContentType {
 		return result.ErrMissingContentType
 	}
 
-	err := result.Error{Message: e.Error(), WrappedErr: e}
-	switch e.Code {
-	case http.StatusBadRequest:
-		err.Code = result.CodeInvalidParams
-
-	case http.StatusUnauthorized:
-		err.Code = result.CodeUnauthorizedOperation
-
-	case http.StatusForbidden:
-		err.Code = result.CodeUnallowedOperation
-
-	case http.StatusNotFound:
-		err.Code = result.CodeInstanceNotFound
-
-	case http.StatusMethodNotAllowed:
-		err.Code = result.CodeUnallowedOperation
-
-	case http.StatusNotAcceptable:
-		err.Code = result.CodeUnsupportedOperation
-
-	case http.StatusRequestTimeout:
-		err.Code = result.CodeGatewayTimeout
-
-	case http.StatusConflict:
-		err.Code = result.CodeFailedOperation
-
-	case http.StatusGone:
-		err.Code = result.CodeInstanceUnavailable
-
-	case http.StatusRequestEntityTooLarge:
-		err.Code = result.CodeInvalidParams
-
-	case http.StatusUnsupportedMediaType:
-		err.Code = result.CodeUnsupportedMediaType
-
-	case http.StatusTooManyRequests:
-		err.Code = result.CodeRequestLimitExceeded
-
-	case http.StatusInternalServerError:
-		err.Code = result.CodeInternalServerError
-
-	case http.StatusNotImplemented:
-		err.Code = result.CodeUnsupportedOperation
-
-	case http.StatusBadGateway:
-		err.Code = result.CodeServiceUnavailable
-
-	case http.StatusServiceUnavailable:
-		err.Code = result.CodeServiceUnavailable
-
-	case http.StatusGatewayTimeout:
-		err.Code = result.CodeGatewayTimeout
-
-	case http.StatusHTTPVersionNotSupported:
-		err.Code = result.CodeUnsupportedProtocol
-
-	default:
-		err.Code = result.CodeInternalServerError
+	if err, ok := e.Err.(result.Error); ok {
+		return err
 	}
 
-	return err
+	return result.Error{
+		Code:       GetCodeByStatus(e.Code),
+		Message:    e.Error(),
+		WrappedErr: e,
+	}
 }
 
 // Error implements the interface error.
@@ -166,4 +116,104 @@ func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	header.SetContentType(w.Header(), e.CT)
 	w.WriteHeader(e.Code)
 	io.WriteString(w, e.Error())
+}
+
+var status2code = make(map[int]string, 32)
+
+// MappingStatusCode adds the mapping from status to code.
+func MappingStatusCode(fromStatus int, toCode string) {
+	status2code[fromStatus] = toCode
+}
+
+// GetCodeByStatus gets the code by the status by the mapping from status to code.
+func GetCodeByStatus(status int) (code string) {
+	if len(status2code) > 0 {
+		if code, ok := status2code[status]; ok {
+			return code
+		}
+	}
+	return getCodeDefault(status)
+}
+
+func getCodeDefault(status int) string {
+	switch status {
+	case http.StatusBadRequest: // 400
+		return result.CodeInvalidParams
+
+	case http.StatusUnauthorized: // 401
+		return result.CodeUnauthorizedOperation
+
+	case http.StatusForbidden: // 403
+		return result.CodeUnallowedOperation
+
+	case http.StatusNotFound: // 404
+		return result.CodeInstanceNotFound
+
+	case http.StatusMethodNotAllowed: // 405
+		return result.CodeUnallowedOperation
+
+	case http.StatusNotAcceptable: // 406
+		return result.CodeUnsupportedOperation
+
+	case http.StatusRequestTimeout: // 408
+		return result.CodeGatewayTimeout
+
+	case http.StatusConflict: // 409
+		return result.CodeFailedOperation
+
+	case http.StatusGone: // 410
+		return result.CodeInstanceUnavailable
+
+	case http.StatusLengthRequired: // 411
+		return result.CodeInvalidParams
+
+	case http.StatusRequestEntityTooLarge: // 413
+		return result.CodeInvalidParams
+
+	case http.StatusRequestURITooLong: // 414
+		return result.CodeInvalidParams
+
+	case http.StatusUnsupportedMediaType: // 415
+		return result.CodeUnsupportedMediaType
+
+	case http.StatusExpectationFailed: // 417
+		return result.CodeInternalServerError
+
+	case http.StatusUnprocessableEntity: // 422
+		return result.CodeFailedOperation
+
+	case http.StatusTooManyRequests: // 429
+		return result.CodeRequestLimitExceeded
+
+	case http.StatusRequestHeaderFieldsTooLarge: // 431
+		return result.CodeInvalidParams
+
+	case http.StatusInternalServerError: // 500
+		return result.CodeInternalServerError
+
+	case http.StatusNotImplemented: // 501
+		return result.CodeUnsupportedOperation
+
+	case http.StatusBadGateway: // 502
+		return result.CodeServiceUnavailable
+
+	case http.StatusServiceUnavailable: // 503
+		return result.CodeServiceUnavailable
+
+	case http.StatusGatewayTimeout: // 504
+		return result.CodeGatewayTimeout
+
+	case http.StatusHTTPVersionNotSupported: // 505
+		return result.CodeUnsupportedProtocol
+
+	default:
+		switch {
+		case status < 400:
+			return ""
+		case status < 500:
+			return result.CodeInvalidParams
+		default:
+			return result.CodeInternalServerError
+		}
+	}
 }
