@@ -31,7 +31,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/matcher"
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/http/router/routes/action"
+	"github.com/xgfone/go-apiserver/http/router/action"
 	"github.com/xgfone/go-apiserver/internal/ruler"
 	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-generics/maps"

@@ -20,7 +20,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
-	ruleroute "github.com/xgfone/go-apiserver/http/router/routes/ruler"
+	ruleroute "github.com/xgfone/go-apiserver/http/router/ruler"
 	"github.com/xgfone/go-apiserver/internal/ruler"
 )
 

@@ -19,7 +19,7 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/middlewares"
-	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
+	"github.com/xgfone/go-apiserver/http/router/ruler"
 	"github.com/xgfone/go-apiserver/middleware"
 )
 

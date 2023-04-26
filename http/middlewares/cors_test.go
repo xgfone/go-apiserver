@@ -20,7 +20,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/middlewares"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
-	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
+	"github.com/xgfone/go-apiserver/http/router/ruler"
 )
 
 func ExampleCORS() {
