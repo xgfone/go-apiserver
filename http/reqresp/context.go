@@ -25,7 +25,6 @@ import (
 
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/header"
-	"github.com/xgfone/go-apiserver/http/herrors"
 	"github.com/xgfone/go-apiserver/http/render"
 	"github.com/xgfone/go-apiserver/internal/errors2"
 	"github.com/xgfone/go-apiserver/result"
@@ -154,8 +153,8 @@ func handleContextResult(c *Context) {
 		switch e := c.Err.(type) {
 		case nil:
 			c.WriteHeader(200)
-		case herrors.Error:
-			c.BlobText(e.Code, e.CT, c.Err.Error())
+		case result.Error:
+			c.JSON(200, e)
 		case http.Handler:
 			e.ServeHTTP(c.ResponseWriter, c.Request)
 		default:
@@ -377,19 +376,25 @@ func (c *Context) Scheme() string {
 // ---------------------------------------------------------------------------
 
 // GetDataInt64 returns the value as int64 by the key from the field Data.
-func (c *Context) GetDataInt64(key string) (value int64, exist bool, err error) {
-	v, exist := c.Data[key]
-	if exist {
+//
+// If the key does not exist and required is false, return (0, nil).
+func (c *Context) GetDataInt64(key string, required bool) (value int64, err error) {
+	if v, exist := c.Data[key]; exist {
 		value, err = cast.ToInt64(v)
+	} else if required {
+		err = fmt.Errorf("missing %s", key)
 	}
 	return
 }
 
 // GetDataUint64 returns the value as uint64 by the key from the field Data.
-func (c *Context) GetDataUint64(key string) (value uint64, exist bool, err error) {
-	v, exist := c.Data[key]
-	if exist {
+//
+// If the key does not exist and required is false, return (0, nil).
+func (c *Context) GetDataUint64(key string, required bool) (value uint64, err error) {
+	if v, exist := c.Data[key]; exist {
 		value, err = cast.ToUint64(v)
+	} else if required {
+		err = fmt.Errorf("missing %s", key)
 	}
 	return
 }
@@ -448,13 +453,39 @@ func (c *Context) GetQuery(key string) (value string) {
 }
 
 // GetQueryInt64 returns the value as int64 by the key from the field Data.
-func (c *Context) GetQueryInt64(key string) (value int64, err error) {
-	return cast.ToInt64(c.GetQuery(key))
+//
+// If the key does not exist and required is false, return (0, nil).
+func (c *Context) GetQueryInt64(key string, required bool) (value int64, err error) {
+	if vs, exist := c.GetQueries()[key]; exist {
+		switch len(vs) {
+		case 0:
+		case 1:
+			value, err = cast.ToInt64(vs[0])
+		default:
+			err = fmt.Errorf("too query values for %s", key)
+		}
+	} else if required {
+		err = fmt.Errorf("missing %s", key)
+	}
+	return
 }
 
 // GetQueryUint64 returns the value as uint64 by the key from the field Data.
-func (c *Context) GetQueryUint64(key string) (value uint64, err error) {
-	return cast.ToUint64(c.GetQuery(key))
+//
+// If the key does not exist and required is false, return (0, nil).
+func (c *Context) GetQueryUint64(key string, required bool) (value uint64, err error) {
+	if vs, exist := c.GetQueries()[key]; exist {
+		switch len(vs) {
+		case 0:
+		case 1:
+			value, err = cast.ToUint64(vs[0])
+		default:
+			err = fmt.Errorf("too query values for %s", key)
+		}
+	} else if required {
+		err = fmt.Errorf("missing %s", key)
+	}
+	return
 }
 
 // ---------------------------------------------------------------------------
