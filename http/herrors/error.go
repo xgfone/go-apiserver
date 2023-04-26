@@ -62,6 +62,9 @@ func NewError(code int) Error { return Error{Code: code} }
 // StatusCode implements the interface to return the status code.
 func (e Error) StatusCode() int { return e.Code }
 
+// ContentType returns the Content-Type to render the error.
+func (e Error) ContentType() string { return e.CT }
+
 // CodeError implements the interface result.CodeError
 // to convert itself to result.Error.
 //
