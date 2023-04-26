@@ -29,7 +29,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/middlewares"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
-	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
+	"github.com/xgfone/go-apiserver/http/router/ruler"
 )
 
 func httpHandler(route string) http.HandlerFunc {
@@ -87,7 +87,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/middlewares"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
-	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
+	"github.com/xgfone/go-apiserver/http/router/ruler"
 	"github.com/xgfone/go-apiserver/http/vhost"
 )
 
@@ -160,7 +160,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/entrypoint"
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
+	"github.com/xgfone/go-apiserver/http/router/ruler"
 	tls2 "github.com/xgfone/go-apiserver/tls"
 	"github.com/xgfone/go-apiserver/tls/tlscert/provider"
 )
@@ -247,7 +247,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/middlewares"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
-	"github.com/xgfone/go-apiserver/http/router/routes/ruler"
+	"github.com/xgfone/go-apiserver/http/router/ruler"
 	"github.com/xgfone/go-loadbalancer"
 	"github.com/xgfone/go-loadbalancer/balancer"
 	"github.com/xgfone/go-loadbalancer/endpoints/httpep"
