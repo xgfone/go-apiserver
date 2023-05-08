@@ -248,6 +248,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
 	"github.com/xgfone/go-apiserver/http/router/ruler"
+	"github.com/xgfone/go-checker"
 	"github.com/xgfone/go-loadbalancer"
 	"github.com/xgfone/go-loadbalancer/balancer"
 	"github.com/xgfone/go-loadbalancer/endpoints/httpep"
@@ -282,9 +283,9 @@ func initAdminManageAPI(router *ruler.Router) {
 			var req struct {
 				Rule     string `json:"rule" validate:"required"`
 				Upstream struct {
-					ForwardPolicy string                  `json:"forwardPolicy" default:"weight_random"`
-					ForwardURL    httpep.URL              `json:"forwardUrl"`
-					HealthCheck   healthcheck.CheckConfig `json:"healthCheck"`
+					ForwardPolicy string         `json:"forwardPolicy" default:"weight_random"`
+					ForwardURL    httpep.URL     `json:"forwardUrl"`
+					HealthCheck   checker.Config `json:"healthCheck"`
 
 					Servers []struct {
 						IP     string `json:"ip" validate:"ip"`
