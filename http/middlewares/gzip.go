@@ -28,23 +28,24 @@ import (
 
 // Gzip returns a middleware to compress the response body by GZIP.
 //
-//   level is the compression level, range [-1, 9].
+// level is the compression level, range [-1, 9].
 //
-//   domains is the host domains enabling the gzip compression.
-//   which supports the exact, prefix and suffix match. For example,
-//     Exact:  www.example.com
-//     Prefix: www.example.*
-//     Suffix: *.example.com
-//   If empty, compress all the requests to all the host domains.
+// domains is the host domains enabling the gzip compression.
+// which supports the exact, prefix and suffix match. For example,
+//   - Exact:  www.example.com
+//   - Prefix: www.example.*
+//   - Suffix: *.example.com
+//
+// If empty, compress all the requests to all the host domains.
 //
 // Notice:
-//   1. the returned gzip middleware will always compress it,
-//      no matter whether the response body is empty or not.
-//   2. the gzip middleware must be the last to handle the response.
-//      If returning an error stands for the failure result, therefore,
-//      it should be handled before compressing the response body,
-//      that's, the error handler middleware must be appended
-//      after the GZip middleware.
+//  1. the returned gzip middleware will always compress it,
+//     no matter whether the response body is empty or not.
+//  2. the gzip middleware must be the last to handle the response.
+//     If returning an error stands for the failure result, therefore,
+//     it should be handled before compressing the response body,
+//     that's, the error handler middleware must be appended
+//     after the GZip middleware.
 func Gzip(priority, level int, domains ...string) middleware.Middleware {
 	if _, err := gzip.NewWriterLevel(nil, level); err != nil {
 		panic(err)
@@ -107,7 +108,7 @@ func Gzip(priority, level int, domains ...string) middleware.Middleware {
 
 					gw := acquireGzipResponse(w)
 					defer releaseGzipResponse(gw)
-					w = reqresp.NewResponseWriterWithWriteFunc(w, gw.Write)
+					w = reqresp.NewResponseWriter(w, reqresp.Write(gw.Write))
 				}
 			}
 

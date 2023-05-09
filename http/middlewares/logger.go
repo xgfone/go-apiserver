@@ -87,14 +87,14 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				pool, respBuf = pools.GetBuffer(logRespBodyLen)
 				defer pools.PutBuffer(pool, respBuf)
 
-				rw := reqresp.NewResponseWriterWithWriteResponse(w,
+				rw := reqresp.NewResponseWriter(w, reqresp.WriteWithResponse(
 					func(w http.ResponseWriter, b []byte) (int, error) {
 						n, err := w.Write(b)
 						if n > 0 {
 							respBuf.Write(b[:n])
 						}
 						return n, err
-					})
+					}))
 
 				if ctx != nil {
 					ctx.ResponseWriter = rw

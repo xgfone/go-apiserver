@@ -54,12 +54,80 @@ type ResponseWriter interface {
 	Written() int64
 }
 
+// NewResponseWriter returns a new ResponseWriter from http.ResponseWriter
+// with the configuration options.
+//
+// NOTICE: The returned ResponseWriter has also implemented the interface
+// { Unwrap() http.ResponseWriter }.
+func NewResponseWriter(w http.ResponseWriter, options ...Option) ResponseWriter {
+	switch rw := w.(type) {
+	case nil:
+		return nil
+	case ResponseWriter:
+		if len(options) == 0 {
+			return rw
+		}
+	}
+
+	rw := &responseWriter{ResponseWriter: w}
+	for _, o := range options {
+		o.apply(rw)
+	}
+
+	var index int
+	if _, ok := w.(http.Flusher); ok {
+		index += flusher
+	}
+	if _, ok := w.(http.Hijacker); ok {
+		index += hijacker
+	}
+	if _, ok := w.(io.ReaderFrom); ok {
+		index += readerFrom
+	}
+	if _, ok := w.(http.Pusher); ok {
+		index += pusher
+	}
+	return newResponseWriter(rw, index)
+}
+
+// Write returns a ResponseWriter option to wrap the method Write.
+func Write(write func([]byte) (int, error)) Option {
+	return WriteWithResponse(func(w http.ResponseWriter, b []byte) (int, error) {
+		return write(b)
+	})
+}
+
+// WriteHeader returns a ResponseWriter option to wrap the method WriteHeader.
+func WriteHeader(writeHeader func(statusCode int)) Option {
+	return WriteHeaderWithResponse(func(rw http.ResponseWriter, statusCode int) {
+		writeHeader(statusCode)
+	})
+}
+
+// WriteWithResponse returns a ResponseWriter option to wrap the method Write.
+func WriteWithResponse(write func(rw http.ResponseWriter, data []byte) (int, error)) Option {
+	return rwoption(func(w *responseWriter) { w.writeData = write })
+}
+
+// WriteHeaderWithResponse returns a ResponseWriter option to wrap the method WriteHeader.
+func WriteHeaderWithResponse(writeHeader func(rw http.ResponseWriter, statusCode int)) Option {
+	return rwoption(func(w *responseWriter) { w.writeHeader = writeHeader })
+}
+
+// Option is used to configure the ResponseWriter.
+type Option interface{ apply(*responseWriter) }
+
+type rwoption func(*responseWriter)
+
+func (f rwoption) apply(rw *responseWriter) { f(rw) }
+
 type responseWriter struct {
 	http.ResponseWriter
 
-	written      int64
-	statusCode   int
-	wrappedWrite func(http.ResponseWriter, []byte) (int, error)
+	written     int64
+	statusCode  int
+	writeHeader func(rw http.ResponseWriter, statusCode int)
+	writeData   func(http.ResponseWriter, []byte) (int, error)
 }
 
 func (rw *responseWriter) Written() int64    { return rw.written }
@@ -83,7 +151,11 @@ func (rw *responseWriter) WriteHeader(statusCode int) {
 
 	if rw.statusCode == 0 {
 		rw.statusCode = statusCode
-		rw.ResponseWriter.WriteHeader(statusCode)
+		if rw.writeHeader == nil {
+			rw.ResponseWriter.WriteHeader(statusCode)
+		} else {
+			rw.writeHeader(rw.ResponseWriter, statusCode)
+		}
 	}
 }
 
@@ -92,10 +164,10 @@ func (rw *responseWriter) Write(p []byte) (n int, err error) {
 		rw.WriteHeader(http.StatusOK)
 	}
 
-	if rw.wrappedWrite == nil {
+	if rw.writeData == nil {
 		n, err = rw.ResponseWriter.Write(p)
 	} else {
-		n, err = rw.wrappedWrite(rw.ResponseWriter, p)
+		n, err = rw.writeData(rw.ResponseWriter, p)
 	}
 	rw.written += int64(n)
 	return
@@ -106,67 +178,13 @@ func (rw *responseWriter) WriteString(s string) (n int, err error) {
 		rw.WriteHeader(http.StatusOK)
 	}
 
-	if rw.wrappedWrite == nil {
+	if rw.writeData == nil {
 		n, err = io.WriteString(rw.ResponseWriter, s)
 	} else {
-		n, err = rw.wrappedWrite(rw.ResponseWriter, []byte(s))
+		n, err = rw.writeData(rw.ResponseWriter, []byte(s))
 	}
 	rw.written += int64(n)
 	return
-}
-
-// NewResponseWriter returns a new ResponseWriter from http.ResponseWriter.
-//
-// NOTICE: The returned ResponseWriter has also implemented the interface
-// { Unwrap() http.ResponseWriter }.
-func NewResponseWriter(w http.ResponseWriter) ResponseWriter {
-	return NewResponseWriterWithWriteResponse(w, nil)
-}
-
-// NewResponseWriterWithWriteFunc returns a new ResponseWriter
-// from http.ResponseWriter with the wrapped write function.
-//
-// NOTICE: The returned ResponseWriter has also implemented the interface
-// { Unwrap() http.ResponseWriter }.
-func NewResponseWriterWithWriteFunc(w http.ResponseWriter, f func([]byte) (int, error)) ResponseWriter {
-	return NewResponseWriterWithWriteResponse(w, func(w http.ResponseWriter, b []byte) (int, error) {
-		return f(b)
-	})
-}
-
-// NewResponseWriterWithWriteResponse returns a new ResponseWriter
-// from http.ResponseWriter with the wrapped write function.
-//
-// NOTICE: The returned ResponseWriter has also implemented the interface
-// { Unwrap() http.ResponseWriter }.
-func NewResponseWriterWithWriteResponse(w http.ResponseWriter,
-	write func(http.ResponseWriter, []byte) (int, error)) ResponseWriter {
-	switch rw := w.(type) {
-	case nil:
-		return nil
-	case ResponseWriter:
-		if write == nil {
-			return rw
-		}
-	}
-
-	rw := &responseWriter{ResponseWriter: w, wrappedWrite: write}
-
-	var index int
-	if _, ok := w.(http.Flusher); ok {
-		index += flusher
-	}
-	if _, ok := w.(http.Hijacker); ok {
-		index += hijacker
-	}
-	if _, ok := w.(io.ReaderFrom); ok {
-		index += readerFrom
-	}
-	if _, ok := w.(http.Pusher); ok {
-		index += pusher
-	}
-
-	return newResponseWriter(rw, index)
 }
 
 func newResponseWriter(rw *responseWriter, index int) ResponseWriter {
