@@ -315,13 +315,23 @@ func (b RouteBuilder) Handler(handler http.Handler) (err error) {
 	return
 }
 
-func (b RouteBuilder) addRoute(handler http.Handler) (err error) {
+// Route returns the built route with the handler.
+func (b RouteBuilder) Route(handler http.Handler) Route {
+	route, err := b.newRoute(handler)
+	if err != nil {
+		panic(err)
+	}
+	return route
+}
+
+func (b RouteBuilder) newRoute(handler http.Handler) (route Route, err error) {
 	if b.matcher == nil && len(b.matchers) > 0 {
 		b.matcher = matcher.And(b.matchers...)
 	}
 
 	if b.matcher == nil {
-		return errors.New("mising the route matcher")
+		err = errors.New("mising the route matcher")
+		return
 	}
 
 	name := b.name
@@ -330,8 +340,16 @@ func (b RouteBuilder) addRoute(handler http.Handler) (err error) {
 	}
 
 	handler = b.mdws.Handler(handler).(http.Handler)
-	route := NewRoute(name, b.priority, b.matcher, handler)
-	return b.manager.AddRoute(route)
+	route = NewRoute(name, b.priority, b.matcher, handler)
+	return
+}
+
+func (b RouteBuilder) addRoute(handler http.Handler) (err error) {
+	route, err := b.newRoute(handler)
+	if err == nil {
+		err = b.manager.AddRoute(route)
+	}
+	return
 }
 
 // GET is a convenient function to register the route with the handler,
