@@ -38,6 +38,9 @@ import (
 	"github.com/xgfone/go-generics/slices"
 )
 
+// BuildMatcherRule is the default build function to build the matcher by the rule.
+var BuildMatcherRule func(matcherRule string) (matcher.Matcher, error) = ruler.Build
+
 // DefaultRouter is the default global ruler router.
 var DefaultRouter = NewRouter()
 
@@ -69,9 +72,18 @@ type Router struct {
 func NewRouter() *Router {
 	r := &Router{rmaps: make(map[string]Route, 16)}
 	r.Middlewares = middleware.NewManager(nil)
-	r.BuildMatcherRule = ruler.Build
+	r.BuildMatcherRule = BuildMatcherRule
 	r.updateRoutes()
 	return r
+}
+
+func (r *Router) buildMatcher(rule string) (matcher.Matcher, error) {
+	if r.BuildMatcherRule != nil {
+		return r.BuildMatcherRule(rule)
+	} else if BuildMatcherRule != nil {
+		return BuildMatcherRule(rule)
+	}
+	return ruler.Build(rule)
 }
 
 // ServeHTTP implements the interface http.Handler.

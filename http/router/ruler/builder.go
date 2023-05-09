@@ -136,12 +136,8 @@ func (b RouteBuilder) Or(matchers ...matcher.Matcher) RouteBuilder {
 // Rule is the same as Matcher, but use the builder to build the matcher
 // with the matcher rule string.
 func (b RouteBuilder) Rule(matcherRule string) RouteBuilder {
-	if b.manager.BuildMatcherRule == nil {
-		panic("not set the rule buidler of the route matcher")
-	}
-
 	if b.err == nil {
-		b.matcher, b.err = b.manager.BuildMatcherRule(matcherRule)
+		b.matcher, b.err = b.manager.buildMatcher(matcherRule)
 		b.matchers = nil
 	}
 	return b
