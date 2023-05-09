@@ -696,7 +696,7 @@ func (c *Context) XML(code int, v interface{}) (err error) {
 func (c *Context) Stream(code int, contentType string, r io.Reader) (err error) {
 	c.SetContentType(contentType)
 	c.WriteHeader(code)
-	_, err = io.CopyBuffer(c.ResponseWriter, r, make([]byte, 2048))
+	_, err = io.CopyBuffer(c.ResponseWriter, r, make([]byte, 1024))
 	return
 }
 
