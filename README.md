@@ -242,18 +242,21 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"net/http"
 
 	"github.com/xgfone/go-apiserver/entrypoint"
 	"github.com/xgfone/go-apiserver/http/middlewares"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
 	"github.com/xgfone/go-apiserver/http/router/ruler"
-	"github.com/xgfone/go-checker"
+	"github.com/xgfone/go-apiserver/nets"
 	"github.com/xgfone/go-loadbalancer"
 	"github.com/xgfone/go-loadbalancer/balancer"
-	"github.com/xgfone/go-loadbalancer/endpoints/httpep"
+	"github.com/xgfone/go-loadbalancer/endpoint"
 	"github.com/xgfone/go-loadbalancer/forwarder"
 	"github.com/xgfone/go-loadbalancer/healthcheck"
+	httpep "github.com/xgfone/go-loadbalancer/http/endpoint"
 )
 
 var (
@@ -281,13 +284,11 @@ func initAdminManageAPI(router *ruler.Router) {
 		ClientIP(*manageCIDR). // Only allow the specific clients to add the route.
 		ContextHandler(func(ctx *reqresp.Context) {
 			var req struct {
-				Rule     string `json:"rule" validate:"required"`
+				Matcher  string `json:"matcher" validate:"required"` // Route Matcher rule
 				Upstream struct {
-					ForwardPolicy string         `json:"forwardPolicy" default:"weight_random"`
-					ForwardURL    httpep.URL     `json:"forwardUrl"`
-					HealthCheck   checker.Config `json:"healthCheck"`
-
-					Servers []struct {
+					ForwardPolicy string              `json:"forwardPolicy" default:"weight_random"`
+					HealthCheck   healthcheck.Checker `json:"healthCheck"`
+					Servers       []struct {
 						IP     string `json:"ip" validate:"ip"`
 						Port   uint16 `json:"port" validate:"ranger(1,65535)"`
 						Weight int    `json:"weight" default:"1" validate:"min(1)"`
@@ -296,38 +297,59 @@ func initAdminManageAPI(router *ruler.Router) {
 			}
 
 			if err := ctx.BindBody(&req); err != nil {
-				ctx.Text(400, "invalid request route paramenter: %w", err.Error())
+				ctx.Text(400, "invalid request route paramenter: %s", err)
 				return
 			}
 
 			// Build the upstream backend servers.
-			endpoints := make(loadbalancer.Endpoints, len(req.Upstream.Servers))
+			endpoints := make(endpoint.Endpoints, len(req.Upstream.Servers))
 			for i, server := range req.Upstream.Servers {
-				config := httpep.Config{URL: req.Upstream.ForwardURL}
-				config.StaticWeight = server.Weight
-				config.URL.Port = server.Port
-				config.URL.IP = server.IP
-
-				endpoint, err := config.NewEndpoint()
-				if err != nil {
-					ctx.Text(400, "fail to build the upstream server: %s", err.Error())
-					return
-				}
-
-				endpoints[i] = endpoint
+				endpoints[i] = httpep.Config{
+					IP:     server.IP,
+					Port:   server.Port,
+					Weight: server.Weight,
+				}.NewEndpoint()
 			}
 
 			// Build the loadbalancer forwarder.
 			balancer, _ := balancer.Build(req.Upstream.ForwardPolicy, nil)
-			forwarder := forwarder.NewForwarder(req.Rule, balancer)
+			forwarder := forwarder.NewForwarder(req.Matcher, balancer)
 
 			healthcheck.DefaultHealthChecker.AddUpdater(forwarder.Name(), forwarder)
 			healthcheck.DefaultHealthChecker.UpsertEndpoints(endpoints, req.Upstream.HealthCheck)
 
 			// Build the route and forward the request to forwarder.
-			err := router.Rule(req.Rule).HandlerFunc(forwarder.ServeHTTP)
+			err := router.Rule(req.Matcher).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// 1. Create a new request.
+				ctx := r.Context()
+				req := r.Clone(ctx)
+				req.URL.Scheme = "http"
+				req.RequestURI = "" // Pretend to be a client request.
+				//req.URL.Host = "" // Dial to the backend http endpoint.
+
+				// 2. Process the request.
+				// TODO ...
+
+				// 3. Forward the request and handle the response.
+				err := forwarder.Serve(ctx, httpep.NewRequest(w, r, req))
+				if err != nil {
+					switch c := reqresp.GetContext(w, r); {
+					case c.WroteHeader():
+						fmt.Printf("fail to forward the http request: %s", err)
+
+					case err == loadbalancer.ErrNoAvailableEndpoints:
+						w.WriteHeader(503) // Service Unavailable
+
+					case nets.IsTimeout(err):
+						w.WriteHeader(504) // Gateway Timeout
+
+					default:
+						w.WriteHeader(502) // Bad Gateway
+					}
+				}
+			})
 			if err != nil {
-				ctx.Text(400, "invalid route rule '%s': %s", req.Rule, err.Error())
+				ctx.Text(400, "invalid route rule '%s': %s", req.Matcher, err.Error())
 			}
 		})
 }
@@ -341,7 +363,7 @@ $ nohup go run main.go &
 # Notice: remove the characters from // to the line end.
 $ curl -XPOST http://127.0.0.1/admin/route -H 'Content-Type: application/json' -d '
 {
-    "rule": "Method(`GET`) && Path(`/path`)",
+    "matcher": "Method(`GET`) && Path(`/path`)",
     "upstream": {
         "forwardPolicy": "weight_round_robin",
         "forwardUrl" : {"path": "/backend/path"},
