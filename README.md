@@ -284,7 +284,7 @@ func initAdminManageAPI(router *ruler.Router) {
 		ClientIP(*manageCIDR). // Only allow the specific clients to add the route.
 		ContextHandler(func(ctx *reqresp.Context) {
 			var req struct {
-				Matcher  string `json:"matcher" validate:"required"` // Route Matcher rule
+				Matcher  string `json:"matcher" validate:"required"` // Route Matcher Rule
 				Upstream struct {
 					ForwardPolicy string              `json:"forwardPolicy" default:"weight_random"`
 					HealthCheck   healthcheck.Checker `json:"healthCheck"`
@@ -366,7 +366,6 @@ $ curl -XPOST http://127.0.0.1/admin/route -H 'Content-Type: application/json' -
     "matcher": "Method(`GET`) && Path(`/path`)",
     "upstream": {
         "forwardPolicy": "weight_round_robin",
-        "forwardUrl" : {"path": "/backend/path"},
         "servers": [
             {"ip": "192.168.1.11", "port": 80, "weight": 10}, // 33.3% requests
             {"ip": "192.168.1.12", "port": 80, "weight": 20}  // 66.7% requests
