@@ -27,13 +27,29 @@ var (
 		w.WriteHeader(200)
 	})
 
+	Handler204 http.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(204)
+	})
+
 	Handler400 http.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(400)
+	})
+
+	Handler401 http.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(401)
+	})
+
+	Handler403 http.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(403)
 	})
 
 	Handler404 http.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Connection", "close")
 		w.WriteHeader(404)
+	})
+
+	Handler500 http.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(500)
 	})
 )
 
