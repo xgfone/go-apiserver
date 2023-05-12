@@ -242,16 +242,12 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"net/http"
 
 	"github.com/xgfone/go-apiserver/entrypoint"
 	"github.com/xgfone/go-apiserver/http/middlewares"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
 	"github.com/xgfone/go-apiserver/http/router/ruler"
-	"github.com/xgfone/go-apiserver/nets"
-	"github.com/xgfone/go-loadbalancer"
 	"github.com/xgfone/go-loadbalancer/balancer"
 	"github.com/xgfone/go-loadbalancer/endpoint"
 	"github.com/xgfone/go-loadbalancer/forwarder"
@@ -319,35 +315,8 @@ func initAdminManageAPI(router *ruler.Router) {
 			healthcheck.DefaultHealthChecker.UpsertEndpoints(endpoints, req.Upstream.HealthCheck)
 
 			// Build the route and forward the request to forwarder.
-			err := router.Rule(req.Matcher).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// 1. Create a new request.
-				ctx := r.Context()
-				req := r.Clone(ctx)
-				req.URL.Scheme = "http"
-				req.RequestURI = "" // Pretend to be a client request.
-				//req.URL.Host = "" // Dial to the backend http endpoint.
-
-				// 2. Process the request.
-				// TODO ...
-
-				// 3. Forward the request and handle the response.
-				err := forwarder.Serve(ctx, httpep.NewRequest(w, r, req))
-				if err != nil {
-					switch c := reqresp.GetContext(w, r); {
-					case c.WroteHeader():
-						fmt.Printf("fail to forward the http request: %s", err)
-
-					case err == loadbalancer.ErrNoAvailableEndpoints:
-						w.WriteHeader(503) // Service Unavailable
-
-					case nets.IsTimeout(err):
-						w.WriteHeader(504) // Gateway Timeout
-
-					default:
-						w.WriteHeader(502) // Bad Gateway
-					}
-				}
-			})
+			// You can use forwarder.ForwardHTTP to control the request and response.
+			err := router.Rule(req.Matcher).Handler(forwarder)
 			if err != nil {
 				ctx.Text(400, "invalid route rule '%s': %s", req.Matcher, err.Error())
 			}
