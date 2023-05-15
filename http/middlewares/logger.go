@@ -172,6 +172,9 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 
 			if err != nil {
 				kvs = append(kvs, "err", err)
+				if se, ok := err.(interface{ Stacks() []string }); ok {
+					kvs = append(kvs, "stacks", se.Stacks())
+				}
 			}
 
 			log.Info("log http request", kvs...)
