@@ -78,6 +78,7 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, recover interface{})
 	c := reqresp.GetContext(w, r)
 	if c != nil {
 		rw = c.ResponseWriter
+		c.Err = panicError{panics: recover, stacks: helper.GetCallStack(4)}
 	} else if _rw, ok := w.(reqresp.ResponseWriter); ok {
 		rw = _rw
 	} else {
@@ -107,3 +108,11 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, recover interface{})
 
 	return false
 }
+
+type panicError struct {
+	panics interface{}
+	stacks []string
+}
+
+func (e panicError) Error() string    { return fmt.Sprintf("wrap a panic: %v", e.panics) }
+func (e panicError) Stacks() []string { return e.stacks }
