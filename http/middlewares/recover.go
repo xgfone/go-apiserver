@@ -20,7 +20,6 @@ import (
 
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/result"
 )
@@ -32,7 +31,7 @@ var DefaultPanicHandler PanicHandler
 //
 // If returning true, no longer continue to do something.
 // Or, do extra something, for example, log the panic, etc.
-type PanicHandler func(w http.ResponseWriter, r *http.Request, recover interface{}) (done bool)
+type PanicHandler func(w http.ResponseWriter, r *http.Request, recover interface{})
 
 // Recover is equal to RecoverWithHandler(priority, nil).
 func Recover(priority int) middleware.Middleware {
@@ -56,33 +55,26 @@ func RecoverWithHandler(priority int, handler PanicHandler) middleware.Middlewar
 
 func wrapPanic(w http.ResponseWriter, r *http.Request, handler PanicHandler) {
 	if e := recover(); e != nil {
-		var ok bool
 		if handler != nil {
-			ok = handler(w, r, e)
+			handler(w, r, e)
 		} else if DefaultPanicHandler != nil {
-			ok = DefaultPanicHandler(w, r, e)
+			DefaultPanicHandler(w, r, e)
 		} else {
-			ok = defaultHandler(w, r, e)
-		}
-
-		if !ok {
-			stacks := helper.GetCallStack(4)
-			log.Error("wrap a panic", "addr", r.RemoteAddr, "method", r.Method,
-				"uri", r.RequestURI, "panic", e, "stacks", stacks)
+			defaultHandler(w, r, e)
 		}
 	}
 }
 
-func defaultHandler(w http.ResponseWriter, r *http.Request, recover interface{}) bool {
+func defaultHandler(w http.ResponseWriter, r *http.Request, recover interface{}) {
 	var rw reqresp.ResponseWriter
 	c := reqresp.GetContext(w, r)
 	if c != nil {
 		rw = c.ResponseWriter
-		c.Err = panicError{panics: recover, stacks: helper.GetCallStack(4)}
+		c.Err = panicError{panics: recover, stacks: helper.GetCallStack(5)}
 	} else if _rw, ok := w.(reqresp.ResponseWriter); ok {
 		rw = _rw
 	} else {
-		return false
+		return
 	}
 
 	if !rw.WroteHeader() {
@@ -105,8 +97,6 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, recover interface{})
 			c.Respond(result.Response{Error: rerr})
 		}
 	}
-
-	return false
 }
 
 type panicError struct {

@@ -29,16 +29,13 @@ func TestRecover(t *testing.T) {
 	})
 
 	var stacks []string
-	DefaultPanicHandler = func(w http.ResponseWriter, r *http.Request, recover interface{}) (done bool) {
-		for _, stack := range helper.GetCallStack(4) {
-			if strings.HasPrefix(stack, "testing/") {
-				break
-			} else if strings.HasPrefix(stack, "net/http/") || strings.HasPrefix(stack, "runtime/") {
+	DefaultPanicHandler = func(w http.ResponseWriter, r *http.Request, recover interface{}) {
+		for _, stack := range helper.GetCallStack(5) {
+			if strings.HasPrefix(stack, "testing/") || strings.HasPrefix(stack, "net/http/") {
 				continue
 			}
 			stacks = append(stacks, stack)
 		}
-		return true
 	}
 
 	rec := httptest.NewRecorder()
@@ -47,8 +44,8 @@ func TestRecover(t *testing.T) {
 
 	expects := []string{
 		"github.com/xgfone/go-apiserver/http/middlewares/recover_test.go:func1:28",
-		"github.com/xgfone/go-apiserver/http/middlewares/recover.go:1:52",
-		"github.com/xgfone/go-apiserver/http/middlewares/recover_test.go:TestRecover:46",
+		"github.com/xgfone/go-apiserver/http/middlewares/recover.go:1:51",
+		"github.com/xgfone/go-apiserver/http/middlewares/recover_test.go:TestRecover:43",
 	}
 
 	if len(expects) != len(stacks) {
