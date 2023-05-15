@@ -78,6 +78,7 @@ type RouteBuilder struct {
 	manager  *Router
 	mdws     middleware.Middlewares
 	name     string
+	extra    interface{}
 	matcher  matcher.Matcher
 	matchers matcher.Matchers
 	priority int
@@ -104,6 +105,12 @@ func (b RouteBuilder) SetPanic(panic bool) RouteBuilder {
 // Name sets the name of the route.
 func (b RouteBuilder) Name(name string) RouteBuilder {
 	b.name = name
+	return b
+}
+
+// Extra sets the extra data of the route.
+func (b RouteBuilder) Extra(extra interface{}) RouteBuilder {
+	b.extra = extra
 	return b
 }
 
@@ -341,6 +348,7 @@ func (b RouteBuilder) newRoute(handler http.Handler) (route Route, err error) {
 
 	handler = b.mdws.Handler(handler).(http.Handler)
 	route = NewRoute(name, b.priority, b.matcher, handler)
+	route.Extra = b.extra
 	return
 }
 

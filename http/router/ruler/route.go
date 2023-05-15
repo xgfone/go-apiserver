@@ -44,6 +44,9 @@ type Route struct {
 	// Handler is the handler of the route.
 	Handler http.Handler `json:"-"`
 
+	// Extra is the extra data of the route.
+	Extra interface{}
+
 	handler http.Handler
 }
 
