@@ -322,13 +322,18 @@ func (b RouteBuilder) Handler(handler http.Handler) (err error) {
 	return
 }
 
-// Route returns the built route with the handler.
-func (b RouteBuilder) Route(handler http.Handler) Route {
-	route, err := b.newRoute(handler)
+// Must is the same as Route, but panics instead if there is an error.
+func (b RouteBuilder) Must(handler http.Handler) Route {
+	route, err := b.Route(handler)
 	if err != nil {
 		panic(err)
 	}
 	return route
+}
+
+// Route returns the built route with the handler.
+func (b RouteBuilder) Route(handler http.Handler) (Route, error) {
+	return b.newRoute(handler)
 }
 
 func (b RouteBuilder) newRoute(handler http.Handler) (route Route, err error) {
