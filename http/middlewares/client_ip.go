@@ -17,9 +17,9 @@ package middlewares
 import (
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 
+	"github.com/xgfone/go-apiserver/http/matcher"
 	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/nets"
 )
@@ -45,8 +45,7 @@ func ClientIP(prioirty int, handler http.Handler, ipOrCidrs ...string) (middlewa
 
 	return middleware.NewMiddleware("client_ip", prioirty, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			ip, _ := nets.SplitHostPort(r.RemoteAddr)
-			if checkers.CheckIP(net.ParseIP(ip)) {
+			if checkers.CheckIP(matcher.GetClientIP(r)) {
 				h.(http.Handler).ServeHTTP(rw, r)
 			} else {
 				handler.ServeHTTP(rw, r)
@@ -57,7 +56,5 @@ func ClientIP(prioirty int, handler http.Handler, ipOrCidrs ...string) (middlewa
 
 func handleClientIP(rw http.ResponseWriter, r *http.Request) {
 	rw.WriteHeader(403)
-
-	ip, _ := nets.SplitHostPort(r.RemoteAddr)
-	fmt.Fprintf(rw, "the client from '%s' is not allowed", ip)
+	fmt.Fprintf(rw, "the client from '%s' is not allowed", matcher.GetClientIP(r))
 }
