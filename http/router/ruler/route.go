@@ -45,7 +45,7 @@ type Route struct {
 	Handler http.Handler `json:"-"`
 
 	// Extra is the extra data of the route.
-	Extra interface{}
+	Extra interface{} `json:",omitempty"`
 
 	handler http.Handler
 }
