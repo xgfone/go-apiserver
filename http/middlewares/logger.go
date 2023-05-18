@@ -45,16 +45,17 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 
 	return middleware.NewMiddleware("logger", priority, func(h interface{}) interface{} {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !log.Enabled(r.Context(), log.LevelInfo) {
+			ctx := r.Context()
+			if !log.Enabled(ctx, log.LevelInfo) || (config.LogReq != nil && !config.LogReq(ctx)) {
 				h.(http.Handler).ServeHTTP(w, r)
 				return
 			}
 
-			ctx := reqresp.GetContext(w, r)
+			c := reqresp.GetContext(w, r)
 
 			var reqBodyLen int
 			var reqBodyData string
-			logReqBodyLen := config.GetLogReqBodyLen(r.Context())
+			logReqBodyLen := config.GetLogReqBodyLen(ctx)
 			if logReqBodyLen > 0 {
 				if r.ContentLength < 0 || r.ContentLength > int64(logReqBodyLen) {
 					logReqBodyLen = -1
@@ -81,7 +82,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 			}
 
 			var respBuf *bytes.Buffer
-			logRespBodyLen := config.GetLogRespBodyLen(r.Context())
+			logRespBodyLen := config.GetLogRespBodyLen(ctx)
 			if logRespBodyLen > 0 {
 				var pool *sync.Pool
 				pool, respBuf = pools.GetBuffer(logRespBodyLen)
@@ -96,8 +97,8 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 						return n, err
 					}))
 
-				if ctx != nil {
-					ctx.ResponseWriter = rw
+				if c != nil {
+					c.ResponseWriter = rw
 				}
 				w = rw
 			}
@@ -108,9 +109,9 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 
 			var code int
 			var err error
-			if ctx != nil {
-				code = ctx.StatusCode()
-				err = ctx.Err
+			if c != nil {
+				code = c.StatusCode()
+				err = c.Err
 			} else if rw, ok := w.(reqresp.ResponseWriter); ok {
 				code = rw.StatusCode()
 			}
@@ -126,11 +127,11 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				"cost", cost.String(),
 			)
 
-			if ctx != nil && ctx.Action != "" {
-				kvs = append(kvs, "action", ctx.Action)
+			if c != nil && c.Action != "" {
+				kvs = append(kvs, "action", c.Action)
 			}
 
-			if reqid := defaults.GetRequestID(r.Context(), r); reqid != "" {
+			if reqid := defaults.GetRequestID(ctx, r); reqid != "" {
 				kvs = append(kvs, "reqid", reqid)
 			}
 
@@ -138,7 +139,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				kvs = appender(w, r, kvs)
 			}
 
-			if config.GetLogReqHeaders(r.Context()) {
+			if config.GetLogReqHeaders(ctx) {
 				kvs = append(kvs, "reqheaders", r.Header)
 			}
 
@@ -154,7 +155,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				}
 			}
 
-			if config.GetLogRespHeaders(r.Context()) {
+			if config.GetLogRespHeaders(ctx) {
 				kvs = append(kvs, "respheaders", w.Header())
 			}
 
