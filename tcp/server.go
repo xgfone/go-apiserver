@@ -19,7 +19,9 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"strings"
 	"sync/atomic"
+	"syscall"
 
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/nets"
@@ -137,10 +139,16 @@ func (s *Server) Start() {
 
 func (s *Server) checkTLS(conn net.Conn, config *tls.Config, force bool) net.Conn {
 	var bs [1]byte
-	if n, err := conn.Read(bs[:]); err != nil || n == 0 {
-		log.Error("fail to read the first byte from the conneciton",
-			"remoteaddr", conn.RemoteAddr().String(), "err", err)
+	if n, err := conn.Read(bs[:]); err != nil {
 		conn.Close()
+		if !errors.Is(err, syscall.ECONNRESET) && !strings.HasSuffix(err.Error(), "connection reset by peer") {
+			log.Error("fail to read the first byte from the conneciton",
+				"remoteaddr", conn.RemoteAddr().String(), "err", err)
+		}
+		return nil
+	} else if n == 0 {
+		conn.Close()
+		log.Error("read the zero byte from the connection", "remoteaddr", conn.RemoteAddr().String())
 		return nil
 	}
 
