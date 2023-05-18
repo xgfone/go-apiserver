@@ -19,8 +19,11 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/xgfone/go-apiserver/helper"
@@ -553,6 +556,54 @@ func (c *Context) SetConnectionClose() {
 // If ct is "", do nothing.
 func (c *Context) SetContentType(ct string) {
 	header.SetContentType(c.ResponseWriter.Header(), ct)
+}
+
+func (c *Context) sendfile(name, path, dtype string) (err error) {
+	if name == "" {
+		name = filepath.Base(path)
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return
+	} else if stat.IsDir() {
+		return fmt.Errorf("file '%s' is a directory", path)
+	}
+
+	params := map[string]string{"filename": name}
+	disposition := mime.FormatMediaType(dtype, params)
+	c.ResponseWriter.Header().Set(header.HeaderContentDisposition, disposition)
+
+	http.ServeContent(c.ResponseWriter, c.Request, stat.Name(), stat.ModTime(), file)
+	return
+}
+
+// Attachment sends a file as attachment.
+//
+// If filename is "", it will use the base name of the filepath instead.
+// And if the file does not exist, it returns os.ErrNotExist.
+func (c *Context) Attachment(filename, filepath string) error {
+	if filepath == "" {
+		panic("Context.Attachment: filepath must not be empty")
+	}
+	return c.sendfile(filename, filepath, "attachment")
+}
+
+// Inline sends a file as inline.
+//
+// If filename is "", it will use the base name of the filepath instead.
+// And if the file does not exist, it returns os.ErrNotExist.
+func (c *Context) Inline(filename, filepath string) error {
+	if filepath == "" {
+		panic("Context.Inline: filepath must not be empty")
+	}
+	return c.sendfile(filename, filepath, "inline")
 }
 
 // Redirect redirects the request to a provided URL with status code.
