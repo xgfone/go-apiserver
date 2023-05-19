@@ -107,6 +107,11 @@ func CORS(priority int, config *CORSConfig) middleware.Middleware {
 				}
 			}
 
+			if len(allowOrigin) == 0 {
+				h.(http.Handler).ServeHTTP(w, r)
+				return
+			}
+
 			respHeader := w.Header()
 			respHeader.Add(header.HeaderVary, header.HeaderOrigin)
 			respHeader.Set(header.HeaderAccessControlAllowOrigin, allowOrigin)
