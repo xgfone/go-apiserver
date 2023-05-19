@@ -85,6 +85,7 @@ func CORS(priority int, config *CORSConfig) middleware.Middleware {
 	maxAge := fmt.Sprintf("%d", conf.MaxAge)
 
 	return middleware.NewMiddleware("cors", priority, func(h interface{}) interface{} {
+		next := h.(http.Handler)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Check whether the origin is allowed or not.
 			var allowOrigin string
@@ -108,7 +109,7 @@ func CORS(priority int, config *CORSConfig) middleware.Middleware {
 			}
 
 			if len(allowOrigin) == 0 {
-				h.(http.Handler).ServeHTTP(w, r)
+				next.ServeHTTP(w, r)
 				return
 			}
 
@@ -124,7 +125,7 @@ func CORS(priority int, config *CORSConfig) middleware.Middleware {
 				if exposeHeaders != "" {
 					respHeader.Set(header.HeaderAccessControlExposeHeaders, exposeHeaders)
 				}
-				h.(http.Handler).ServeHTTP(w, r)
+				next.ServeHTTP(w, r)
 
 			} else {
 				// Preflight request

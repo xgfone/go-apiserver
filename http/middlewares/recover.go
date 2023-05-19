@@ -46,9 +46,10 @@ func Recover(priority int) middleware.Middleware {
 // which will respond with the status code 500.
 func RecoverWithHandler(priority int, handler PanicHandler) middleware.Middleware {
 	return middleware.NewMiddleware("recover", priority, func(h interface{}) interface{} {
+		next := h.(http.Handler)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer wrapPanic(w, r, handler)
-			h.(http.Handler).ServeHTTP(w, r)
+			next.ServeHTTP(w, r)
 		})
 	})
 }

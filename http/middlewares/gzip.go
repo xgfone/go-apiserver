@@ -99,6 +99,7 @@ func Gzip(priority, level int, domains ...string) middleware.Middleware {
 	}
 
 	return middleware.NewMiddleware("gzip", priority, func(h interface{}) interface{} {
+		next := h.(http.Handler)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.Contains(r.Header.Get(header.HeaderAcceptEncoding), "gzip") {
 				respHeader := w.Header()
@@ -112,7 +113,7 @@ func Gzip(priority, level int, domains ...string) middleware.Middleware {
 				}
 			}
 
-			h.(http.Handler).ServeHTTP(w, r)
+			next.ServeHTTP(w, r)
 		})
 	})
 }

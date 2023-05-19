@@ -26,8 +26,9 @@ import (
 // to get the status code of the response.
 func ResponseWriter(priority int) middleware.Middleware {
 	return middleware.NewMiddleware("responsewriter", priority, func(h interface{}) interface{} {
+		next := h.(http.Handler)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			h.(http.Handler).ServeHTTP(reqresp.NewResponseWriter(w), r)
+			next.ServeHTTP(reqresp.NewResponseWriter(w), r)
 		})
 	})
 }

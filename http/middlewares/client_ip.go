@@ -44,9 +44,10 @@ func ClientIP(prioirty int, handler http.Handler, ipOrCidrs ...string) (middlewa
 	}
 
 	return middleware.NewMiddleware("client_ip", prioirty, func(h interface{}) interface{} {
+		next := h.(http.Handler)
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			if checkers.CheckIP(matcher.GetClientIP(r)) {
-				h.(http.Handler).ServeHTTP(rw, r)
+				next.ServeHTTP(rw, r)
 			} else {
 				handler.ServeHTTP(rw, r)
 			}

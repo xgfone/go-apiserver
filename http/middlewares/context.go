@@ -26,15 +26,16 @@ import (
 // handling the http request.
 func Context(priority int) middleware.Middleware {
 	return middleware.NewMiddleware("context", priority, func(h interface{}) interface{} {
+		next := h.(http.Handler)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if c := reqresp.GetContext(w, r); c == nil {
 				c = reqresp.DefaultContextAllocator.Acquire()
 				c.ResponseWriter = reqresp.NewResponseWriter(w)
 				c.Request = reqresp.SetContext(r, c)
 				defer reqresp.DefaultContextAllocator.Release(c)
-				h.(http.Handler).ServeHTTP(c.ResponseWriter, c.Request)
+				next.ServeHTTP(c.ResponseWriter, c.Request)
 			} else {
-				h.(http.Handler).ServeHTTP(w, r)
+				next.ServeHTTP(w, r)
 			}
 		})
 	})
