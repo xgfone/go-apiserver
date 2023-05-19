@@ -44,10 +44,11 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 	}
 
 	return middleware.NewMiddleware("logger", priority, func(h interface{}) interface{} {
+		next := h.(http.Handler)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
-			if !log.Enabled(ctx, log.LevelInfo) || (config.LogReq != nil && !config.LogReq(ctx)) {
-				h.(http.Handler).ServeHTTP(w, r)
+			if !log.Enabled(ctx, log.LevelInfo) || !config.GetLogReq(ctx) {
+				next.ServeHTTP(w, r)
 				return
 			}
 
@@ -104,7 +105,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 			}
 
 			start := time.Now()
-			h.(http.Handler).ServeHTTP(w, r)
+			next.ServeHTTP(w, r)
 			cost := time.Since(start)
 
 			var code int

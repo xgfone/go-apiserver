@@ -41,14 +41,14 @@ type Config struct {
 // GetLogReq reports whther to log the request.
 //
 // If the field LogReq is nil, call the global function LogReq instead.
-// If it's also nil, return false instead.
+// If it's also nil, return true instead.
 func (c Config) GetLogReq(ctx context.Context) bool {
 	if c.LogReq != nil {
 		return c.LogReq(ctx)
 	} else if LogReq != nil {
 		return LogReq(ctx)
 	}
-	return false
+	return true
 }
 
 // GetLogReqBodyLen returns the maximum length of the request body to be logged.
