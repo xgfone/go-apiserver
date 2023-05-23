@@ -16,6 +16,7 @@ package ruler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -163,7 +164,7 @@ func (b RouteBuilder) Group(pathPrefix string) RouteBuilder {
 	if pathPrefix == "" {
 		return b
 	} else if pathPrefix[0] != '/' {
-		b.err = errors.New("the route path group must start with '/'")
+		b.err = fmt.Errorf("the route path group '%s' must start with '/'", pathPrefix)
 		return b
 	}
 
@@ -180,9 +181,22 @@ func (b RouteBuilder) Group(pathPrefix string) RouteBuilder {
 //
 // NOTICE: if the path prefix group is set, it will add the prefix into path.
 func (b RouteBuilder) Path(path string) RouteBuilder {
+	if path == "" {
+		return b
+	}
+
 	if b.err == nil {
+		if path[0] != '/' {
+			b.err = fmt.Errorf("the path '%s' must start with '/'", path)
+			return b
+		}
+
 		if b.group != "" {
-			path = b.group + path
+			if path == "/" {
+				path = b.group
+			} else {
+				path = b.group + path
+			}
 		}
 
 		var m matcher.Matcher
@@ -197,9 +211,22 @@ func (b RouteBuilder) Path(path string) RouteBuilder {
 //
 // NOTICE: if the path prefix group is set, it will add the prefix into pathPrefix.
 func (b RouteBuilder) PathPrefix(pathPrefix string) RouteBuilder {
+	if pathPrefix == "" {
+		return b
+	}
+
 	if b.err == nil {
+		if pathPrefix[0] != '/' {
+			b.err = fmt.Errorf("the path prefix '%s' must start with '/'", pathPrefix)
+			return b
+		}
+
 		if b.group != "" {
-			pathPrefix = b.group + pathPrefix
+			if pathPrefix == "/" {
+				pathPrefix = b.group
+			} else {
+				pathPrefix = b.group + pathPrefix
+			}
 		}
 
 		var m matcher.Matcher

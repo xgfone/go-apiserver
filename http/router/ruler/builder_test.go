@@ -17,6 +17,9 @@ package ruler
 import (
 	"fmt"
 	"net/http"
+	"testing"
+
+	"github.com/xgfone/go-apiserver/http/handler"
 )
 
 func ExampleRouteBuilder_Group() {
@@ -61,4 +64,42 @@ func ExampleRouteBuilder_Group() {
 	// (Path(`/v2/svc1/path`) && Method(`GET`))
 	// (Path(`/v1/svc2/path`) && Method(`GET`))
 	// (Path(`/v1/svc1/path`) && Method(`GET`))
+}
+
+func TestRouteBuilder_Group_Path(t *testing.T) {
+	router := NewRouter()
+	group := router.Group("/group/")
+
+	r1, err := group.Path("/").Route(handler.Handler200)
+	if err != nil {
+		t.Error(err)
+	} else if r1.Name != "Path(`/group`)" {
+		t.Errorf("expect '%s', but got '%s'", "Path(`/group`)", r1.Name)
+	}
+
+	r2, err := group.Path("/path/").Route(handler.Handler200)
+	if err != nil {
+		t.Error(err)
+	} else if r2.Name != "Path(`/group/path/`)" {
+		t.Errorf("expect '%s', but got '%s'", "Path(`/group/path/`)", r2.Name)
+	}
+}
+
+func TestRouteBuilder_Group_PathPrefix(t *testing.T) {
+	router := NewRouter()
+	group := router.Group("/group/")
+
+	r1, err := group.PathPrefix("/").Route(handler.Handler200)
+	if err != nil {
+		t.Error(err)
+	} else if r1.Name != "PathPrefix(`/group`)" {
+		t.Errorf("expect '%s', but got '%s'", "PathPrefix(`/group`)", r1.Name)
+	}
+
+	r2, err := group.PathPrefix("/prefix/").Route(handler.Handler200)
+	if err != nil {
+		t.Error(err)
+	} else if r2.Name != "PathPrefix(`/group/prefix/`)" {
+		t.Errorf("expect '%s', but got '%s'", "PathPrefix(`/group/prefix/`)", r2.Name)
+	}
 }
