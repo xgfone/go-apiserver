@@ -688,7 +688,9 @@ func (c *Context) Error(err error) error {
 func (c *Context) Blob(code int, contentType string, data []byte) (err error) {
 	c.SetContentType(contentType)
 	c.WriteHeader(code)
-	_, err = c.Write(data)
+	if len(data) > 0 {
+		_, err = c.Write(data)
+	}
 	return
 }
 
@@ -698,11 +700,14 @@ func (c *Context) BlobText(code int, contentType string,
 	c.SetContentType(contentType)
 	c.WriteHeader(code)
 
-	if len(args) > 0 {
-		_, err = fmt.Fprintf(c.ResponseWriter, format, args...)
-	} else {
-		_, err = io.WriteString(c.ResponseWriter, format)
+	if len(format) > 0 {
+		if len(args) > 0 {
+			_, err = fmt.Fprintf(c.ResponseWriter, format, args...)
+		} else {
+			_, err = io.WriteString(c.ResponseWriter, format)
+		}
 	}
+
 	return
 }
 
@@ -718,6 +723,12 @@ func (c *Context) HTML(code int, format string, args ...interface{}) error {
 
 // JSON sends a JSON response with the status code.
 func (c *Context) JSON(code int, v interface{}) (err error) {
+	if v == nil {
+		c.SetContentType(header.MIMEApplicationJSONCharsetUTF8)
+		c.WriteHeader(code)
+		return
+	}
+
 	buf := getBuilder()
 	if err = helper.EncodeJSON(buf, v); err == nil {
 		c.SetContentType(header.MIMEApplicationJSONCharsetUTF8)
@@ -730,6 +741,12 @@ func (c *Context) JSON(code int, v interface{}) (err error) {
 
 // XML sends a XML response with the status code.
 func (c *Context) XML(code int, v interface{}) (err error) {
+	if v == nil {
+		c.SetContentType(header.MIMEApplicationXMLCharsetUTF8)
+		c.WriteHeader(code)
+		return
+	}
+
 	buf := getBuilder()
 	buf.WriteString(xml.Header)
 	if err = xml.NewEncoder(buf).Encode(v); err == nil {
