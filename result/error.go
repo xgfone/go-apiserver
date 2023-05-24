@@ -15,6 +15,7 @@
 package result
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -44,6 +45,38 @@ func (e Error) Clone() Error {
 		e.Causes = append([]error{}, e.Causes...)
 	}
 	return e
+}
+
+// As finds the first error in the error that matches target,
+// and if one is found, sets target to that error value and returns true.
+// Otherwise, it returns false.
+func (e Error) As(target interface{}) bool {
+	if e.Err != nil && errors.As(e.Err, target) {
+		return true
+	}
+
+	for _, err := range e.Causes {
+		if errors.As(err, target) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Is reports whether the error matches target.
+func (e Error) Is(target error) bool {
+	if e.Err != nil && errors.Is(e.Err, target) {
+		return true
+	}
+
+	for _, err := range e.Causes {
+		if errors.Is(err, target) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Unwrap unwraps the inner error.
