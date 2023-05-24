@@ -78,11 +78,7 @@ func (e Error) CodeError() result.Error {
 		return err
 	}
 
-	return result.Error{
-		Code:       GetCodeByStatus(e.Code),
-		Message:    e.Error(),
-		WrappedErr: e,
-	}
+	return result.Error{Code: GetCodeByStatus(e.Code), Message: e.Error(), Err: e}
 }
 
 // Error implements the interface error.

@@ -32,8 +32,7 @@ type Error struct {
 	Message   string  `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
 	Component string  `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
 	Causes    []error `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
-
-	WrappedErr error `json:"-" yaml:"-" xml:"-"`
+	Err       error   `json:"-" yaml:"-" xml:"-"`
 }
 
 // NewError returns a new Error.
@@ -48,7 +47,7 @@ func (e Error) Clone() Error {
 }
 
 // Unwrap unwraps the inner error.
-func (e Error) Unwrap() error { return e.WrappedErr }
+func (e Error) Unwrap() error { return e.Err }
 
 // IsCode is equal to IsCode(e.Code, target).
 func (e Error) IsCode(target string) bool { return IsCode(e.Code, target) }
@@ -60,8 +59,8 @@ func (e Error) GetCode() string { return e.Code }
 func (e Error) GetMessage() string {
 	if e.Message != "" {
 		return e.Message
-	} else if e.WrappedErr != nil {
-		return e.WrappedErr.Error()
+	} else if e.Err != nil {
+		return e.Err.Error()
 	}
 	return ""
 }
@@ -111,7 +110,7 @@ func (e Error) WithCode(code string) Error {
 // the error code and message from the error.
 func (e Error) WithError(err error) Error {
 	ne := e.Clone()
-	ne.WrappedErr = err
+	ne.Err = err
 	switch ce := err.(type) {
 	case nil:
 	case Error:
