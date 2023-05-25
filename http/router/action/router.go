@@ -32,9 +32,9 @@ var HeaderAction = "X-Action"
 func notFoundHandler(resp http.ResponseWriter, req *http.Request) {
 	c := reqresp.GetContext(resp, req)
 	if len(c.Action) == 0 {
-		c.Failure(result.ErrInvalidAction.WithMessage("missing the action"))
+		c.Failure(result.ErrBadRequestInvalidAction.WithMessage("missing the action"))
 	} else {
-		c.Failure(result.ErrInvalidAction.WithMessage("action '%s' is unsupported", c.Action))
+		c.Failure(result.ErrBadRequestInvalidAction.WithMessage("action '%s' is unsupported", c.Action))
 	}
 }
 

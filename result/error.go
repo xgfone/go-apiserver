@@ -204,18 +204,3 @@ func (e Error) AppendCauses(errs ...error) Error {
 	}
 	return e
 }
-
-// WithRequestID returns a Response with the error and request id.
-func (e Error) WithRequestID(requestID string) Response {
-	return Response{RequestID: requestID, Error: e}
-}
-
-// WithData returns a Response with the error and data.
-func (e Error) WithData(data interface{}) Response {
-	return NewResponse(data, e)
-}
-
-// Respond sends the response by the context as JSON.
-func (e Error) Respond(responder Responder) {
-	NewResponse(nil, e).Respond(responder)
-}

@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,19 +16,19 @@ package result
 
 // Predefine some error codes.
 const (
-	CodeInvalidAction  = "InvalidAction"
-	CodeInvalidVersion = "InvalidVersion"
-	CodeInvalidParams  = "InvalidParams"
-	CodeInvalidCaptcha = "InvalidCaptcha"
+	CodeBadRequest                     = "BadRequest"
+	CodeBadRequestInvalidAction        = "BadRequest.InvalidAction"
+	CodeBadRequestInvalidParams        = "BadRequest.InvalidParams"
+	CodeBadRequestInvalidVersion       = "BadRequest.InvalidVersion"
+	CodeBadRequestInvalidCaptcha       = "BadRequest.InvalidCaptcha"
+	CodeBadRequestMissingContentType   = "BadRequest.MissingContentType"
+	CodeBadRequestUnsupportedProtocol  = "BadRequest.UnsupportedProtocol"
+	CodeBadRequestUnsupportedOperation = "BadRequest.UnsupportedOperation"
+	CodeBadRequestUnsupportedMediaType = "BadRequest.UnsupportedMediaType"
 
-	CodeUnsupportedProtocol  = "UnsupportedProtocol"
-	CodeUnsupportedOperation = "UnsupportedOperation"
-	CodeUnsupportedMediaType = "UnsupportedMediaType"
-	CodeMissingContentType   = "MissingContentType"
-
-	CodeUnauthorizedOperation = "UnauthorizedOperation"
-	CodeUnallowedOperation    = "UnallowedOperation"
-	CodeFailedOperation       = "FailedOperation"
+	CodeNotFound         = "NotFound"
+	CodeNotFoundInstance = "NotFound.Instance"
+	CodeNotFoundResource = "NotFound.Resource"
 
 	CodeAuthFailure                 = "AuthFailure"
 	CodeAuthFailureMissing          = "AuthFailure.Missing"
@@ -38,58 +38,68 @@ const (
 	CodeAuthFailureInvalidAPIKey    = "AuthFailure.Invalid.ApiKey"
 	CodeAuthFailureInvalidSignature = "AuthFailure.Invalid.Signature"
 
-	CodeInternalServerError = "InternalServerError"
-	CodeServiceUnavailable  = "ServiceUnavailable"
-	CodeGatewayTimeout      = "GatewayTimeout"
+	CodeUnallowed                     = "Unallowed"              // Operation is prevented because a condition is not satisfied.
+	CodeUnallowedInUse                = "Unallowed.InUse"        // Something is in use, and the operation is exclusive.
+	CodeUnallowedInOperation          = "Unallowed.InOperation"  // Another is exeucted, and the current is exclusive.
+	CodeUnallowedUnavailable          = "Unallowed.Unavailable"  // Something is unavailable for the moment, and maybe recover later.
+	CodeUnallowedUnauthorized         = "Unallowed.Unauthorized" // The operator has no permission of the operation.
+	CodeUnallowedInconsistent         = "Unallowed.Inconsistent" // The status may be inconsistent.
+	CodeUnallowedInsufficient         = "Unallowed.Insufficient"
+	CodeUnallowedInsufficientBalance  = "Unallowed.Insufficient.Balance"
+	CodeUnallowedInsufficientResource = "Unallowed.Insufficient.Resource"
+	CodeUnallowedExceedLimit          = "Unallowed.ExceedLimit"
+	CodeUnallowedExceedLimitRate      = "Unallowed.ExceedLimit.Rate"
+	CodeUnallowedExceedLimitQuota     = "Unallowed.ExceedLimit.Quota"
+	CodeUnallowedNotRegistered        = "Unallowed.NotRegistered"
 
-	CodeQuotaLimitExceeded   = "QuotaLimitExceeded"
-	CodeRequestLimitExceeded = "RequestLimitExceeded"
-
-	CodeInstanceInUse        = "InstanceInUse"
-	CodeInstanceNotFound     = "InstanceNotFound"
-	CodeInstanceUnavailable  = "InstanceUnavailable"
-	CodeInstanceInconsistent = "InstanceInconsistent"
-	CodeResourceInsufficient = "ResourceInsufficient"
-	CodeBalanceInsufficient  = "BalanceInsufficient"
+	CodeInternalServerError            = "InternalServerError"         // All errors from the server, such an unknown exception.
+	CodeInternalServerErrorTimeout     = "InternalServerError.Timeout" // Timeout when the gateway forwards the request.
+	CodeInternalServerErrorBadGateway  = "InternalServerError.BadGateway"
+	CodeInternalServerErrorUnavailable = "InternalServerError.Unavailable" // No available backends for the gateway.
 )
 
 // Predefine some errors.
 var (
-	ErrInvalidAction    = NewError(CodeInvalidAction, "invalid action")
-	ErrInvalidVersion   = NewError(CodeInvalidVersion, "invalid version")
-	ErrInvalidParameter = NewError(CodeInvalidParams, "invalid parameter")
-	ErrInvalidCaptcha   = NewError(CodeInvalidCaptcha, "invalid captcha")
+	ErrBadRequest                     = NewError(CodeBadRequest, "bad request")
+	ErrBadRequestInvalidAction        = NewError(CodeBadRequestInvalidAction, "invalid version")
+	ErrBadRequestInvalidParams        = NewError(CodeBadRequestInvalidParams, "invalid parameters")
+	ErrBadRequestInvalidVersion       = NewError(CodeBadRequestInvalidVersion, "invalid version")
+	ErrBadRequestInvalidCaptcha       = NewError(CodeBadRequestInvalidCaptcha, "invalid captcha")
+	ErrBadRequestMissingContentType   = NewError(CodeBadRequestMissingContentType, "missing the header Content-Type")
+	ErrBadRequestUnsupportedProtocol  = NewError(CodeBadRequestUnsupportedProtocol, "protocol is unsupported")
+	ErrBadRequestUnsupportedOperation = NewError(CodeBadRequestUnsupportedOperation, "operation is unsupported")
+	ErrBadRequestUnsupportedMediaType = NewError(CodeBadRequestUnsupportedMediaType, "media type is unsupported")
 
-	ErrUnsupportedProtocol  = NewError(CodeUnsupportedProtocol, "protocol is unsupported")
-	ErrUnsupportedOperation = NewError(CodeUnsupportedOperation, "operation is unsupported")
-	ErrUnsupportedMediaType = NewError(CodeUnsupportedMediaType, "media type is unsupported")
-	ErrMissingContentType   = NewError(CodeMissingContentType, "missing the header Content-Type")
+	ErrNotFound         = NewError(CodeNotFound, "not found")
+	ErrNotFoundInstance = NewError(CodeNotFoundInstance, "instance is not found")
+	ErrNotFoundResource = NewError(CodeNotFoundResource, "resource is not found")
 
-	ErrUnauthorizedOperation = NewError(CodeUnauthorizedOperation, "operation is unauthorized")
-	ErrUnallowedOperation    = NewError(CodeUnallowedOperation, "operation is not allowed")
-	ErrFailedOperation       = NewError(CodeFailedOperation, "operation failed")
+	ErrAuthFailure                 = NewError(CodeAuthFailure, "authentication failure")
+	ErrAuthFailureMissing          = NewError(CodeAuthFailureMissing, "missing authentication")
+	ErrAuthFailureInvalid          = NewError(CodeAuthFailureInvalid, "invalid authentication")
+	ErrAuthFailureInvalidToken     = NewError(CodeAuthFailureInvalidToken, "invalid authentication token")
+	ErrAuthFailureInvalidCookie    = NewError(CodeAuthFailureInvalidCookie, "invalid authentication cookie")
+	ErrAuthFailureInvalidAPIKey    = NewError(CodeAuthFailureInvalidAPIKey, "invalid authentication apikey")
+	ErrAuthFailureInvalidSignature = NewError(CodeAuthFailureInvalidSignature, "invalid authentication signature")
 
-	ErrAuthFailure                 = NewError(CodeAuthFailure, "authorization failure")
-	ErrAuthFailureMissing          = NewError(CodeAuthFailureMissing, "missing authorization")
-	ErrAuthFailureInvalid          = NewError(CodeAuthFailureInvalid, "invalid authorization")
-	ErrAuthFailureInvalidToken     = NewError(CodeAuthFailureInvalidToken, "invalid authorization token")
-	ErrAuthFailureInvalidCookie    = NewError(CodeAuthFailureInvalidCookie, "invalid authorization cookie")
-	ErrAuthFailureInvalidAPIKey    = NewError(CodeAuthFailureInvalidAPIKey, "invalid authorization apikey")
-	ErrAuthFailureInvalidSignature = NewError(CodeAuthFailureInvalidSignature, "invalid authorization signature")
+	ErrUnallowed                     = NewError(CodeUnallowed, "operation is not allowed")
+	ErrUnallowedInUse                = NewError(CodeUnallowedInUse, "in use")
+	ErrUnallowedInOperation          = NewError(CodeUnallowedInOperation, "in operation")
+	ErrUnallowedUnavailable          = NewError(CodeUnallowedUnavailable, "unavailable")
+	ErrCodeUnallowedUnauthorized     = NewError(CodeUnallowedUnauthorized, "operation is unauthorized")
+	ErrUnallowedInconsistent         = NewError(CodeUnallowedInconsistent, "inconsistent")
+	ErrUnallowedInsufficient         = NewError(CodeUnallowedInsufficient, "insufficient")
+	ErrUnallowedInsufficientBalance  = NewError(CodeUnallowedInsufficientBalance, "balance is insufficient")
+	ErrUnallowedInsufficientResource = NewError(CodeUnallowedInsufficientResource, "resource is insufficient")
+	ErrUnallowedExceedLimit          = NewError(CodeUnallowedExceedLimit, "exceed the limit")
+	ErrUnallowedExceedLimitRate      = NewError(CodeUnallowedExceedLimitRate, "exceed the rate limit")
+	ErrUnallowedExceedLimitQuota     = NewError(CodeUnallowedExceedLimitQuota, "exceed the quota limit")
+	ErrUnallowedNotRegistered        = NewError(CodeUnallowedNotRegistered, "not registered")
 
-	ErrInternalServerError = NewError(CodeInternalServerError, "internal server error")
-	ErrServiceUnavailable  = NewError(CodeServiceUnavailable, "service is unavailable")
-	ErrGatewayTimeout      = NewError(CodeGatewayTimeout, "gateway timeout")
-
-	ErrQuotaLimitExceeded   = NewError(CodeQuotaLimitExceeded, "exceed the quota limit")
-	ErrRequestLimitExceeded = NewError(CodeRequestLimitExceeded, "exceed the request limit")
-
-	ErrInstanceInUse        = NewError(CodeInstanceInUse, "instance is in use")
-	ErrInstanceNotFound     = NewError(CodeInstanceNotFound, "instance is not found")
-	ErrInstanceUnavailable  = NewError(CodeInstanceUnavailable, "instance is unavailable")
-	ErrInstanceInconsistent = NewError(CodeInstanceInconsistent, "instance is inconsistent")
-	ErrResourceInsufficient = NewError(CodeResourceInsufficient, "resource is insufficient")
-	ErrBalanceInsufficient  = NewError(CodeBalanceInsufficient, "balance is insufficient")
+	ErrInternalServerError            = NewError(CodeInternalServerError, "internal server error")
+	ErrInternalServerErrorTimeout     = NewError(CodeInternalServerErrorTimeout, "gateway timeout")
+	ErrInternalServerErrorBadGateway  = NewError(CodeInternalServerErrorBadGateway, "bad gateway")
+	ErrInternalServerErrorUnavailable = NewError(CodeInternalServerErrorUnavailable, "service is unavailable")
 )
 
 // CodeGetter is an interface used to get the error code.
@@ -142,3 +152,18 @@ func ErrIsCode(err error, targetCode string) bool {
 		return false
 	}
 }
+
+// IsBadRequest reports whether the error is CodeBadRequest.
+func (e Error) IsBadRequest() bool { return IsCode(e.Code, CodeBadRequest) }
+
+// IsNotFound reports whether the error is CodeNotFound.
+func (e Error) IsNotFound() bool { return IsCode(e.Code, CodeNotFound) }
+
+// IsUnallowed reports whether the error is CodeUnallowed.
+func (e Error) IsUnallowed() bool { return IsCode(e.Code, CodeUnallowed) }
+
+// IsAuthFailure reports whether the error is CodeAuthFailure.
+func (e Error) IsAuthFailure() bool { return IsCode(e.Code, CodeAuthFailure) }
+
+// IsInternalServerError reports whether the error is CodeInternalServerError.
+func (e Error) IsInternalServerError() bool { return IsCode(e.Code, CodeInternalServerError) }

@@ -71,7 +71,7 @@ func (e Error) ContentType() string { return e.CT }
 // If e.Err is a result.Error, return it directly.
 func (e Error) CodeError() result.Error {
 	if e == ErrMissingContentType {
-		return result.ErrMissingContentType
+		return result.ErrBadRequestMissingContentType
 	}
 
 	if err, ok := e.Err.(result.Error); ok {
@@ -137,80 +137,80 @@ func GetCodeByStatus(status int) (code string) {
 func getCodeDefault(status int) string {
 	switch status {
 	case http.StatusBadRequest: // 400
-		return result.CodeInvalidParams
+		return result.CodeBadRequest
 
 	case http.StatusUnauthorized: // 401
-		return result.CodeUnauthorizedOperation
+		return result.CodeAuthFailure
 
 	case http.StatusForbidden: // 403
-		return result.CodeUnallowedOperation
+		return result.CodeUnallowedUnauthorized
 
 	case http.StatusNotFound: // 404
-		return result.CodeInstanceNotFound
+		return result.CodeNotFound
 
 	case http.StatusMethodNotAllowed: // 405
-		return result.CodeUnallowedOperation
+		return result.CodeUnallowed
 
 	case http.StatusNotAcceptable: // 406
-		return result.CodeUnsupportedOperation
+		return result.CodeBadRequestUnsupportedOperation
 
 	case http.StatusRequestTimeout: // 408
-		return result.CodeGatewayTimeout
+		return result.CodeInternalServerErrorTimeout
 
 	case http.StatusConflict: // 409
-		return result.CodeFailedOperation
+		return result.CodeUnallowedInconsistent
 
 	case http.StatusGone: // 410
-		return result.CodeInstanceUnavailable
+		return result.CodeNotFound
 
 	case http.StatusLengthRequired: // 411
-		return result.CodeInvalidParams
+		return result.CodeBadRequest
 
 	case http.StatusRequestEntityTooLarge: // 413
-		return result.CodeInvalidParams
+		return result.CodeBadRequest
 
 	case http.StatusRequestURITooLong: // 414
-		return result.CodeInvalidParams
+		return result.CodeBadRequest
 
 	case http.StatusUnsupportedMediaType: // 415
-		return result.CodeUnsupportedMediaType
+		return result.CodeBadRequestUnsupportedMediaType
 
 	case http.StatusExpectationFailed: // 417
 		return result.CodeInternalServerError
 
 	case http.StatusUnprocessableEntity: // 422
-		return result.CodeFailedOperation
+		return result.CodeUnallowed
 
 	case http.StatusTooManyRequests: // 429
-		return result.CodeRequestLimitExceeded
+		return result.CodeUnallowedExceedLimitRate
 
 	case http.StatusRequestHeaderFieldsTooLarge: // 431
-		return result.CodeInvalidParams
+		return result.CodeBadRequest
 
 	case http.StatusInternalServerError: // 500
 		return result.CodeInternalServerError
 
 	case http.StatusNotImplemented: // 501
-		return result.CodeUnsupportedOperation
+		return result.CodeBadRequestUnsupportedOperation
 
 	case http.StatusBadGateway: // 502
-		return result.CodeServiceUnavailable
+		return result.CodeInternalServerErrorBadGateway
 
 	case http.StatusServiceUnavailable: // 503
-		return result.CodeServiceUnavailable
+		return result.CodeInternalServerErrorUnavailable
 
 	case http.StatusGatewayTimeout: // 504
-		return result.CodeGatewayTimeout
+		return result.CodeInternalServerErrorTimeout
 
 	case http.StatusHTTPVersionNotSupported: // 505
-		return result.CodeUnsupportedProtocol
+		return result.CodeBadRequestInvalidVersion
 
 	default:
 		switch {
 		case status < 400:
 			return ""
 		case status < 500:
-			return result.CodeInvalidParams
+			return result.CodeBadRequest
 		default:
 			return result.CodeInternalServerError
 		}
