@@ -49,6 +49,9 @@ var (
 	ErrStatusHTTPVersionNotSupported = NewError(http.StatusHTTPVersionNotSupported)
 )
 
+// ToResultError is used to convert the http error to the result error.
+var ToResultError func(Error) result.Error = convertError
+
 // Error represents a server error.
 type Error struct {
 	Code int
@@ -64,22 +67,6 @@ func (e Error) StatusCode() int { return e.Code }
 
 // ContentType returns the Content-Type to render the error.
 func (e Error) ContentType() string { return e.CT }
-
-// CodeError implements the interface result.CodeError
-// to convert itself to result.Error.
-//
-// If e.Err is a result.Error, return it directly.
-func (e Error) CodeError() result.Error {
-	if e == ErrMissingContentType {
-		return result.ErrBadRequestMissingContentType
-	}
-
-	if err, ok := e.Err.(result.Error); ok {
-		return err
-	}
-
-	return result.Error{Code: GetCodeByStatus(e.Code), Message: e.Error(), Err: e}
-}
 
 // Error implements the interface error.
 func (e Error) Error() string {
@@ -114,27 +101,30 @@ func (e Error) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 
 	header.SetContentType(w.Header(), e.CT)
 	w.WriteHeader(e.Code)
-	io.WriteString(w, e.Error())
-}
-
-var status2code = make(map[int]string, 32)
-
-// MappingStatusCode adds the mapping from status to code.
-func MappingStatusCode(fromStatus int, toCode string) {
-	status2code[fromStatus] = toCode
-}
-
-// GetCodeByStatus gets the code by the status by the mapping from status to code.
-func GetCodeByStatus(status int) (code string) {
-	if len(status2code) > 0 {
-		if code, ok := status2code[status]; ok {
-			return code
-		}
+	if wt, ok := e.Err.(io.WriterTo); ok {
+		wt.WriteTo(w)
+	} else {
+		io.WriteString(w, e.Error())
 	}
-	return getCodeDefault(status)
 }
 
-func getCodeDefault(status int) string {
+// CodeError uses the function ToResultError to convert itself to result.Error,
+// which implements the interface result.CodeError.
+func (e Error) CodeError() result.Error { return ToResultError(e) }
+
+func convertError(e Error) result.Error {
+	if e == ErrMissingContentType {
+		return result.ErrBadRequestMissingContentType
+	}
+
+	if err, ok := e.Err.(result.Error); ok {
+		return err
+	}
+
+	return result.Error{Code: getCodeByStatus(e.StatusCode()), Message: e.Error(), Err: e}
+}
+
+func getCodeByStatus(status int) (code string) {
 	switch status {
 	case http.StatusBadRequest: // 400
 		return result.CodeBadRequest
