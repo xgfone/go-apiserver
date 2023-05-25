@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/result"
 )
@@ -94,9 +95,14 @@ func (e Error) WithMsg(msg string, args ...interface{}) Error {
 }
 
 // ServeHTTP implements the interface http.Handler.
-func (e Error) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if e.Code == 0 {
 		e.Code = 200
+	}
+
+	if handler.ServeHTTPWithError != nil {
+		handler.ServeHTTPWithError(w, r, e)
+		return
 	}
 
 	header.SetContentType(w.Header(), e.CT)

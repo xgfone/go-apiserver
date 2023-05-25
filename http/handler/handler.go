@@ -21,6 +21,9 @@ import (
 	"github.com/xgfone/go-atomicvalue"
 )
 
+// ServeHTTPWithError is used to customize the http response with the error.
+var ServeHTTPWithError func(http.ResponseWriter, *http.Request, error)
+
 // Pre-define some http handlers.
 var (
 	Handler200 http.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

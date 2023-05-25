@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/header"
 )
 
@@ -26,6 +27,11 @@ var _ http.Handler = Error{}
 
 // ServeHTTP implements the interface http.Handler.
 func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if handler.ServeHTTPWithError != nil {
+		handler.ServeHTTPWithError(w, r, e)
+		return
+	}
+
 	header.SetContentType(w.Header(), header.MIMEApplicationJSONCharsetUTF8)
 	w.WriteHeader(ToHttpStatusCode(e.Code))
 	json.NewEncoder(w).Encode(e)
