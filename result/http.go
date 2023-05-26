@@ -15,10 +15,10 @@
 package result
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/header"
 )
@@ -34,7 +34,7 @@ func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	header.SetContentType(w.Header(), header.MIMEApplicationJSONCharsetUTF8)
 	w.WriteHeader(ToHttpStatusCode(e.Code))
-	json.NewEncoder(w).Encode(e)
+	helper.EncodeJSON(w, e)
 }
 
 // ToHttpStatusCode converts the code to the http status code.

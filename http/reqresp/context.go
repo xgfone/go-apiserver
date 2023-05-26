@@ -164,8 +164,6 @@ func handleContextResult(c *Context) {
 	switch e := c.Err.(type) {
 	case nil:
 		c.WriteHeader(200)
-	case result.Error:
-		c.JSON(200, e)
 	case http.Handler:
 		e.ServeHTTP(c.ResponseWriter, c.Request)
 	default:
