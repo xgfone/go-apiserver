@@ -236,6 +236,10 @@ type ContextGetter interface {
 // which will be used by Context.UpdateError.
 var UpdateContextError func(c *Context, err error)
 
+// DefaultResponseHandler is used by Context
+// when Context.ResponseHandler is not set.
+var DefaultResponseHandler ResponseHandler
+
 // ResponseHandler is used to handle the response.
 type ResponseHandler func(*Context, result.Response) error
 
@@ -627,6 +631,7 @@ func (c *Context) Render(code int, name string, data interface{}) (err error) {
 }
 
 // Respond forwards the calling to c.ResponseHandler if it is set.
+// Or, try to use DefaultResponseHandler instead if set.
 // Or, it is equal to c.JSON(200, response).
 func (c *Context) Respond(response result.Response) {
 	if response.Error != nil {
@@ -636,6 +641,8 @@ func (c *Context) Respond(response result.Response) {
 	var err error
 	if c.ResponseHandler != nil {
 		err = c.ResponseHandler(c, response)
+	} else if DefaultResponseHandler != nil {
+		DefaultResponseHandler(c, response)
 	} else {
 		err = c.JSON(200, response)
 	}
