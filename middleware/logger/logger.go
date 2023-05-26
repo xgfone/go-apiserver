@@ -20,7 +20,8 @@ import "context"
 
 // Define the global logger option config.
 var (
-	LogReq func(context.Context) bool
+	LogReq      func(context.Context) bool
+	LogReqQuery func(context.Context) bool
 
 	LogReqBodyLen  func(context.Context) int
 	LogRespBodyLen func(context.Context) int
@@ -32,6 +33,7 @@ var (
 // Config is used to configure the logger middleware.
 type Config struct {
 	LogReq         func(context.Context) bool
+	LogReqQuery    func(context.Context) bool
 	LogReqBodyLen  func(context.Context) int
 	LogRespBodyLen func(context.Context) int
 	LogReqHeaders  func(context.Context) bool
@@ -49,6 +51,19 @@ func (c Config) GetLogReq(ctx context.Context) bool {
 		return LogReq(ctx)
 	}
 	return true
+}
+
+// GetLogReqQuery reports whther to log the request query information.
+//
+// If the field LogReqQuery is nil, call the global function LogReqQuery instead.
+// If it's also nil, return false instead.
+func (c Config) GetLogReqQuery(ctx context.Context) bool {
+	if c.LogReqQuery != nil {
+		return c.LogReqQuery(ctx)
+	} else if LogReqQuery != nil {
+		return LogReqQuery(ctx)
+	}
+	return false
 }
 
 // GetLogReqBodyLen returns the maximum length of the request body to be logged.
@@ -117,6 +132,11 @@ type Option func(*Config)
 // SetLogReq returns a logger option to set the field LogReq.
 func SetLogReq(f func(context.Context) bool) Option {
 	return func(lc *Config) { lc.LogReq = f }
+}
+
+// SetLogReqQuery returns a logger option to set the field LogReqQuery.
+func SetLogReqQuery(f func(context.Context) bool) Option {
+	return func(lc *Config) { lc.LogReqQuery = f }
 }
 
 // SetLogReqBodyLen returns a logger option to set the field LogReqBodyLen.

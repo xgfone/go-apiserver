@@ -140,6 +140,10 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 				kvs = appender(w, r, kvs)
 			}
 
+			if config.GetLogReqQuery(ctx) {
+				kvs = append(kvs, "query", r.URL.RawQuery)
+			}
+
 			if config.GetLogReqHeaders(ctx) {
 				kvs = append(kvs, "reqheaders", r.Header)
 			}
