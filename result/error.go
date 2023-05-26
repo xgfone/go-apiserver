@@ -33,7 +33,9 @@ type Error struct {
 	Message   string  `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
 	Component string  `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
 	Causes    []error `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
-	Err       error   `json:"-" yaml:"-" xml:"-"`
+
+	Data interface{} `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
+	Err  error       `json:"-" yaml:"-" xml:"-"`
 }
 
 // NewError returns a new Error.
@@ -137,6 +139,13 @@ func (e Error) WithCode(code string) Error {
 	ne := e.Clone()
 	ne.Code = code
 	return ne
+}
+
+// WithData returns a Response with the error and data.
+func (e Error) WithData(data interface{}) Error {
+	e = e.Clone()
+	e.Data = data
+	return e
 }
 
 // WithError clones itself and returns the new one, which will inspect
