@@ -26,7 +26,7 @@ type Responder interface {
 
 // Response represents a response result.
 type Response struct {
-	RequestID string      `json:"RequestId,omitempty" yaml:"RequestId,omitempty" xml:"RequestId,omitempty"`
+	RequestId string      `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
 	Error     error       `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
 	Type      string      `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
 	Data      interface{} `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
@@ -39,7 +39,7 @@ func NewResponse(data interface{}, err error) Response {
 
 // WithRequestID returns a new Response with the given request id.
 func (r Response) WithRequestID(requestID string) Response {
-	r.RequestID = requestID
+	r.RequestId = requestID
 	return r
 }
 
@@ -81,7 +81,7 @@ func (r *Response) DecodeJSONBytes(data []byte) error {
 
 // WithRequestID returns a Response with the error and request id.
 func (e Error) WithRequestID(requestID string) Response {
-	return Response{RequestID: requestID, Error: e}
+	return Response{RequestId: requestID, Error: e}
 }
 
 // Respond sends the response by the context as JSON.
