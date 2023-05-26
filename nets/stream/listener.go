@@ -30,30 +30,32 @@ func Listen(network, addr string) (net.Listener, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open %s listener on %s: %v", network, addr, err)
 	}
-	return keepAliveListener{listener}, nil
+
+	if ln, ok := listener.(*net.TCPListener); ok {
+		return tcpListener{ln}, nil
+	}
+	return listener, nil
 }
 
-type keepAliveListener struct{ net.Listener }
+type tcpListener struct{ *net.TCPListener }
 
-func (ln keepAliveListener) Accept() (net.Conn, error) {
-	conn, err := ln.Listener.Accept()
+func (ln tcpListener) Accept() (net.Conn, error) {
+	conn, err := ln.AcceptTCP()
 	if err != nil {
 		return nil, err
 	}
 
-	if tc, ok := conn.(*net.TCPConn); ok {
-		if err := tc.SetKeepAlive(true); err != nil {
-			tc.Close()
-			return nil, err
-		}
+	if err := conn.SetKeepAlive(true); err != nil {
+		conn.Close()
+		return nil, err
+	}
 
-		if err := tc.SetKeepAlivePeriod(3 * time.Minute); err != nil {
-			// Some systems, such as OpenBSD, have no user-settable per-socket
-			// TCP keepalive options.
-			if !errors.Is(err, syscall.ENOPROTOOPT) {
-				tc.Close()
-				return nil, err
-			}
+	if err := conn.SetKeepAlivePeriod(3 * time.Minute); err != nil {
+		// Some systems, such as OpenBSD, have no user-settable per-socket
+		// TCP keepalive options.
+		if !errors.Is(err, syscall.ENOPROTOOPT) {
+			conn.Close()
+			return nil, err
 		}
 	}
 
