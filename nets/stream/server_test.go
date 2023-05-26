@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tcp
+package stream
 
 import (
 	"crypto/tls"
@@ -44,7 +44,7 @@ func TestServer(t *testing.T) {
 	caCert.UpdateRootCAs(clientTLSConfig)
 	// cert.UpdateCertificates(clientTLSConfig)
 
-	ln, err := Listen("127.0.0.1:8301")
+	ln, err := Listen("tcp", "127.0.0.1:8301")
 	if err != nil {
 		t.Fatal(err)
 	}

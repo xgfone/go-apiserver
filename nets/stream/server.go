@@ -1,4 +1,4 @@
-// Copyright 2021 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tcp
+package stream
 
 import (
 	"context"
@@ -106,7 +106,7 @@ func (s *Server) OnShutdown(callbacks ...func()) {
 	s.stops = append(s.stops, callbacks...)
 }
 
-// Start starts the TCP server.
+// Start starts the stream server.
 func (s *Server) Start() {
 	addr := s.Listener.Addr().String()
 

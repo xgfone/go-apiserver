@@ -22,7 +22,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/xgfone/go-apiserver/tcp"
+	"github.com/xgfone/go-apiserver/nets/stream"
 	"github.com/xgfone/go-atomicvalue"
 	"github.com/xgfone/go-generics/maps"
 )
@@ -31,8 +31,8 @@ import (
 var DefaultManager = NewManager(nil)
 
 // Manager is used to manage a group of the common middlewares,
-// which has also implemented the interface http.Handler and tcp.Handler
-// to be used as a HTTP or TCP Handler.
+// which has also implemented the interface http.Handler and
+// stream.Handler to be used as a HTTP or stream Handler.
 type Manager struct {
 	origHandler atomicvalue.Value[interface{}]
 	wrapHandler atomicvalue.Value[interface{}]
@@ -186,23 +186,23 @@ func (m *Manager) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	m.getHandler().(http.Handler).ServeHTTP(rw, r)
 }
 
-// OnConnection implements the interface tcp.Handler.
+// OnConnection implements the interface stream.Handler.
 //
-// Notice: the handler must be a tcp.Handler.
+// Notice: the handler must be a stream.Handler.
 func (m *Manager) OnConnection(c net.Conn) {
-	m.getHandler().(tcp.Handler).OnConnection(c)
+	m.getHandler().(stream.Handler).OnConnection(c)
 }
 
-// OnServerExit implements the interface tcp.Handler.
+// OnServerExit implements the interface stream.Handler.
 //
-// Notice: the handler must be a tcp.Handler.
+// Notice: the handler must be a stream.Handler.
 func (m *Manager) OnServerExit(err error) {
-	m.getHandler().(tcp.Handler).OnServerExit(err)
+	m.getHandler().(stream.Handler).OnServerExit(err)
 }
 
-// OnShutdown implements the interface tcp.Handler.
+// OnShutdown implements the interface stream.Handler.
 //
-// Notice: the handler must be a tcp.Handler.
+// Notice: the handler must be a stream.Handler.
 func (m *Manager) OnShutdown(c context.Context) {
-	m.getHandler().(tcp.Handler).OnShutdown(c)
+	m.getHandler().(stream.Handler).OnShutdown(c)
 }

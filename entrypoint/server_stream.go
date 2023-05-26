@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2022~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,49 +19,61 @@ import (
 	"net"
 
 	"github.com/xgfone/go-apiserver/middleware"
-	"github.com/xgfone/go-apiserver/tcp"
+	"github.com/xgfone/go-apiserver/nets/stream"
 	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
 
 func init() {
+	// TCP
 	RegisterServerBuilder("tcp", func(addr string, h interface{}) (Server, error) {
-		ln, err := tcp.Listen(addr)
+		ln, err := stream.Listen("tcp", addr)
 		if err != nil {
 			return nil, err
 		}
-		return NewTCPServer(ln, h.(tcp.Handler)), nil
+		return NewStreamServer("tcp", ln, h.(stream.Handler)), nil
+	})
+
+	// TCP
+	RegisterServerBuilder("unix", func(addr string, h interface{}) (Server, error) {
+		ln, err := stream.Listen("unix", addr)
+		if err != nil {
+			return nil, err
+		}
+		return NewStreamServer("unix", ln, h.(stream.Handler)), nil
 	})
 }
 
-var _ Server = TCPServer{}
+var _ Server = StreamServer{}
 
-// TCPServer represents a tcp entrypoint server.
-type TCPServer struct {
+// StreamServer represents a stream entrypoint server.
+type StreamServer struct {
+	Proto       string
 	Middlewares *middleware.Manager
 	CertManager *tlscert.Manager
-	*tcp.Server
+	*stream.Server
 }
 
-// NewTCPServer returns a new TCP entrypoint Server.
-func NewTCPServer(ln net.Listener, handler tcp.Handler) (server TCPServer) {
+// NewStreamServer returns a new stream entrypoint Server, such as TCP.
+func NewStreamServer(proto string, ln net.Listener, handler stream.Handler) (server StreamServer) {
 	if ln == nil {
-		panic("the tcp listener is nil")
+		panic("the stream listener is nil")
 	} else if handler == nil {
-		panic("the tcp handler is nil")
+		panic("the stream handler is nil")
 	}
 
+	server.Proto = proto
 	server.CertManager = tlscert.NewManager()
 	server.Middlewares = middleware.NewManager(handler)
-	server.Server = tcp.NewServer(ln, server.Middlewares)
+	server.Server = stream.NewServer(ln, server.Middlewares)
 	server.SetTLSForce(true)
 	return
 }
 
-// Protocol returns the protocol of the http server, which is a fixed "tcp".
-func (s TCPServer) Protocol() string { return "tcp" }
+// Protocol returns the protocol of the stream server.
+func (s StreamServer) Protocol() string { return s.Proto }
 
 // SetTLSConfig sets the tls configuration, which is thread-safe.
-func (s TCPServer) SetTLSConfig(c *tls.Config) {
+func (s StreamServer) SetTLSConfig(c *tls.Config) {
 	if c != nil && c.GetCertificate == nil && len(c.Certificates) == 0 {
 		c.GetCertificate = s.CertManager.GetTLSCertificate
 	}
@@ -71,17 +83,17 @@ func (s TCPServer) SetTLSConfig(c *tls.Config) {
 }
 
 // SetTLSForce sets whether or not to force the client to use TLS.
-func (s TCPServer) SetTLSForce(forceTLS bool) {
+func (s StreamServer) SetTLSForce(forceTLS bool) {
 	config, _ := s.Server.GetTLSConfig()
 	s.Server.SetTLSConfig(config, forceTLS)
 }
 
 // AddCertificate implements the interface tlscert.CertUpdater.
-func (s TCPServer) AddCertificate(name string, certificate tlscert.Certificate) {
+func (s StreamServer) AddCertificate(name string, certificate tlscert.Certificate) {
 	s.CertManager.AddCertificate(name, certificate)
 }
 
 // DelCertificate implements the interface tlscert.CertUpdater.
-func (s TCPServer) DelCertificate(name string) {
+func (s StreamServer) DelCertificate(name string) {
 	s.CertManager.DelCertificate(name)
 }

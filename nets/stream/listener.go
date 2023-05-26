@@ -1,4 +1,4 @@
-// Copyright 2021~2022 xgfone
+// Copyright 2021~2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tcp
+package stream
 
 import (
 	"context"
@@ -24,38 +24,40 @@ import (
 	"time"
 )
 
-// Listen opens a tcp listener on the given address.
-func Listen(addr string) (net.Listener, error) {
-	listener, err := net.Listen("tcp", addr)
+// Listen opens a stream listener on the given address.
+func Listen(network, addr string) (net.Listener, error) {
+	listener, err := net.Listen(network, addr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open listener on %s: %v", addr, err)
+		return nil, fmt.Errorf("failed to open %s listener on %s: %v", network, addr, err)
 	}
-	return keepAliveListener{listener.(*net.TCPListener)}, nil
+	return keepAliveListener{listener}, nil
 }
 
-type keepAliveListener struct{ *net.TCPListener }
+type keepAliveListener struct{ net.Listener }
 
 func (ln keepAliveListener) Accept() (net.Conn, error) {
-	tc, err := ln.AcceptTCP()
+	conn, err := ln.Listener.Accept()
 	if err != nil {
 		return nil, err
 	}
 
-	if err := tc.SetKeepAlive(true); err != nil {
-		tc.Close()
-		return nil, err
-	}
-
-	if err := tc.SetKeepAlivePeriod(3 * time.Minute); err != nil {
-		// Some systems, such as OpenBSD, have no user-settable per-socket TCP
-		// keepalive options.
-		if !errors.Is(err, syscall.ENOPROTOOPT) {
+	if tc, ok := conn.(*net.TCPConn); ok {
+		if err := tc.SetKeepAlive(true); err != nil {
 			tc.Close()
 			return nil, err
 		}
+
+		if err := tc.SetKeepAlivePeriod(3 * time.Minute); err != nil {
+			// Some systems, such as OpenBSD, have no user-settable per-socket
+			// TCP keepalive options.
+			if !errors.Is(err, syscall.ENOPROTOOPT) {
+				tc.Close()
+				return nil, err
+			}
+		}
 	}
 
-	return tc, nil
+	return conn, nil
 }
 
 var (

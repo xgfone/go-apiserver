@@ -23,15 +23,15 @@ import (
 	"testing"
 
 	"github.com/xgfone/go-apiserver/internal/test"
-	"github.com/xgfone/go-apiserver/tcp"
+	"github.com/xgfone/go-apiserver/nets/stream"
 )
 
-var _ tcp.Handler = testTCPHandler{}
+var _ stream.Handler = testTCPHandler{}
 
 type testTCPHandler struct {
 	buf     *bytes.Buffer
 	name    string
-	handler tcp.Handler
+	handler stream.Handler
 }
 
 func (h testTCPHandler) OnShutdown(c context.Context) {
@@ -69,7 +69,7 @@ func (h testTCPHandler) OnConnection(c net.Conn) {
 
 func tcpMiddleware(name string, priority int, buf *bytes.Buffer) Middleware {
 	return NewMiddleware(name, priority, func(h interface{}) interface{} {
-		return testTCPHandler{handler: h.(tcp.Handler), name: name, buf: buf}
+		return testTCPHandler{handler: h.(stream.Handler), name: name, buf: buf}
 	})
 }
 
@@ -80,7 +80,7 @@ func TestMiddlewareManagerTCP(t *testing.T) {
 	manager := NewManager(nil)
 	manager.Use(tcpMiddleware("mw2", 2, buf), tcpMiddleware("mw1", 1, buf))
 
-	handler := manager.WrapHandler(tcpHandler).(tcp.Handler)
+	handler := manager.WrapHandler(tcpHandler).(stream.Handler)
 	handler.OnConnection(nil)
 	handler.OnServerExit(nil)
 	handler.OnShutdown(context.Background())

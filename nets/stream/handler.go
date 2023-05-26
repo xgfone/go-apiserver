@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tcp
+package stream
 
 import (
 	"context"
@@ -24,12 +24,11 @@ import (
 	"github.com/xgfone/go-atomicvalue"
 )
 
-// Handler is used to handle the TCP connection.
+// Handler is used to handle the stream connection.
 type Handler interface {
 	// OnConnection is called when a new connection comes.
 	//
-	// For the TCP connection, you can assert the connection to TLSConn
-	// to get the TLS connection.
+	// The connection can be asserted to TLSConn to get the TLS connection.
 	//
 	// Notice: it is the responsibility of the handler to close the connection.
 	OnConnection(net.Conn)
@@ -51,7 +50,7 @@ type SwitchHandler struct{ handler atomicvalue.Value[Handler] }
 // NewSwitchHandler returns a new switch handler with the initial handler.
 func NewSwitchHandler(handler Handler) *SwitchHandler {
 	if handler == nil {
-		panic("SwitchHandler: the tcp handler is nil")
+		panic("SwitchHandler: the stream handler is nil")
 	}
 	return &SwitchHandler{handler: atomicvalue.NewValue(handler)}
 }
@@ -59,7 +58,7 @@ func NewSwitchHandler(handler Handler) *SwitchHandler {
 // Get returns the current handler.
 func (sh *SwitchHandler) Get() Handler { return sh.handler.Load() }
 
-// Set sets the tcp handler to new.
+// Set sets the handler to new.
 func (sh *SwitchHandler) Set(new Handler) { sh.handler.Store(new) }
 
 // Swap stores the new handler and returns the old.
@@ -84,7 +83,7 @@ func (sh *SwitchHandler) OnShutdown(c context.Context) { sh.Get().OnShutdown(c) 
 
 /* ------------------------------------------------------------------------- */
 
-// IPWhitelistHandler is a tcp handler to support filter the clients
+// IPWhitelistHandler is a stream handler to support filter the clients
 // whose ip is not in the ip whitelist.
 type IPWhitelistHandler struct {
 	nets.IPChecker
@@ -94,7 +93,7 @@ type IPWhitelistHandler struct {
 // NewIPWhitelistHandler returns a new IPWhitelistHandler.
 func NewIPWhitelistHandler(handler Handler, ipChecker nets.IPChecker) IPWhitelistHandler {
 	if handler == nil {
-		panic("IPWhitelistHandler: the tcp handler is nil")
+		panic("IPWhitelistHandler: the stream handler is nil")
 	}
 	if ipChecker == nil {
 		panic("IPWhitelistHandler: the ip checker is nil")
@@ -132,9 +131,9 @@ func (h IPWhitelistHandler) OnConnection(c net.Conn) {
 /* ------------------------------------------------------------------------- */
 
 // NewFuncHandler returns a new handler, based on the a simple function,
-// of the tcp server.
+// of the stream server.
 //
-// When the tcp server is stopped, the context is done.
+// When the stream server is stopped, the context is done.
 func NewFuncHandler(handler func(context.Context, net.Conn)) Handler {
 	c, cancel := context.WithCancel(context.Background())
 	return &funcHandler{Handler: handler, cancel: cancel, context: c}

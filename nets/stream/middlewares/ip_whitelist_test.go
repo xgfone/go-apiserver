@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xgfone/go-apiserver/tcp"
+	"github.com/xgfone/go-apiserver/nets/stream"
 )
 
 type tcpHandler struct{ buf *bytes.Buffer }
@@ -53,7 +53,7 @@ func TestIPWhitelist(t *testing.T) {
 	}
 
 	buf := bytes.NewBuffer(nil)
-	handler := mw.Handler(tcpHandler{buf}).(tcp.Handler)
+	handler := mw.Handler(tcpHandler{buf}).(stream.Handler)
 	handler.OnConnection(tcpConn{"10.1.2.3:1234"})
 	if s := buf.String(); s != "pass" {
 		t.Errorf("expect '%s', but got '%s'", "pass", s)

@@ -20,12 +20,19 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/router"
-	"github.com/xgfone/go-apiserver/tcp"
+	"github.com/xgfone/go-apiserver/nets/stream"
 )
 
 func init() {
-	RegisterServerBuilder("http", func(addr string, h interface{}) (Server, error) {
-		ln, err := tcp.Listen(addr)
+	registerHTTPServerBuilder("http", "tcp")
+	registerHTTPServerBuilder("http4", "tcp4")
+	registerHTTPServerBuilder("http6", "tcp6")
+	registerHTTPServerBuilder("unixhttp", "unix")
+}
+
+func registerHTTPServerBuilder(proto, streamProto string) {
+	RegisterServerBuilder(proto, func(addr string, h interface{}) (Server, error) {
+		ln, err := stream.Listen(streamProto, addr)
 		if err != nil {
 			return nil, err
 		}
@@ -39,7 +46,9 @@ func init() {
 			panic(fmt.Errorf("unknown http handler type '%T'", h))
 		}
 
-		return NewHTTPServer(ln, httpHandler), nil
+		server := NewHTTPServer(ln, httpHandler)
+		server.Proto = proto
+		return server, nil
 	})
 }
 
@@ -47,28 +56,25 @@ var _ Server = HTTPServer{}
 
 // HTTPServer represents a http entrypoint server.
 type HTTPServer struct {
+	StreamServer
 	HTTPHandler http.Handler
-	HTTPServer  *tcp.HTTPServerHandler
-	TCPServer
+	HTTPServer  *stream.HTTPServerHandler
 }
 
-// NewHTTPServer returns a new HTTP entrypoint Server.
+// NewHTTPServer returns a new HTTP entrypoint Server based on TCP.
 func NewHTTPServer(ln net.Listener, handler http.Handler) (server HTTPServer) {
 	if handler == nil {
 		handler = router.DefaultRouter
 	}
 
 	server.HTTPHandler = handler
-	server.HTTPServer = tcp.NewHTTPServerHandler(ln.Addr(), handler)
-	server.TCPServer = NewTCPServer(ln, server.HTTPServer)
+	server.HTTPServer = stream.NewHTTPServerHandler(ln.Addr(), handler)
+	server.StreamServer = NewStreamServer("http", ln, server.HTTPServer)
 	return
 }
-
-// Protocol returns the protocol of the http server, which is a fixed "http".
-func (s HTTPServer) Protocol() string { return "http" }
 
 // Start starts and runs the http server until it is closed.
 func (s HTTPServer) Start() {
 	go s.HTTPServer.Start()
-	s.TCPServer.Start()
+	s.StreamServer.Start()
 }

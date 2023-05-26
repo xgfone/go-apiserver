@@ -19,14 +19,14 @@ import (
 
 	mw "github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/nets"
-	"github.com/xgfone/go-apiserver/tcp"
+	"github.com/xgfone/go-apiserver/nets/stream"
 )
 
-// IPWhitelist returns a tcp middleware to filter the connections
+// IPWhitelist returns a middleware to filter the stream connections
 // that the client ip is not in the given ip or cidr list.
 func IPWhitelist(priority int, ipOrCidrs ...string) (mw.Middleware, error) {
 	if len(ipOrCidrs) == 0 {
-		return nil, errors.New("TCP ClientIP middleware: no ips or cidrs")
+		return nil, errors.New("ClientIP middleware: no ips or cidrs")
 	}
 
 	checker, err := nets.NewIPCheckers(ipOrCidrs...)
@@ -35,6 +35,6 @@ func IPWhitelist(priority int, ipOrCidrs ...string) (mw.Middleware, error) {
 	}
 
 	return mw.NewMiddleware("ip_whitelist", priority, func(h interface{}) interface{} {
-		return tcp.NewIPWhitelistHandler(h.(tcp.Handler), checker)
+		return stream.NewIPWhitelistHandler(h.(stream.Handler), checker)
 	}), nil
 }
