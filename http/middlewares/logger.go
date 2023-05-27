@@ -96,7 +96,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 							respBuf.Write(b[:n])
 						}
 						return n, err
-					}))
+					}), reqresp.DisableReaderFrom())
 
 				if c != nil {
 					c.ResponseWriter = rw

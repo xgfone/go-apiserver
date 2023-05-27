@@ -81,13 +81,19 @@ func NewResponseWriter(w http.ResponseWriter, options ...Option) ResponseWriter 
 	if _, ok := w.(http.Hijacker); ok {
 		index += hijacker
 	}
-	if _, ok := w.(io.ReaderFrom); ok {
+	if _, ok := w.(io.ReaderFrom); ok && !rw.disableRF {
 		index += readerFrom
 	}
 	if _, ok := w.(http.Pusher); ok {
 		index += pusher
 	}
 	return newResponseWriter(rw, index)
+}
+
+// DisableReaderFrom returns a ResponseWriter option to disable the interface
+// io.ReaderFrom.
+func DisableReaderFrom() Option {
+	return rwoption(func(w *responseWriter) { w.disableRF = true })
 }
 
 // Write returns a ResponseWriter option to wrap the method Write.
@@ -128,6 +134,7 @@ type responseWriter struct {
 	statusCode  int
 	writeHeader func(rw http.ResponseWriter, statusCode int)
 	writeData   func(http.ResponseWriter, []byte) (int, error)
+	disableRF   bool
 }
 
 func (rw *responseWriter) Written() int64    { return rw.written }

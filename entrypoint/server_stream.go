@@ -33,7 +33,7 @@ func init() {
 		return NewStreamServer("tcp", ln, h.(stream.Handler)), nil
 	})
 
-	// TCP
+	// Unix
 	RegisterServerBuilder("unix", func(addr string, h interface{}) (Server, error) {
 		ln, err := stream.Listen("unix", addr)
 		if err != nil {
