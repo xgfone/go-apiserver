@@ -92,6 +92,13 @@ func NewRouteBuilder(r *Router) RouteBuilder {
 	return RouteBuilder{manager: r, panic: true}
 }
 
+// Clone clones and returns a new route builder.
+func (b RouteBuilder) Clone() RouteBuilder {
+	b.mdws = b.mdws.Clone()
+	b.matchers = append(matcher.Matchers{}, b.matchers...)
+	return b
+}
+
 // GetGroup returns the group of the route builder.
 func (b RouteBuilder) GetGroup() string { return b.group }
 
