@@ -86,7 +86,7 @@ var (
 	ErrUnallowedInUse                = NewError(CodeUnallowedInUse, "in use")
 	ErrUnallowedInOperation          = NewError(CodeUnallowedInOperation, "in operation")
 	ErrUnallowedUnavailable          = NewError(CodeUnallowedUnavailable, "unavailable")
-	ErrCodeUnallowedUnauthorized     = NewError(CodeUnallowedUnauthorized, "operation is unauthorized")
+	ErrUnallowedUnauthorized         = NewError(CodeUnallowedUnauthorized, "operation is unauthorized")
 	ErrUnallowedInconsistent         = NewError(CodeUnallowedInconsistent, "inconsistent")
 	ErrUnallowedInsufficient         = NewError(CodeUnallowedInsufficient, "insufficient")
 	ErrUnallowedInsufficientBalance  = NewError(CodeUnallowedInsufficientBalance, "balance is insufficient")
