@@ -106,6 +106,25 @@ func (r *Router) Route(rw http.ResponseWriter, req *http.Request, notFound http.
 
 /* ------------------------------------------------------------------------ */
 
+// Range ranges each route with the function f.
+func (r *Router) RangeAndUpdate(f func(old Route) (new Route, changed bool)) {
+	r.rlock.Lock()
+	defer r.rlock.Unlock()
+
+	var changed bool
+	for name, route := range r.rmaps {
+		new, _changed := f(route)
+		if _changed {
+			changed = true
+			r.rmaps[name] = new
+		}
+	}
+
+	if changed {
+		r.updateRoutes()
+	}
+}
+
 // MatchRoute uses the registered routes to match the http request,
 // and returns the matched route.
 func (r *Router) MatchRoute(rw http.ResponseWriter, req *http.Request) (Route, bool) {
