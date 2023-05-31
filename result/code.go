@@ -165,5 +165,8 @@ func (e Error) IsUnallowed() bool { return IsCode(e.Code, CodeUnallowed) }
 // IsAuthFailure reports whether the error is CodeAuthFailure.
 func (e Error) IsAuthFailure() bool { return IsCode(e.Code, CodeAuthFailure) }
 
+// IsUnauthorized reports whether the error is CodeUnallowedUnauthorized.
+func (e Error) IsUnauthorized() bool { return IsCode(e.Code, CodeUnallowedUnauthorized) }
+
 // IsInternalServerError reports whether the error is CodeInternalServerError.
 func (e Error) IsInternalServerError() bool { return IsCode(e.Code, CodeInternalServerError) }
