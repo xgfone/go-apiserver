@@ -17,6 +17,7 @@
 package matcher
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -34,7 +35,7 @@ import (
 )
 
 // MatchFunc is a function to match the request.
-type MatchFunc func(http.ResponseWriter, *http.Request) (ok bool)
+type MatchFunc func(context.Context, *http.Request) (ok bool)
 
 // Matcher is used to check whether the route rule matches the request.
 type Matcher interface {
@@ -46,7 +47,7 @@ type Matcher interface {
 	Priority() int
 
 	// Match is used to check whether the rule matches the request.
-	Match(http.ResponseWriter, *http.Request) (ok bool)
+	Match(context.Context, *http.Request) (ok bool)
 }
 
 // Matchers is a group of Matchers.
@@ -70,9 +71,9 @@ type matcher struct {
 	match MatchFunc
 }
 
-func (m matcher) String() string                                    { return m.desc }
-func (m matcher) Priority() int                                     { return m.prio }
-func (m matcher) Match(w http.ResponseWriter, r *http.Request) bool { return m.match(w, r) }
+func (m matcher) String() string                                { return m.desc }
+func (m matcher) Priority() int                                 { return m.prio }
+func (m matcher) Match(c context.Context, r *http.Request) bool { return m.match(c, r) }
 
 // New returns a new route matcher.
 func New(priority int, description string, match MatchFunc) Matcher {
@@ -82,8 +83,8 @@ func New(priority int, description string, match MatchFunc) Matcher {
 type notMatcher struct{ Matcher }
 
 func (m notMatcher) String() string { return "!" + m.Matcher.String() }
-func (m notMatcher) Match(w http.ResponseWriter, r *http.Request) bool {
-	return !m.Matcher.Match(w, r)
+func (m notMatcher) Match(c context.Context, r *http.Request) bool {
+	return !m.Matcher.Match(c, r)
 }
 
 // Not returns a NOT matcher based on the original matcher.
@@ -101,10 +102,10 @@ func (m andMatcher) String() string {
 }
 
 func (m andMatcher) Priority() int { return Matchers(m).Priority() }
-func (m andMatcher) Match(w http.ResponseWriter, r *http.Request) bool {
+func (m andMatcher) Match(c context.Context, r *http.Request) bool {
 	ms := Matchers(m)
 	for i, _len := 0, len(ms); i < _len; i++ {
-		if !ms[i].Match(w, r) {
+		if !ms[i].Match(c, r) {
 			return false
 		}
 	}
@@ -144,10 +145,10 @@ func (m orMatcher) String() string {
 }
 
 func (m orMatcher) Priority() int { return Matchers(m).Priority() }
-func (m orMatcher) Match(w http.ResponseWriter, r *http.Request) bool {
+func (m orMatcher) Match(c context.Context, r *http.Request) bool {
 	ms := Matchers(m)
 	for i, _len := 0, len(ms); i < _len; i++ {
-		if ms[i].Match(w, r) {
+		if ms[i].Match(c, r) {
 			return true
 		}
 	}
@@ -317,7 +318,7 @@ type urlPath struct {
 	plen     int
 }
 
-func (p urlPath) Match(w http.ResponseWriter, r *http.Request) (ok bool) {
+func (p urlPath) Match(ctx context.Context, r *http.Request) (ok bool) {
 	if p.plen == 0 {
 		if p.isPrefix {
 			return strings.HasPrefix(GetPath(r), p.rawPath)
@@ -363,7 +364,7 @@ func (p urlPath) Match(w http.ResponseWriter, r *http.Request) (ok bool) {
 	}
 
 	if ok {
-		if c := reqresp.GetContext(w, r); c != nil {
+		if c := reqresp.GetContextFromCtx(ctx); c != nil {
 			for i, _len := 0, len(args); i < _len; i++ {
 				c.Data[args[i].key] = args[i].value
 			}
@@ -453,7 +454,7 @@ func methodMatcher(method string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("Method(`%s`)", method)
-	return New(PriorityMethod, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityMethod, desc, func(_ context.Context, r *http.Request) bool {
 		return r.Method == method
 	}), nil
 }
@@ -465,7 +466,7 @@ func clientIPMatcher(clientIP string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("ClientIP(`%s`)", clientIP)
-	return New(PriorityClientIP, desc, func(_ http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityClientIP, desc, func(_ context.Context, r *http.Request) bool {
 		return ipChecker.CheckIP(GetClientIP(r))
 	}), nil
 }
@@ -482,9 +483,9 @@ func queryMatcher(key, value string) (Matcher, error) {
 		desc = fmt.Sprintf("Query(`%s`, `%s`)", key, value)
 	}
 
-	return New(PriorityQuery, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityQuery, desc, func(ctx context.Context, r *http.Request) bool {
 		var queries url.Values
-		if c := reqresp.GetContext(w, r); c != nil {
+		if c := reqresp.GetContextFromCtx(ctx); c != nil {
 			queries = c.GetQueries()
 		} else {
 			queries = r.URL.Query()
@@ -512,7 +513,7 @@ func headerMatcher(key, value string) (Matcher, error) {
 		desc = fmt.Sprintf("Header(`%s`, `%s`)", key, value)
 	}
 
-	return New(PriorityHeader, desc, func(_ http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityHeader, desc, func(_ context.Context, r *http.Request) bool {
 		var ok bool
 		if value == "" {
 			_, ok = r.Header[textproto.CanonicalMIMEHeaderKey(key)]
@@ -530,7 +531,7 @@ func headerRegexpMatcher(key, regexpValue string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("HeaderRegexp(`%s`)", regexpValue)
-	return New(PriorityHeaderRegexp, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityHeaderRegexp, desc, func(_ context.Context, r *http.Request) bool {
 		return regexp.MatchString(r.Header.Get(key))
 	}), nil
 }
@@ -538,7 +539,7 @@ func headerRegexpMatcher(key, regexpValue string) (Matcher, error) {
 func hostMatcher(host string) (Matcher, error) {
 	desc := fmt.Sprintf("Host(`%s`)", host)
 	prio := PriorityHost * 10 * len(host)
-	return New(prio, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(prio, desc, func(_ context.Context, r *http.Request) bool {
 		return GetHost(r) == host
 	}), nil
 }
@@ -550,7 +551,7 @@ func hostRegexpMatcher(regexpHost string) (Matcher, error) {
 	}
 
 	desc := fmt.Sprintf("HostRegexp(`%s`)", regexpHost)
-	return New(PriorityHostRegexp, desc, func(w http.ResponseWriter, r *http.Request) bool {
+	return New(PriorityHostRegexp, desc, func(_ context.Context, r *http.Request) bool {
 		return regexp.MatchString(GetHost(r))
 	}), nil
 }

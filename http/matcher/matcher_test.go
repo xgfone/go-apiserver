@@ -24,7 +24,7 @@ import (
 )
 
 func testMatcher(t *testing.T, req *http.Request, matcher Matcher, match bool) {
-	if ok := matcher.Match(nil, req); ok != match {
+	if ok := matcher.Match(req.Context(), req); ok != match {
 		t.Errorf("'%s': expect '%v', but got '%v'", matcher.String(), match, ok)
 	}
 }
@@ -150,12 +150,12 @@ func TestPathMatcherParameter(t *testing.T) {
 	}
 
 	c := reqresp.NewContext(4)
-	req := &http.Request{URL: &url.URL{}}
+	req := reqresp.SetContext(&http.Request{URL: &url.URL{}}, c)
 	for i, m := range matchers {
 		for j, p := range paths {
 			if i == j {
 				req.URL.Path = p.Path
-				ok := m.Match(c, req)
+				ok := m.Match(req.Context(), req)
 
 				if !ok {
 					t.Errorf("%s does not match the path '%s'", m.String(), p.Path)
@@ -191,10 +191,10 @@ func TestPathPrefixMatcherParameter(t *testing.T) {
 	}
 
 	c := reqresp.NewContext(4)
-	req := &http.Request{URL: &url.URL{}}
+	req := reqresp.SetContext(&http.Request{URL: &url.URL{}}, c)
 	for _, p := range paths {
 		req.URL.Path = p.Path
-		ok := matcher.Match(c, req)
+		ok := matcher.Match(req.Context(), req)
 		if p.Match {
 			if !ok {
 				t.Errorf("%s does not match the path '%s'", matcher.String(), p.Path)
@@ -219,7 +219,7 @@ func TestPathPrefixMatcherParameter(t *testing.T) {
 
 	matcher = Must(PathPrefix("/prefix/{id}/"))
 	req.URL.Path = "/prefix/123"
-	ok := matcher.Match(c, req)
+	ok := matcher.Match(req.Context(), req)
 	if ok {
 		t.Errorf("unexpect the matcher '%s' to match the path '%s'", matcher.String(), req.URL.Path)
 	}

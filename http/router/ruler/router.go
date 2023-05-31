@@ -16,6 +16,7 @@
 package ruler
 
 import (
+	"context"
 	"errors"
 	"expvar"
 	"fmt"
@@ -93,7 +94,7 @@ func (r *Router) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 // Route is the same ServeHTTP, but support to provide a NotFound handler.
 func (r *Router) Route(rw http.ResponseWriter, req *http.Request, notFound http.Handler) {
-	if route, ok := r.MatchRoute(rw, req); ok {
+	if route, ok := r.MatchRoute(req.Context(), req); ok {
 		route.ServeHTTP(rw, req)
 	} else if notFound != nil {
 		notFound.ServeHTTP(rw, req)
@@ -127,10 +128,10 @@ func (r *Router) RangeAndUpdate(f func(old Route) (new Route, changed bool)) {
 
 // MatchRoute uses the registered routes to match the http request,
 // and returns the matched route.
-func (r *Router) MatchRoute(rw http.ResponseWriter, req *http.Request) (Route, bool) {
+func (r *Router) MatchRoute(ctx context.Context, req *http.Request) (Route, bool) {
 	routes := r.routes.Load().(Routes)
 	for i, _len := 0, len(routes); i < _len; i++ {
-		if ok := routes[i].Matcher.Match(rw, req); ok {
+		if ok := routes[i].Matcher.Match(ctx, req); ok {
 			return routes[i], true
 		}
 	}

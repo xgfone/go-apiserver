@@ -15,6 +15,7 @@
 package matcher
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"testing"
@@ -35,7 +36,7 @@ func BenchmarkPath(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		if !matcher.Match(c, req) {
+		if !matcher.Match(context.Background(), req) {
 			panic("not match")
 		}
 	}
@@ -54,7 +55,7 @@ func BenchmarkPathParameter(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		if !matcher.Match(c, req) {
+		if !matcher.Match(context.Background(), req) {
 			panic("not match")
 		}
 	}
