@@ -123,8 +123,11 @@ func (l *ForwardConnListener) Close() (err error) {
 // Accept implements the interface net.Listener.
 func (l *ForwardConnListener) Accept() (conn net.Conn, err error) {
 	select {
-	case conn = <-l.connch:
 	case err = <-l.errch:
+	case conn = <-l.connch:
+		if c, ok := conn.(*TryTLSConn); ok {
+			conn, err = c.GetConn()
+		}
 	}
 	return
 }

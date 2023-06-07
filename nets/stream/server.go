@@ -18,10 +18,12 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"io"
 	"net"
 	"strings"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/nets"
@@ -128,8 +130,10 @@ func (s *Server) Start() {
 		}
 
 		if tlsConfig, forceTLS := s.GetTLSConfig(); tlsConfig != nil {
-			if conn = s.checkTLS(conn, tlsConfig, forceTLS); conn == nil {
-				continue
+			if forceTLS {
+				conn = tls.Server(conn, tlsConfig)
+			} else {
+				conn = &TryTLSConn{Conn: conn, Config: tlsConfig}
 			}
 		}
 
@@ -137,7 +141,43 @@ func (s *Server) Start() {
 	}
 }
 
-func (s *Server) checkTLS(conn net.Conn, config *tls.Config, force bool) net.Conn {
+// TryTLSConn is used to try to ensure the TLS connection
+// if the client enables TLS.
+type TryTLSConn struct {
+	*tls.Config
+	net.Conn
+
+	check bool
+}
+
+func (c *TryTLSConn) ensure() (err error) {
+	if !c.check {
+		c.check = true
+		c.Conn, err = checkTLS(c.Conn, c.Config, time.Second*2)
+	}
+	return
+}
+
+// Read implements the interface io.Reader to override the Read method.
+func (c *TryTLSConn) Read(b []byte) (n int, err error) {
+	if err = c.ensure(); err == nil {
+		n, err = c.Conn.Read(b)
+	}
+	return
+}
+
+// GetConn returns the ensured connection.
+func (c *TryTLSConn) GetConn() (conn net.Conn, err error) {
+	err = c.ensure()
+	conn = c.Conn
+	return
+}
+
+func checkTLS(conn net.Conn, config *tls.Config, timeout time.Duration) (net.Conn, error) {
+	if timeout > 0 {
+		conn.SetReadDeadline(time.Now().Add(timeout))
+	}
+
 	var bs [1]byte
 	if n, err := conn.Read(bs[:]); err != nil {
 		conn.Close()
@@ -145,11 +185,15 @@ func (s *Server) checkTLS(conn net.Conn, config *tls.Config, force bool) net.Con
 			log.Error("fail to read the first byte from the conneciton",
 				"remoteaddr", conn.RemoteAddr().String(), "err", err)
 		}
-		return nil
+		return conn, err
 	} else if n == 0 {
 		conn.Close()
 		log.Error("read the zero byte from the connection", "remoteaddr", conn.RemoteAddr().String())
-		return nil
+		return conn, io.EOF
+	}
+
+	if timeout > 0 {
+		conn.SetReadDeadline(time.Time{})
 	}
 
 	conn = &peekedConn{Conn: conn, Peeked: int16(bs[0])}
@@ -165,14 +209,9 @@ func (s *Server) checkTLS(conn net.Conn, config *tls.Config, force bool) net.Con
 	const recordTypeHandshake = 0x16
 	if bs[0] == recordTypeHandshake || bs[0] == recordTypeSSLv2 { // For TLS
 		conn = tls.Server(conn, config)
-	} else if force {
-		log.Error("not support the not-TLS conneciton",
-			"remoteaddr", conn.RemoteAddr().String())
-		conn.Close()
-		return nil
 	}
 
-	return conn
+	return conn, nil
 }
 
 type peekedConn struct {
