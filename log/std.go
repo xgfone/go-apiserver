@@ -24,17 +24,14 @@ import (
 
 // StdLogger returns a stdlib log logger.
 func StdLogger(prefix string, level slog.Level) *log.Logger {
-	writer := &handlerWriter{handler: slog.Default().Handler(), level: level}
-	return log.New(writer, prefix, 0)
+	return log.New(&handlerWriter{level: level}, prefix, 0)
 }
 
-type handlerWriter struct {
-	handler slog.Handler
-	level   slog.Level
-}
+type handlerWriter struct{ level slog.Level }
 
 func (w *handlerWriter) Write(buf []byte) (int, error) {
-	if !w.handler.Enabled(nil, w.level) {
+	handler := slog.Default().Handler()
+	if !handler.Enabled(nil, w.level) {
 		return 0, nil
 	}
 
@@ -45,7 +42,7 @@ func (w *handlerWriter) Write(buf []byte) (int, error) {
 	}
 
 	r := slog.NewRecord(time.Now(), w.level, string(buf), callerPC(5))
-	return origLen, w.handler.Handle(nil, r)
+	return origLen, handler.Handle(nil, r)
 }
 
 // callerPC returns the program counter at the given stack depth.

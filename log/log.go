@@ -59,6 +59,15 @@ type (
 	// LevelVar is used to manage the level atomically, which implements the interface Leveler.
 	LevelVar = slog.LevelVar
 
+	// Handler is the log handler.
+	Handler = slog.Handler
+
+	// Record is the log record.
+	Record = slog.Record
+
+	// Value is the attribute value.
+	Value = slog.Value
+
 	// Attr represents a key-value pair.
 	Attr = slog.Attr
 )
@@ -74,7 +83,7 @@ func (f LevelFunc) Level() Level { return Level(f()) }
 // NewJSONHandler returns a new json handler.
 //
 // If w is nil, use Writer instead.
-func NewJSONHandler(w io.Writer, level Leveler) slog.Handler {
+func NewJSONHandler(w io.Writer, level Leveler) Handler {
 	if w == nil {
 		w = Writer
 	}
@@ -96,11 +105,63 @@ func replaceSourceAttr(groups []string, a slog.Attr) slog.Attr {
 	return a
 }
 
+type OptionHandler struct {
+	Handler
+
+	// Options
+	EnableFunc  func(context.Context, Level) bool    // Default: nil
+	FilterFunc  func(context.Context, Record) bool   // Default: nil
+	ReplaceFunc func(context.Context, Record) Record // Default: nil
+}
+
+// NewOptionHandler returns a new OptionHandler wrapping the given handler.
+func NewOptionHandler(handler Handler) *OptionHandler {
+	return &OptionHandler{Handler: handler}
+}
+
+func (h *OptionHandler) clone() *OptionHandler {
+	nh := *h
+	return &nh
+}
+
+// Enabled implements the interface Handler#Enabled.
+func (h *OptionHandler) Enabled(c context.Context, l Level) bool {
+	if h.EnableFunc != nil {
+		return h.EnableFunc(c, l)
+	}
+	return h.Handler.Enabled(c, l)
+}
+
+// Handle implements the interface Handler#Handle.
+func (h *OptionHandler) Handle(c context.Context, r Record) error {
+	if h.ReplaceFunc != nil {
+		r = h.ReplaceFunc(c, r)
+	}
+	if h.FilterFunc != nil && h.FilterFunc(c, r) {
+		return nil
+	}
+	return h.Handler.Handle(c, r)
+}
+
+// WithAttrs implements the interface Handler#WithAttrs.
+func (h *OptionHandler) WithAttrs(attrs []Attr) Handler {
+	nh := h.clone()
+	nh.Handler = h.Handler.WithAttrs(attrs)
+	return nh
+}
+
+// WithGroup implements the interface Handler#WithGroup.
+func (h *OptionHandler) WithGroup(name string) Handler {
+	nh := h.clone()
+	nh.Handler = h.Handler.WithGroup(name)
+	return nh
+}
+
 // GetHandler returns the handler of the default logger.
-func GetHandler() slog.Handler { return slog.Default().Handler() }
+func GetHandler() Handler { return slog.Default().Handler() }
 
 // SetDefault is used to set default global logger with the handler.
-func SetDefault(handler slog.Handler, atts ...slog.Attr) {
+func SetDefault(handler Handler, atts ...slog.Attr) {
 	if len(atts) > 0 {
 		handler = handler.WithAttrs(atts)
 	}
