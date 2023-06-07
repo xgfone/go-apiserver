@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"runtime"
 	"syscall"
 	"time"
 )
@@ -83,10 +82,10 @@ type ForwardConnListener struct {
 
 // NewForwardConnListener returns a new ForwardConnListener.
 //
-// If connCacheSize is less than 0, use runtime.NumCPU().
+// If connCacheSize is less than 0, use 128.
 func NewForwardConnListener(localAddr net.Addr, connCacheSize int) *ForwardConnListener {
 	if connCacheSize < 0 {
-		connCacheSize = runtime.NumCPU()
+		connCacheSize = 128
 	}
 
 	return &ForwardConnListener{
