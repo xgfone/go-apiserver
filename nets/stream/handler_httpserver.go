@@ -50,7 +50,6 @@ func NewHTTPServerHandler(localAddr net.Addr, handler http.Handler) *HTTPServerH
 	h.handler.Set(handler)
 	h.server.Store(&http.Server{Handler: h, ErrorLog: logger})
 	h.listener = NewForwardConnListener(localAddr, -1)
-	h.listener.OnCloseFunc = h.close
 
 	return h
 }
@@ -60,10 +59,7 @@ func (h *HTTPServerHandler) getHTTPServer() *http.Server {
 	return h.server.Load().(*http.Server)
 }
 
-func (h *HTTPServerHandler) close() error {
-	h.getHTTPServer().Shutdown(context.Background())
-	return nil
-}
+func (h *HTTPServerHandler) stop() { h.getHTTPServer().Shutdown(context.Background()) }
 
 // Pending returns the number of the connection in the cache channel,
 // which is waiting to be consumed by the http server.
@@ -97,4 +93,4 @@ func (h *HTTPServerHandler) OnConnection(c net.Conn) { h.listener.OnConnection(c
 
 // OnServerExit implements the interface Handler, which will forward the call
 // to the inner handler.
-func (h *HTTPServerHandler) OnServerExit(err error) { h.listener.OnServerExit(err) }
+func (h *HTTPServerHandler) OnServerExit(err error) { h.listener.OnServerExit(err); h.stop() }

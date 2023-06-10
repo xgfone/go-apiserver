@@ -68,15 +68,11 @@ var (
 // ForwardConnListener is a listener implementing the interface Handler,
 // which accepts and returns a received connection.
 type ForwardConnListener struct {
-	// OnCloseFunc is the callback function when closing the listener.
+	// OnStop is the callback function when stopping the listener,
+	// which may be used to wait all the connections are closed.
 	//
 	// Default: nil
-	OnCloseFunc func() error
-
-	// HandleConn wraps and handles the connection, and maybe return a new one.
-	//
-	// Default: nil
-	HandleConn func(old net.Conn) (new net.Conn, err error)
+	OnStop func()
 
 	addr   net.Addr
 	connch chan net.Conn
@@ -93,7 +89,7 @@ func NewForwardConnListener(localAddr net.Addr, connCacheSize int) *ForwardConnL
 
 	return &ForwardConnListener{
 		connch: make(chan net.Conn, connCacheSize),
-		errch:  make(chan error),
+		errch:  make(chan error, 1),
 		addr:   localAddr,
 	}
 }
@@ -101,8 +97,15 @@ func NewForwardConnListener(localAddr net.Addr, connCacheSize int) *ForwardConnL
 // OnConnection implements the interface Handler.
 func (l *ForwardConnListener) OnConnection(conn net.Conn) { l.connch <- conn }
 
-// OnServerExit implements the interface Handler.
-func (l *ForwardConnListener) OnServerExit(err error) { l.errch <- err }
+// OnServerExit implements the interface Handler to stop the listener.
+func (l *ForwardConnListener) OnServerExit(err error) { l.errch <- err; l.Stop() }
+
+// Stop call the function OnStop to stop the listener.
+func (l *ForwardConnListener) Stop() {
+	if l.OnStop != nil {
+		l.OnStop()
+	}
+}
 
 // Pending returns the number of the connection in the cache channel.
 func (l *ForwardConnListener) Pending() int { return len(l.connch) }
@@ -110,22 +113,14 @@ func (l *ForwardConnListener) Pending() int { return len(l.connch) }
 // Addr implements the interface net.Listener.
 func (l *ForwardConnListener) Addr() net.Addr { return l.addr }
 
-// Close implements the interface net.Listener.
-func (l *ForwardConnListener) Close() (err error) {
-	if l.OnCloseFunc != nil {
-		err = l.OnCloseFunc()
-	}
-	return
-}
+// Close implements the interface net.Listener, which does nothing.
+func (l *ForwardConnListener) Close() (err error) { return }
 
 // Accept implements the interface net.Listener.
 func (l *ForwardConnListener) Accept() (conn net.Conn, err error) {
 	select {
 	case err = <-l.errch:
 	case conn = <-l.connch:
-		if l.HandleConn != nil {
-			conn, err = l.HandleConn(conn)
-		}
 	}
 	return
 }
