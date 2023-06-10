@@ -166,7 +166,7 @@ func LoggerWithOptions(priority int, appender LogKvsAppender, options ...logger.
 
 			if respBuf != nil {
 				kvs = append(kvs, "respbodylen", respBuf.Len())
-				if respBuf.Len() <= logRespBodyLen {
+				if respBuf.Len() <= logRespBodyLen && w.Header().Get(header.HeaderContentEncoding) != "gzip" {
 					if header.ContentType(w.Header()) == header.MIMEApplicationJSON {
 						// (xgfone): We needs to check whether respbody is a valid raw json string??
 						kvs = append(kvs, "respbodydata", rawString(respBuf.String()))
