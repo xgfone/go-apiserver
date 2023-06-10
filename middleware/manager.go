@@ -15,7 +15,6 @@
 package middleware
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -198,11 +197,4 @@ func (m *Manager) OnConnection(c net.Conn) {
 // Notice: the handler must be a stream.Handler.
 func (m *Manager) OnServerExit(err error) {
 	m.getHandler().(stream.Handler).OnServerExit(err)
-}
-
-// OnShutdown implements the interface stream.Handler.
-//
-// Notice: the handler must be a stream.Handler.
-func (m *Manager) OnShutdown(c context.Context) {
-	m.getHandler().(stream.Handler).OnShutdown(c)
 }

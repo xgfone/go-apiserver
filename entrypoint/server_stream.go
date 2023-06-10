@@ -65,7 +65,6 @@ func NewStreamServer(proto string, ln net.Listener, handler stream.Handler) (ser
 	server.CertManager = tlscert.NewManager()
 	server.Middlewares = middleware.NewManager(handler)
 	server.Server = stream.NewServer(ln, server.Middlewares)
-	server.SetTLSForce(true)
 	return
 }
 
@@ -77,15 +76,7 @@ func (s StreamServer) SetTLSConfig(c *tls.Config) {
 	if c != nil && c.GetCertificate == nil && len(c.Certificates) == 0 {
 		c.GetCertificate = s.CertManager.GetTLSCertificate
 	}
-
-	_, forceTLS := s.Server.GetTLSConfig()
-	s.Server.SetTLSConfig(c, forceTLS)
-}
-
-// SetTLSForce sets whether or not to force the client to use TLS.
-func (s StreamServer) SetTLSForce(forceTLS bool) {
-	config, _ := s.Server.GetTLSConfig()
-	s.Server.SetTLSConfig(config, forceTLS)
+	s.Server.SetTLSConfig(c)
 }
 
 // AddCertificate implements the interface tlscert.CertUpdater.

@@ -28,16 +28,12 @@ import (
 type Handler interface {
 	// OnConnection is called when a new connection comes.
 	//
-	// The connection can be asserted to TLSConn to get the TLS connection.
-	//
 	// Notice: it is the responsibility of the handler to close the connection.
 	OnConnection(net.Conn)
 
-	// OnServerExit is called when the server exits unexpectedly.
+	// OnServerExit is called when the server exits,
+	// which should return only when all the connections are closed.
 	OnServerExit(err error)
-
-	// OnShutdown is called when the server is stopped.
-	OnShutdown(context.Context)
 }
 
 /* ------------------------------------------------------------------------- */
@@ -76,10 +72,6 @@ func (sh *SwitchHandler) OnConnection(c net.Conn) { sh.Get().OnConnection(c) }
 // OnServerExit implements the interface Handler, which will forward the call
 // to the inner handler.
 func (sh *SwitchHandler) OnServerExit(err error) { sh.Get().OnServerExit(err) }
-
-// OnShutdown implements the interface Handler, which will forward the call
-// to the inner handler.
-func (sh *SwitchHandler) OnShutdown(c context.Context) { sh.Get().OnShutdown(c) }
 
 /* ------------------------------------------------------------------------- */
 
@@ -157,15 +149,7 @@ func (h *funcHandler) OnConnection(conn net.Conn) {
 	go h.onConnection(conn)
 }
 
-func (h *funcHandler) OnServerExit(err error)       { h.stop(context.TODO()) }
-func (h *funcHandler) OnShutdown(c context.Context) { h.stop(c) }
-func (h *funcHandler) stop(c context.Context) {
-	c, cancel := context.WithCancel(c)
-	go h.wait(cancel)
-	<-c.Done()
-}
-func (h *funcHandler) wait(cancel context.CancelFunc) {
-	defer cancel()
+func (h *funcHandler) OnServerExit(err error) {
 	h.cancel()
 	h.wg.Wait()
 }

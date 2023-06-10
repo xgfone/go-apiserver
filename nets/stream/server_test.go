@@ -56,6 +56,10 @@ func TestServer(t *testing.T) {
 			if interval, _ := time.ParseDuration(sleep); interval > 0 {
 				time.Sleep(interval)
 			}
+
+			t.Error("+++++++++++++", sleep)
+		} else {
+			t.Error("----------------")
 		}
 		if r.TLS == nil {
 			rw.WriteHeader(201)
@@ -66,7 +70,7 @@ func TestServer(t *testing.T) {
 
 	handler := NewHTTPServerHandler(ln.Addr(), httpHandler)
 	server := NewServer(ln, handler)
-	server.SetTLSConfig(serverTLSConfig, false)
+	server.SetTLSConfig(serverTLSConfig)
 
 	go server.Start()
 	go handler.Start()
@@ -79,9 +83,11 @@ func TestServer(t *testing.T) {
 
 	// Test HTTP
 	go func() {
+		t.Error("##################")
 		// request the block http to test the graceful shutdown.
-		url := "http://127.0.0.1:8301/?sleep=" + waitDuration.String()
-		testHTTPReq(t, client, url, 201)
+		url := "https://127.0.0.1:8301/?sleep=" + waitDuration.String()
+		testHTTPReq(t, client, url, 202)
+		t.Error("@@@@@@@@@@@@@@@@@")
 	}()
 
 	// Test HTTPS: first time
@@ -91,6 +97,7 @@ func TestServer(t *testing.T) {
 	testHTTPReq(t, client, "https://127.0.0.1:8301", 202)
 	testHTTPReq(t, client, "https://127.0.0.1:8301", 202)
 
+	time.Sleep(time.Millisecond * 10)
 	start := time.Now()
 	server.Stop()
 	if time.Since(start) < waitDuration {

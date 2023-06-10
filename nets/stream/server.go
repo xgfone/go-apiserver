@@ -27,6 +27,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/nets"
+	"github.com/xgfone/go-atomicvalue"
 )
 
 var defaultCipherSuites []uint16
@@ -44,16 +45,11 @@ func getCipherSuites() []uint16 {
 	return append([]uint16{}, defaultCipherSuites...)
 }
 
-type tlsOption struct {
-	TLSConfig *tls.Config
-	ForceTLS  bool
-}
-
 // Server implements a server based on the stream.
 type Server struct {
 	Handler  Handler
 	Listener net.Listener
-	tlsconf  atomic.Value
+	tlsconf  atomicvalue.Value[*tls.Config]
 
 	stopped int32
 	stops   []func()
@@ -61,45 +57,41 @@ type Server struct {
 
 // NewServer returns a new Server.
 func NewServer(ln net.Listener, handler Handler) *Server {
-	server := &Server{Listener: ln, Handler: handler}
-	server.SetTLSConfig(nil, false)
-	return server
+	return &Server{Listener: ln, Handler: handler}
 }
 
 // SetTLSConfig sets the TLS configuration, which is thread-safe.
-//
-// If tlsConfig is set and forceTLS is true, the client must use TLS.
-// If tlsConfig is set and forceTLS is false, the client maybe use TLS or not-TLS.
-// If tlsConfig is not set, forceTLS is ignored and the client must use not-TLS.
-func (s *Server) SetTLSConfig(tlsConfig *tls.Config, forceTLS bool) {
+func (s *Server) SetTLSConfig(tlsConfig *tls.Config) {
 	if tlsConfig != nil && len(tlsConfig.CipherSuites) == 0 {
 		tlsConfig.CipherSuites = getCipherSuites()
 	}
-	s.tlsconf.Store(tlsOption{TLSConfig: tlsConfig, ForceTLS: forceTLS})
+	s.tlsconf.Store(tlsConfig)
 }
 
 // GetTLSConfig returns the TLS configuration, which is thread-safe.
-func (s *Server) GetTLSConfig() (tlsConfig *tls.Config, forceTLS bool) {
-	opt := s.tlsconf.Load().(tlsOption)
-	return opt.TLSConfig, opt.ForceTLS
+func (s *Server) GetTLSConfig() *tls.Config {
+	return s.tlsconf.Load()
 }
 
-func (s *Server) shutdown(ctx context.Context) {
-	s.Listener.Close()
-	s.Handler.OnShutdown(ctx)
-	for _len := len(s.stops) - 1; _len >= 0; _len-- {
-		s.stops[_len]()
+func (s *Server) shutdown(err error, callback func()) {
+	if callback != nil {
+		defer callback()
+	}
+
+	if atomic.CompareAndSwapInt32(&s.stopped, 0, 1) {
+		s.Listener.Close()
+		s.Handler.OnServerExit(err)
+		for _len := len(s.stops) - 1; _len >= 0; _len-- {
+			s.stops[_len]()
+		}
 	}
 }
 
 // Stop stops the server and waits until all the connections are closed.
-func (s *Server) Stop() { s.Shutdown(context.Background()) }
-
-// Shutdown shuts down the server gracefully.
-func (s *Server) Shutdown(ctx context.Context) {
-	if atomic.CompareAndSwapInt32(&s.stopped, 0, 1) {
-		s.shutdown(ctx)
-	}
+func (s *Server) Stop() {
+	ctx, cancel := context.WithCancel(context.Background())
+	s.shutdown(net.ErrClosed, cancel)
+	<-ctx.Done()
 }
 
 // OnShutdown registers the callback functions, which are called
@@ -125,18 +117,13 @@ func (s *Server) Start() {
 					"listenaddr", addr, "err", err)
 			}
 
-			s.Handler.OnServerExit(err)
+			go s.shutdown(err, nil)
 			return
 		}
 
-		if tlsConfig, forceTLS := s.GetTLSConfig(); tlsConfig != nil {
-			if forceTLS {
-				conn = tls.Server(conn, tlsConfig)
-			} else {
-				conn = &TryTLSConn{Conn: conn, Config: tlsConfig}
-			}
+		if tlsConfig := s.GetTLSConfig(); tlsConfig != nil {
+			conn = tls.Server(conn, tlsConfig)
 		}
-
 		s.Handler.OnConnection(conn)
 	}
 }

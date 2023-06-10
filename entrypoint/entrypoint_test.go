@@ -15,7 +15,6 @@
 package entrypoint
 
 import (
-	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -88,11 +87,11 @@ func TestHTTPEntryPoint(t *testing.T) {
 	}
 
 	if ep := manager.DelEntryPoint(ep1.Name); ep != nil {
-		ep.Shutdown(context.Background())
+		ep.Stop()
 	}
 
 	if ep := manager.DelEntryPoint(ep2.Name); ep != nil {
-		ep.Shutdown(context.Background())
+		ep.Stop()
 	}
 
 	eps = manager.GetEntryPoints()

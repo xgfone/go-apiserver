@@ -15,7 +15,6 @@
 package stream
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -69,11 +68,15 @@ var (
 // ForwardConnListener is a listener implementing the interface Handler,
 // which accepts and returns a received connection.
 type ForwardConnListener struct {
-	// OnShutdownFunc is the callback function when calling the method OnShutdown.
-	OnShutdownFunc func(context.Context)
-
 	// OnCloseFunc is the callback function when closing the listener.
+	//
+	// Default: nil
 	OnCloseFunc func() error
+
+	// HandleConn wraps and handles the connection, and maybe return a new one.
+	//
+	// Default: nil
+	HandleConn func(old net.Conn) (new net.Conn, err error)
 
 	addr   net.Addr
 	connch chan net.Conn
@@ -101,12 +104,8 @@ func (l *ForwardConnListener) OnConnection(conn net.Conn) { l.connch <- conn }
 // OnServerExit implements the interface Handler.
 func (l *ForwardConnListener) OnServerExit(err error) { l.errch <- err }
 
-// OnShutdown implements the interface Handler.
-func (l *ForwardConnListener) OnShutdown(ctx context.Context) {
-	if l.OnShutdownFunc != nil {
-		l.OnShutdownFunc(ctx)
-	}
-}
+// Pending returns the number of the connection in the cache channel.
+func (l *ForwardConnListener) Pending() int { return len(l.connch) }
 
 // Addr implements the interface net.Listener.
 func (l *ForwardConnListener) Addr() net.Addr { return l.addr }
@@ -124,8 +123,8 @@ func (l *ForwardConnListener) Accept() (conn net.Conn, err error) {
 	select {
 	case err = <-l.errch:
 	case conn = <-l.connch:
-		if c, ok := conn.(*TryTLSConn); ok {
-			conn, err = c.GetConn()
+		if l.HandleConn != nil {
+			conn, err = l.HandleConn(conn)
 		}
 	}
 	return

@@ -15,7 +15,6 @@
 package entrypoint
 
 import (
-	"context"
 	"crypto/tls"
 	"fmt"
 
@@ -23,10 +22,10 @@ import (
 	"github.com/xgfone/go-atexit"
 )
 
-// TLSConfig is used to configure the TLS config.
+// TLSConfig is used to manage the TLS config.
 type TLSConfig interface {
 	SetTLSConfig(*tls.Config)
-	SetTLSForce(forceTLS bool)
+	GetTLSConfig() *tls.Config
 }
 
 // Server represents an entrypoint server.
@@ -34,8 +33,8 @@ type Server interface {
 	TLSConfig
 	Protocol() string
 	OnShutdown(...func())
-	Shutdown(context.Context)
 	Start()
+	Stop()
 }
 
 // ServerBuilder is used to build the entrypoint server.
@@ -89,7 +88,7 @@ func BuildServer(protocol, addr string, handler interface{}) (Server, error) {
 }
 
 // StartTLS is used to rapidly start the entrypoint server with TLS.
-func StartTLS(name, addr string, handler interface{}, tlsconfig *tls.Config, forceTLS bool) {
+func StartTLS(name, addr string, handler interface{}, tlsconfig *tls.Config) {
 	ep, err := NewEntryPoint(name, addr, handler)
 	if err != nil {
 		log.Fatal("fail to start the server", "name", name, "addr", addr, "err", err)
@@ -98,12 +97,11 @@ func StartTLS(name, addr string, handler interface{}, tlsconfig *tls.Config, for
 	atexit.OnExit(ep.Stop)
 	ep.OnShutdown(atexit.Execute)
 	ep.SetTLSConfig(tlsconfig)
-	ep.SetTLSForce(forceTLS)
 	ep.Start()
 	atexit.Wait()
 }
 
 // Start is used to rapidly start the entrypoint server.
 func Start(addr string, handler interface{}) {
-	StartTLS("", addr, handler, nil, false)
+	StartTLS("", addr, handler, nil)
 }

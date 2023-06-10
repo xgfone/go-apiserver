@@ -16,7 +16,6 @@ package middleware
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net"
 	"strings"
@@ -32,17 +31,6 @@ type testTCPHandler struct {
 	buf     *bytes.Buffer
 	name    string
 	handler stream.Handler
-}
-
-func (h testTCPHandler) OnShutdown(c context.Context) {
-	if h.handler == nil {
-		fmt.Fprintf(h.buf, "'%s' onshutdown handler\n", h.name)
-		return
-	}
-
-	fmt.Fprintf(h.buf, "'%s' onshutdown before middleware\n", h.name)
-	h.handler.OnShutdown(c)
-	fmt.Fprintf(h.buf, "'%s' onshutdown after middleware\n", h.name)
 }
 
 func (h testTCPHandler) OnServerExit(err error) {
@@ -83,7 +71,6 @@ func TestMiddlewareManagerTCP(t *testing.T) {
 	handler := manager.WrapHandler(tcpHandler).(stream.Handler)
 	handler.OnConnection(nil)
 	handler.OnServerExit(nil)
-	handler.OnShutdown(context.Background())
 
 	expects := []string{
 		// OnConnection
@@ -100,13 +87,6 @@ func TestMiddlewareManagerTCP(t *testing.T) {
 		"'mw2' onserverexit after middleware",
 		"'mw1' onserverexit after middleware",
 
-		// OnShutdown
-		"'mw1' onshutdown before middleware",
-		"'mw2' onshutdown before middleware",
-		"'handler' onshutdown handler",
-		"'mw2' onshutdown after middleware",
-		"'mw1' onshutdown after middleware",
-
 		// End
 		"",
 	}
@@ -116,6 +96,5 @@ func TestMiddlewareManagerTCP(t *testing.T) {
 	manager.SetHandler(tcpHandler)
 	manager.OnConnection(nil)
 	manager.OnServerExit(nil)
-	manager.OnShutdown(context.Background())
 	test.CheckStrings(t, "MiddlewareManagerTCP", strings.Split(buf.String(), "\n"), expects)
 }

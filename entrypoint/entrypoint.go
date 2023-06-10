@@ -16,13 +16,17 @@
 package entrypoint
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
+
+// EntryPointHook is used by NewEntryPoint to intercept the built entrypoint.
+//
+// Default: nil
+var EntryPointHook func(*EntryPoint)
 
 // EntryPoint represents an entrypoint of the services.
 type EntryPoint struct {
@@ -56,11 +60,12 @@ func NewEntryPoint(name, addr string, handler interface{}) (*EntryPoint, error) 
 		return nil, err
 	}
 
-	return &EntryPoint{Name: name, Addr: addr, Handler: handler, Server: server}, nil
+	ep := &EntryPoint{Name: name, Addr: addr, Handler: handler, Server: server}
+	if EntryPointHook != nil {
+		EntryPointHook(ep)
+	}
+	return ep, nil
 }
-
-// Stop is equal to ep.Shutdown(context.Background()).
-func (ep *EntryPoint) Stop() { ep.Shutdown(context.Background()) }
 
 // Start starts the entrypoint.
 func (ep *EntryPoint) Start() {
