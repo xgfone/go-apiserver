@@ -68,6 +68,9 @@ func NewStreamServer(proto string, ln net.Listener, handler stream.Handler) (ser
 	return
 }
 
+// Addr returns the address that the server listens on.
+func (s StreamServer) Addr() net.Addr { return s.Server.Listener.Addr() }
+
 // Protocol returns the protocol of the stream server.
 func (s StreamServer) Protocol() string { return s.Proto }
 

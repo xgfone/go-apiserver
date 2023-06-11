@@ -17,6 +17,7 @@ package entrypoint
 import (
 	"crypto/tls"
 	"fmt"
+	"net"
 
 	"github.com/xgfone/go-apiserver/log"
 	"github.com/xgfone/go-atexit"
@@ -31,6 +32,7 @@ type TLSConfig interface {
 // Server represents an entrypoint server.
 type Server interface {
 	TLSConfig
+	Addr() net.Addr
 	Protocol() string
 	OnShutdown(...func())
 	Start()
