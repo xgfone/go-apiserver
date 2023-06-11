@@ -87,17 +87,18 @@ func NewJSONHandler(w io.Writer, level Leveler) Handler {
 		w = Writer
 	}
 
-	return slog.HandlerOptions{
+	return slog.NewJSONHandler(w, &slog.HandlerOptions{
 		Level:       level,
 		AddSource:   true,
 		ReplaceAttr: replaceSourceAttr,
-	}.NewJSONHandler(w)
+	})
 }
 
 func replaceSourceAttr(groups []string, a slog.Attr) slog.Attr {
 	switch {
 	case a.Key == slog.SourceKey:
-		a.Value = slog.StringValue(helper.TrimPkgFile(a.Value.String()))
+		src := a.Value.Any().(*slog.Source)
+		a.Value = slog.StringValue(fmt.Sprintf("%s:%d", helper.TrimPkgFile(src.File), src.Line))
 	case a.Value.Kind() == slog.KindDuration:
 		a.Value = slog.StringValue(a.Value.Duration().String())
 	}
