@@ -18,13 +18,24 @@ package logger
 
 import "context"
 
-// LogRequest is used to log the request if set.
-var LogRequest Logger
+var (
+	// LogRequest is used to log the request if set,
+	//
+	// If returning nil, do not log any extra information.
+	//
+	// For the default implementation, it returns nil.
+	Start func(ctx context.Context, req interface{}) Collector = defaultStart
 
-type (
-	// Collector is used to collect the log key-value pairs.
-	Collector func(kvs []interface{}) (newkvs []interface{}, clean func())
-
-	// Logger is used to log the request.
-	Logger func(ctx context.Context, req interface{}) Collector
+	// Enabled is used to decide whether to log the request,
+	//
+	// For the default implementation, it returns true.
+	Enabled func(ctx context.Context, req interface{}) bool = defaultEnabled
 )
+
+// Collector is used to collect the extra log key-value pairs.
+//
+// If the returned clean function is nil, it indicates not to need to clean any.
+type Collector func(kvs []interface{}) (newkvs []interface{}, clean func())
+
+func defaultStart(ctx context.Context, req interface{}) Collector { return nil }
+func defaultEnabled(ctx context.Context, req interface{}) bool    { return true }

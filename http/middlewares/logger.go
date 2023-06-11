@@ -34,16 +34,12 @@ func Logger(priority int) middleware.Middleware {
 		next := h.(http.Handler)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
-			if !log.Enabled(ctx, log.LevelInfo) {
+			if !log.Enabled(ctx, log.LevelInfo) || !logger.Enabled(ctx, r) {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			var collect logger.Collector
-			if logger.LogRequest != nil {
-				collect = logger.LogRequest(ctx, r)
-			}
-
+			collect := logger.Start(ctx, r)
 			start := time.Now()
 			next.ServeHTTP(w, r)
 			cost := time.Since(start)
