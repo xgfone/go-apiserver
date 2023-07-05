@@ -21,22 +21,34 @@ import (
 
 // Pre-define some charsets to generate the random string.
 var (
-	DefaultCharset  = "0123456789abcdefghijklmnopqrstuvwxyz"
-	AlphaNumCharset = DefaultCharset + "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	NumCharset      = "0123456789"
+	HexCharset      = NumCharset + "abcdefABCDEF"
+	HexLowerCharset = NumCharset + "abcdef"
+	HexUpperCharset = NumCharset + "ABCDEF"
 
-	HexCharset      = "0123456789abcdefABCDEF"
-	HexLowerCharset = "0123456789abcdef"
-	HexUpperCharset = "0123456789ABCDEF"
+	AlphaLowerCharset = "abcdefghijklmnopqrstuvwxyz"
+	AlphaUpperCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	AlphaNumLowerCharset = NumCharset + AlphaLowerCharset
+	AlphaNumUpperCharset = NumCharset + AlphaUpperCharset
+	AlphaNumCharset      = NumCharset + AlphaLowerCharset + AlphaNumUpperCharset
+
+	DefaultCharset = AlphaNumLowerCharset
 )
 
 // RandomString generates a random string with the length from the given charsets.
 func RandomString(n int, charset string) string {
-	nlen := len(charset)
 	buf := make([]byte, n)
-	for i := 0; i < n; i++ {
+	Random(buf, charset)
+	return string(buf) // TODO: use unsafe.String??
+}
+
+// Random generates a random string with the length from the given charsets into buf.
+func Random(buf []byte, charset string) {
+	nlen := len(charset)
+	for i, _len := 0, len(buf); i < _len; i++ {
 		buf[i] = charset[rand.Intn(nlen)]
 	}
-	return string(buf)
 }
 
 // IsDigitString reports whether the string s only contains the characters [0-9].
