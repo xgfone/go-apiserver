@@ -37,6 +37,7 @@ const (
 	CodeAuthFailureInvalidCookie    = "AuthFailure.Invalid.Cookie"
 	CodeAuthFailureInvalidAPIKey    = "AuthFailure.Invalid.ApiKey"
 	CodeAuthFailureInvalidSignature = "AuthFailure.Invalid.Signature"
+	CodeAuthFailureDisabled         = "AuthFailure.Disabled"
 
 	CodeUnallowed                     = "Unallowed"              // Operation is prevented because a condition is not satisfied.
 	CodeUnallowedInUse                = "Unallowed.InUse"        // Something is in use, and the operation is exclusive.
@@ -81,6 +82,7 @@ var (
 	ErrAuthFailureInvalidCookie    = NewError(CodeAuthFailureInvalidCookie, "invalid authentication cookie")
 	ErrAuthFailureInvalidAPIKey    = NewError(CodeAuthFailureInvalidAPIKey, "invalid authentication apikey")
 	ErrAuthFailureInvalidSignature = NewError(CodeAuthFailureInvalidSignature, "invalid authentication signature")
+	ErrAuthFailureDisabled         = NewError(CodeAuthFailureDisabled, "the user is disabled")
 
 	ErrUnallowed                     = NewError(CodeUnallowed, "operation is not allowed")
 	ErrUnallowedInUse                = NewError(CodeUnallowedInUse, "in use")
