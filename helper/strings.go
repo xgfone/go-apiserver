@@ -28,10 +28,11 @@ var (
 
 	AlphaLowerCharset = "abcdefghijklmnopqrstuvwxyz"
 	AlphaUpperCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	AlphaCharset      = AlphaLowerCharset + AlphaUpperCharset
 
 	AlphaNumLowerCharset = NumCharset + AlphaLowerCharset
 	AlphaNumUpperCharset = NumCharset + AlphaUpperCharset
-	AlphaNumCharset      = NumCharset + AlphaLowerCharset + AlphaNumUpperCharset
+	AlphaNumCharset      = NumCharset + AlphaCharset
 
 	DefaultCharset = AlphaNumLowerCharset
 )
