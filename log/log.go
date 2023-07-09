@@ -46,6 +46,9 @@ var (
 
 	// String is a convenient function to new a key-value pair based on string.
 	String = slog.String
+
+	// AnyValue is used to return a any value.
+	AnyValue = slog.AnyValue
 )
 
 type (

@@ -28,6 +28,13 @@ import (
 	"github.com/xgfone/go-defaults"
 )
 
+// WrapLoggerResponse is used to wrap the old http.ResponseWriter and returns a new.
+//
+// If clean is not equal to nil, call it to clean something after handling the request.
+//
+// Default: nil
+var WrapLoggerResponse func(http.ResponseWriter, *http.Request) (new http.ResponseWriter, kvs []interface{}, clean func())
+
 // Logger returns a new common http handler middleware to log the http request.
 func Logger(priority int) middleware.Middleware {
 	return middleware.NewMiddleware("logger", priority, func(h interface{}) interface{} {
@@ -37,6 +44,15 @@ func Logger(priority int) middleware.Middleware {
 			if !log.Enabled(ctx, log.LevelInfo) || !logger.Enabled(ctx, r) {
 				next.ServeHTTP(w, r)
 				return
+			}
+
+			var respkvs []interface{}
+			if WrapLoggerResponse != nil {
+				var clean func()
+				w, respkvs, clean = WrapLoggerResponse(w, r)
+				if clean != nil {
+					defer clean()
+				}
 			}
 
 			collect := logger.Start(ctx, r)
@@ -79,6 +95,10 @@ func Logger(priority int) middleware.Middleware {
 				if clean != nil {
 					defer clean()
 				}
+			}
+
+			if len(respkvs) > 0 {
+				kvs = append(kvs, respkvs...)
 			}
 
 			if err != nil {
