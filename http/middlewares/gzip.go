@@ -109,7 +109,11 @@ func Gzip(priority, level int, domains ...string) middleware.Middleware {
 
 					gw := acquireGzipResponse(w)
 					defer releaseGzipResponse(gw)
-					w = reqresp.NewResponseWriter(w, reqresp.Write(gw.Write))
+					rw := reqresp.NewResponseWriter(w, reqresp.Write(gw.Write))
+					if c := reqresp.GetContext(w, r); c != nil {
+						c.ResponseWriter = rw
+					}
+					w = rw
 				}
 			}
 

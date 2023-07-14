@@ -46,12 +46,17 @@ func Logger(priority int) middleware.Middleware {
 				return
 			}
 
+			c := reqresp.GetContext(w, r)
+
 			var respkvs []interface{}
 			if WrapLoggerResponse != nil {
 				var clean func()
 				w, respkvs, clean = WrapLoggerResponse(w, r)
 				if clean != nil {
 					defer clean()
+				}
+				if c != nil {
+					c.ResponseWriter = reqresp.NewResponseWriter(w)
 				}
 			}
 
@@ -62,7 +67,6 @@ func Logger(priority int) middleware.Middleware {
 
 			var code int
 			var err error
-			c := reqresp.GetContext(w, r)
 			if c != nil {
 				code = c.StatusCode()
 				err = c.Err
