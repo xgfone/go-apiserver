@@ -4,7 +4,7 @@ require (
 	github.com/xgfone/go-atexit v0.10.0
 	github.com/xgfone/go-atomicvalue v0.2.0
 	github.com/xgfone/go-binder v0.4.0
-	github.com/xgfone/go-cast v0.8.0
+	github.com/xgfone/go-cast v0.8.1
 	github.com/xgfone/go-defaults v0.6.0
 	github.com/xgfone/go-generics v0.3.0
 	github.com/xgfone/predicate v1.3.3
