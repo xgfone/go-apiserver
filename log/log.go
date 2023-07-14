@@ -40,15 +40,16 @@ const (
 	LevelFatal = slog.LevelError + 4
 )
 
+// Writer is the default global writer.
+var Writer = io2.NewSwitchWriter(os.Stderr)
+
+// Some aliases of the attribute values.
 var (
-	// Writer is the default global writer.
-	Writer = io2.NewSwitchWriter(os.Stderr)
-
-	// String is a convenient function to new a key-value pair based on string.
-	String = slog.String
-
-	// AnyValue is used to return a any value.
-	AnyValue = slog.AnyValue
+	AnyValue      = slog.AnyValue
+	IntValue      = slog.IntValue
+	TimeValue     = slog.TimeValue
+	StringValue   = slog.StringValue
+	DurationValue = slog.DurationValue
 )
 
 type (
