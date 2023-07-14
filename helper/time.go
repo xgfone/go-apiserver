@@ -16,6 +16,12 @@ package helper
 
 import "time"
 
+// Some common durations.
+const (
+	Day  = time.Hour * 24
+	Week = Day * 7
+)
+
 // StopTimer stops the timer.
 func StopTimer(timer *time.Timer) {
 	if timer != nil {
