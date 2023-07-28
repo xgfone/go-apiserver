@@ -48,14 +48,17 @@ func TestGetCallStack(t *testing.T) {
 func ExampleTrimPkgFile() {
 	srcfile := TrimPkgFile("/path/to/src/github.com/xgfone/go-apiserver/srcfile.go")
 	modfile := TrimPkgFile("/path/to/pkg/mod/github.com/xgfone/go-apiserver/modfile.go")
-	origfile := TrimPkgFile("/path/to/github.com/xgfone/go-apiserver/modfile.go")
+	repofile := TrimPkgFile("/path/to/github.com/xgfone/go-apiserver/modfile.go")
+	origfile := TrimPkgFile("/path/to/repo/file.go")
 
 	fmt.Println(srcfile)
 	fmt.Println(modfile)
+	fmt.Println(repofile)
 	fmt.Println(origfile)
 
 	// Output:
 	// github.com/xgfone/go-apiserver/srcfile.go
 	// github.com/xgfone/go-apiserver/modfile.go
-	// /path/to/github.com/xgfone/go-apiserver/modfile.go
+	// github.com/xgfone/go-apiserver/modfile.go
+	// /path/to/repo/file.go
 }

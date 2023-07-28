@@ -20,16 +20,25 @@ import (
 	"strings"
 )
 
-var trimPrefixes = []string{"/pkg/mod/", "/src/"}
+var (
+	trimPrefixes = []string{"/pkg/mod/", "/src/"}
+	trimGitRepos = []string{"github.", "gitlab."}
+)
 
 // TrimPkgFile trims the "/src/" or "/pkg/mod/" prefix path of the package file.
 func TrimPkgFile(file string) string {
 	for _, mark := range trimPrefixes {
 		if index := strings.Index(file, mark); index > -1 {
-			file = file[index+len(mark):]
-			break
+			return file[index+len(mark):]
 		}
 	}
+
+	for _, repo := range trimGitRepos {
+		if index := strings.Index(file, repo); index > -1 {
+			return file[index:]
+		}
+	}
+
 	return file
 }
 
