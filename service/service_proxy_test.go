@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package task
+package service
 
 import (
 	"context"
@@ -21,29 +21,31 @@ import (
 	"time"
 )
 
-func TestService(t *testing.T) {
-	runTask := func(f func(context.Context)) { Run(AsyncRunner(RunnerFunc(f))) }
+func TestProxy(t *testing.T) {
+	runTask := func(f func(context.Context)) {
+		DefaultProxy.Run(func(c context.Context) { go f(c) })
+	}
 
 	parent, pcancel := context.WithCancel(context.Background())
-	DefaultService = NewService(parent)
-	defer DefaultService.Deactivate()
+	DefaultProxy = NewProxy(parent)
+	defer DefaultProxy.Deactivate()
 
-	if Context() != nil {
+	if DefaultProxy.Context() != nil {
 		t.Errorf("unexpect the context")
 	}
-	if IsActivated() {
+	if DefaultProxy.IsActivated() {
 		t.Errorf("unexpect the task service is activated")
 	}
 	runTask(func(context.Context) {
 		t.Errorf("unexpect the task is run")
 	})
 
-	DefaultService.Activate()
+	DefaultProxy.Activate()
 
-	if Context() == nil {
+	if DefaultProxy.Context() == nil {
 		t.Errorf("expect the context, but got nil")
 	}
-	if !IsActivated() {
+	if !DefaultProxy.IsActivated() {
 		t.Errorf("the task service is not activated")
 	}
 
@@ -60,14 +62,14 @@ func TestService(t *testing.T) {
 		err.Store(ctx.Err())
 	})
 
-	DefaultService.Deactivate()
+	DefaultProxy.Deactivate()
 	time.Sleep(time.Millisecond * 10)
 	if v := err.Load(); v == nil || v != context.Canceled {
 		t.Errorf("expect the error context.Canceled, but got '%v'", v)
 	}
 
 	err = atomic.Value{}
-	DefaultService.Activate()
+	DefaultProxy.Activate()
 	runTask(func(ctx context.Context) {
 		<-ctx.Done()
 		err.Store(ctx.Err())
@@ -79,7 +81,7 @@ func TestService(t *testing.T) {
 		t.Errorf("expect the error context.Canceled, but got '%s'", v)
 	}
 
-	if err := Context().Err(); err != context.Canceled {
+	if err := DefaultProxy.Context().Err(); err != context.Canceled {
 		t.Errorf("expect the error context.Canceled, but got '%s'", err)
 	}
 }
