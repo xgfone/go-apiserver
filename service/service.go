@@ -14,6 +14,8 @@
 
 package service
 
+func nothing() {}
+
 type serviceImpl struct {
 	activate   func()
 	deactivate func()
@@ -24,6 +26,12 @@ func (s serviceImpl) Deactivate() { s.deactivate() }
 
 // NewService converts the activate and deactivate functions to the service.
 func NewService(activate, deactivate func()) Service {
+	if activate == nil {
+		activate = nothing
+	}
+	if deactivate == nil {
+		deactivate = nothing
+	}
 	return serviceImpl{activate: activate, deactivate: deactivate}
 }
 
