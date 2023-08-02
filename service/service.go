@@ -14,6 +14,14 @@
 
 package service
 
+// DefaultServices is the global default multi-services.
+var DefaultServices Services
+
+// Append appends the services into DefaultServices.
+func Append(services ...Service) {
+	DefaultServices = DefaultServices.Append(services...)
+}
+
 func nothing() {}
 
 type serviceImpl struct {
