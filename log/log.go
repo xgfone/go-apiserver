@@ -103,6 +103,15 @@ func replaceSourceAttr(groups []string, a slog.Attr) slog.Attr {
 	case a.Key == slog.SourceKey:
 		src := a.Value.Any().(*slog.Source)
 		a.Value = slog.StringValue(fmt.Sprintf("%s:%d", helper.TrimPkgFile(src.File), src.Line))
+	case a.Key == slog.LevelKey:
+		if lvl, ok := a.Value.Any().(Level); ok {
+			switch lvl {
+			case LevelTrace:
+				a.Value = StringValue("TRACE")
+			case LevelFatal:
+				a.Value = StringValue("FATAL")
+			}
+		}
 	case a.Value.Kind() == slog.KindDuration:
 		a.Value = slog.StringValue(a.Value.Duration().String())
 	}
