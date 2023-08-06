@@ -41,6 +41,8 @@ const (
 
 	CodeUnallowed                     = "Unallowed"              // Operation is prevented because a condition is not satisfied.
 	CodeUnallowedInUse                = "Unallowed.InUse"        // Something is in use, and the operation is exclusive.
+	CodeUnallowedExist                = "Unallowed.Exist"        // Something exists, and the operation is exclusive.
+	CodeUnallowedNotExist             = "Unallowed.NotExist"     // Something does not exist, and the operation is exclusive.
 	CodeUnallowedInOperation          = "Unallowed.InOperation"  // Another is exeucted, and the current is exclusive.
 	CodeUnallowedUnavailable          = "Unallowed.Unavailable"  // Something is unavailable for the moment, and maybe recover later.
 	CodeUnallowedUnauthorized         = "Unallowed.Unauthorized" // The operator has no permission of the operation.
@@ -86,6 +88,8 @@ var (
 
 	ErrUnallowed                     = NewError(CodeUnallowed, "operation is not allowed")
 	ErrUnallowedInUse                = NewError(CodeUnallowedInUse, "in use")
+	ErrUnallowedExist                = NewError(CodeUnallowedExist, "exist")
+	ErrUnallowedNotExist             = NewError(CodeUnallowedNotExist, "not exist")
 	ErrUnallowedInOperation          = NewError(CodeUnallowedInOperation, "in operation")
 	ErrUnallowedUnavailable          = NewError(CodeUnallowedUnavailable, "unavailable")
 	ErrUnallowedUnauthorized         = NewError(CodeUnallowedUnauthorized, "operation is unauthorized")
