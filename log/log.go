@@ -101,8 +101,9 @@ func NewJSONHandler(w io.Writer, level Leveler) Handler {
 func replaceSourceAttr(groups []string, a slog.Attr) slog.Attr {
 	switch {
 	case a.Key == slog.SourceKey:
-		src := a.Value.Any().(*slog.Source)
-		a.Value = slog.StringValue(fmt.Sprintf("%s:%d", helper.TrimPkgFile(src.File), src.Line))
+		if src, ok := a.Value.Any().(*slog.Source); ok {
+			a.Value = slog.StringValue(fmt.Sprintf("%s:%d", helper.TrimPkgFile(src.File), src.Line))
+		}
 	case a.Key == slog.LevelKey:
 		if lvl, ok := a.Value.Any().(Level); ok {
 			switch lvl {
