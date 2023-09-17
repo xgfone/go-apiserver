@@ -26,10 +26,8 @@ type Responder interface {
 
 // Response represents a response result.
 type Response struct {
-	RequestId string      `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
-	Error     error       `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
-	Type      string      `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
-	Data      interface{} `json:",omitempty" yaml:",omitempty" xml:",omitempty"`
+	Error error       `json:"error,omitempty" yaml:"error,omitempty" xml:"error,omitempty"`
+	Data  interface{} `json:"data,omitempty" yaml:"data,omitempty" xml:"data,omitempty"`
 }
 
 // NewResponse returns a new response.
@@ -37,21 +35,9 @@ func NewResponse(data interface{}, err error) Response {
 	return Response{Data: data, Error: err}
 }
 
-// WithRequestID returns a new Response with the given request id.
-func (r Response) WithRequestID(requestID string) Response {
-	r.RequestId = requestID
-	return r
-}
-
 // WithData returns a new Response with the given data.
 func (r Response) WithData(data interface{}) Response {
 	r.Data = data
-	return r
-}
-
-// WithType returns a new Response with the data type.
-func (r Response) WithType(_type string) Response {
-	r.Type = _type
 	return r
 }
 
@@ -77,11 +63,6 @@ func (r *Response) DecodeJSON(reader io.Reader) error {
 // DecodeJSONBytes uses json decoder to decode the []byte data into the response.
 func (r *Response) DecodeJSONBytes(data []byte) error {
 	return json.Unmarshal(data, r)
-}
-
-// WithRequestID returns a Response with the error and request id.
-func (e Error) WithRequestID(requestID string) Response {
-	return Response{RequestId: requestID, Error: e}
 }
 
 // Respond sends the response by the context as JSON.
