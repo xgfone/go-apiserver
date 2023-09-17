@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -372,6 +373,11 @@ func (c *Context) Write(p []byte) (int, error) { return c.ResponseWriter.Write(p
 // ---------------------------------------------------------------------------
 // Common
 // ---------------------------------------------------------------------------
+
+// LocalAddr returns the local address of the request connection.
+func (c *Context) LocalAddr() net.Addr {
+	return c.Request.Context().Value(http.LocalAddrContextKey).(net.Addr)
+}
 
 // RequestID returns the request header "X-Request-Id".
 func (c *Context) RequestID() string { return c.Request.Header.Get(header.HeaderXRequestID) }

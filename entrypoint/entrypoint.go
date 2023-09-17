@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/xgfone/go-apiserver/log"
-	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
 
 // EntryPointHook is used by NewEntryPoint to intercept the built entrypoint.
@@ -76,20 +75,4 @@ func (ep *EntryPoint) Start() {
 
 	log.Info(fmt.Sprintf("stop the %s server", ep.Protocol()),
 		"name", ep.Name, "listenaddr", ep.Addr)
-}
-
-// AddCertificate implements the interface tlscert.CertUpdater
-// to add the certificate with the name into the server if it supports TLS.
-func (ep *EntryPoint) AddCertificate(name string, certificate tlscert.Certificate) {
-	if updater, ok := ep.Server.(tlscert.Updater); ok {
-		updater.AddCertificate(name, certificate)
-	}
-}
-
-// DelCertificate implements the interface cert.CertUpdater
-// to delete the certificate by the name from the server if it supports TLS.
-func (ep *EntryPoint) DelCertificate(name string) {
-	if updater, ok := ep.Server.(tlscert.Updater); ok {
-		updater.DelCertificate(name)
-	}
 }

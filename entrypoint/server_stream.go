@@ -15,12 +15,10 @@
 package entrypoint
 
 import (
-	"crypto/tls"
 	"net"
 
 	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/nets/stream"
-	"github.com/xgfone/go-apiserver/tls/tlscert"
 )
 
 func init() {
@@ -49,7 +47,6 @@ var _ Server = StreamServer{}
 type StreamServer struct {
 	Proto       string
 	Middlewares *middleware.Manager
-	CertManager *tlscert.Manager
 	*stream.Server
 }
 
@@ -62,7 +59,6 @@ func NewStreamServer(proto string, ln net.Listener, handler stream.Handler) (ser
 	}
 
 	server.Proto = proto
-	server.CertManager = tlscert.NewManager()
 	server.Middlewares = middleware.NewManager(handler)
 	server.Server = stream.NewServer(ln, server.Middlewares)
 	return
@@ -73,21 +69,3 @@ func (s StreamServer) Addr() net.Addr { return s.Server.Listener.Addr() }
 
 // Protocol returns the protocol of the stream server.
 func (s StreamServer) Protocol() string { return s.Proto }
-
-// SetTLSConfig sets the tls configuration, which is thread-safe.
-func (s StreamServer) SetTLSConfig(c *tls.Config) {
-	if c != nil && c.GetCertificate == nil && len(c.Certificates) == 0 {
-		c.GetCertificate = s.CertManager.GetTLSCertificate
-	}
-	s.Server.SetTLSConfig(c)
-}
-
-// AddCertificate implements the interface tlscert.CertUpdater.
-func (s StreamServer) AddCertificate(name string, certificate tlscert.Certificate) {
-	s.CertManager.AddCertificate(name, certificate)
-}
-
-// DelCertificate implements the interface tlscert.CertUpdater.
-func (s StreamServer) DelCertificate(name string) {
-	s.CertManager.DelCertificate(name)
-}

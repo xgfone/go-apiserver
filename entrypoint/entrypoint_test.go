@@ -25,12 +25,12 @@ import (
 func TestHTTPEntryPoint(t *testing.T) {
 	manager := NewManager()
 
-	ep1, err := NewEntryPoint("http8001", "127.0.0.1:8001", handler.Handler200)
+	ep1, err := NewEntryPoint("http8101", "127.0.0.1:8101", handler.Handler200)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ep2, err := NewEntryPoint("http8002", "127.0.0.1:8002", handler.Handler200)
+	ep2, err := NewEntryPoint("http8102", "127.0.0.1:8102", handler.Handler200)
 	if err != nil {
 		t.Fatal(err)
 	}
