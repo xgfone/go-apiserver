@@ -55,11 +55,6 @@ func TestMatcher(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	req.RemoteAddr = "1.2.3.4"
 
-	// ClientIP
-	testMatcher(t, req, Must(ClientIP("1.2.3.4")), true)
-	testMatcher(t, req, Must(ClientIP("1.2.3.0/24")), true)
-	testMatcher(t, req, Must(ClientIP("5.6.7.8")), false)
-
 	// Method
 	testMatcher(t, req, Must(Method("GET")), true)
 	testMatcher(t, req, Must(Method("POST")), false)
@@ -92,9 +87,6 @@ func TestMatcher(t *testing.T) {
 	// HeaderRegexp
 	testMatcher(t, req, Must(HeaderRegexp("Content-Type", `application/.?`)), true)
 	testMatcher(t, req, Must(HeaderRegexp("Content-Type", `.?/plain`)), false)
-
-	// Not
-	testMatcher(t, req, Not(Must(ClientIP("1.2.3.4"))), false)
 
 	// And
 	testMatcher(t, req, And(Must(Method("GET")), Must(Path("/path/to"))), true)

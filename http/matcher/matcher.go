@@ -268,11 +268,6 @@ var (
 	// Method returns a method matcher to match the request method.
 	Method func(method string) (Matcher, error) = methodMatcher
 
-	// ClientIP returns a matcher to match the remote address of the request.
-	//
-	// Support that clientIP is an IP or CIDR, such as "1.2.3.4", "1.2.3.0/24".
-	ClientIP func(clientIP string) (Matcher, error) = clientIPMatcher
-
 	// Query returns a qeury matcher to match the request query.
 	//
 	// If the value is empty, check whether the request contains the query "key".
@@ -456,18 +451,6 @@ func methodMatcher(method string) (Matcher, error) {
 	desc := fmt.Sprintf("Method(`%s`)", method)
 	return New(PriorityMethod, desc, func(_ context.Context, r *http.Request) bool {
 		return r.Method == method
-	}), nil
-}
-
-func clientIPMatcher(clientIP string) (Matcher, error) {
-	ipChecker, err := nets.NewIPChecker(clientIP)
-	if err != nil {
-		return nil, err
-	}
-
-	desc := fmt.Sprintf("ClientIP(`%s`)", clientIP)
-	return New(PriorityClientIP, desc, func(_ context.Context, r *http.Request) bool {
-		return ipChecker.CheckIP(GetClientIP(r))
 	}), nil
 }
 

@@ -30,29 +30,18 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/header"
-	"github.com/xgfone/go-apiserver/http/matcher"
+	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router/action"
-	"github.com/xgfone/go-apiserver/internal/ruler"
-	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-generics/maps"
 	"github.com/xgfone/go-generics/slices"
 )
-
-// BuildMatcherRule is the default build function to build the matcher by the rule.
-var BuildMatcherRule func(matcherRule string) (matcher.Matcher, error) = ruler.Build
 
 // DefaultRouter is the default global ruler router.
 var DefaultRouter = NewRouter()
 
 // Router is used to manage a set of routes based on the ruler.
 type Router struct {
-	// BuildMatcherRule is used to build the matcher by the rule string.
-	//
-	// Default: ruler.Build
-	// See https://pkg.go.dev/github.com/xgfone/go-apiserver/internal/ruler#Build
-	BuildMatcherRule func(matcherRule string) (matcher.Matcher, error)
-
 	// NotFound is used when the manager is used as http.Handler
 	// and does not find the route.
 	//
@@ -73,18 +62,8 @@ type Router struct {
 func NewRouter() *Router {
 	r := &Router{rmaps: make(map[string]Route, 16)}
 	r.Middlewares = middleware.NewManager(nil)
-	r.BuildMatcherRule = BuildMatcherRule
 	r.updateRoutes()
 	return r
-}
-
-func (r *Router) buildMatcher(rule string) (matcher.Matcher, error) {
-	if r.BuildMatcherRule != nil {
-		return r.BuildMatcherRule(rule)
-	} else if BuildMatcherRule != nil {
-		return BuildMatcherRule(rule)
-	}
-	return ruler.Build(rule)
 }
 
 // ServeHTTP implements the interface http.Handler.
@@ -232,7 +211,7 @@ func (r *Router) checkRoute(route *Route) error {
 		return errors.New("the route matcher is nil")
 	}
 
-	if mdws := r.Middlewares.GetMiddlewares(); len(mdws) > 0 {
+	if mdws := r.Middlewares.Middlewares(); len(mdws) > 0 {
 		route.Use(mdws...)
 	}
 	return nil

@@ -20,8 +20,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/middleware"
 	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-generics/maps"
 )
@@ -239,5 +239,5 @@ func (r *Router) checkAction(action string, handler http.Handler) http.Handler {
 		panic("action handler is nil")
 	}
 
-	return r.Middlewares.WrapHandler(handler).(http.Handler)
+	return r.Middlewares.Handler(handler)
 }

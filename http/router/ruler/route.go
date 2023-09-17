@@ -18,7 +18,7 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/matcher"
-	"github.com/xgfone/go-apiserver/middleware"
+	"github.com/xgfone/go-apiserver/http/middleware"
 )
 
 // Routes is a group of Routes.

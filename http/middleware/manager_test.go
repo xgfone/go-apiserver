@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,43 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package middlewares
+package middleware
 
 import (
-	"compress/gzip"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/xgfone/go-apiserver/http/header"
 )
 
-func TestGzip(t *testing.T) {
-	expect := "data"
+func TestManager(t *testing.T) {
+	m := NewManager(nil)
+	m.Append()
+	m.Append(MiddlewareFunc(func(next http.Handler) http.Handler { return next }))
 
-	var handler http.Handler
-	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(expect))
-	})
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expect a panic, but got not")
+			}
+		}()
 
-	gzipMiddleware := Gzip(123, -1)
-	handler = gzipMiddleware.Handler(handler).(http.Handler)
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "http://localhost", nil)
+		m.ServeHTTP(rec, req)
+	}()
+
+	m.Reset()
+	m.SetHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(204)
+	}))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "http://localhost", nil)
-	req.Header.Set(header.HeaderAcceptEncoding, "gzip")
-	handler.ServeHTTP(rec, req)
-
-	r, err := gzip.NewReader(rec.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	data, err := io.ReadAll(r)
-	if err != nil {
-		t.Error(err)
-	} else if s := string(data); s != expect {
-		t.Errorf("expect '%s', but got '%s'", expect, s)
+	m.ServeHTTP(rec, req)
+	if rec.Code != 204 {
+		t.Errorf("expect status code %d, but got %d", 204, rec.Code)
 	}
 }

@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	"github.com/xgfone/go-apiserver/http/matcher"
+	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/middleware"
 )
 
 // Name returns a route builder with the name, which is equal to
@@ -35,12 +35,6 @@ func (r *Router) Name(name string) RouteBuilder {
 // which is equal to NewRouteBuilder(r).Matcher(matcher).
 func (r *Router) Matcher(matcher matcher.Matcher) RouteBuilder {
 	return NewRouteBuilder(r).Matcher(matcher)
-}
-
-// Rule returns a route builder with the matcher rule,
-// which is equal to NewRouteBuilder(r).Rule(matcherRule).
-func (r *Router) Rule(matcherRule string) RouteBuilder {
-	return NewRouteBuilder(r).Rule(matcherRule)
 }
 
 // Group returns a route builder with the prefix path group,
@@ -148,16 +142,6 @@ func (b RouteBuilder) Or(matchers ...matcher.Matcher) RouteBuilder {
 	return b.And(matcher.Or(matchers...))
 }
 
-// Rule is the same as Matcher, but use the builder to build the matcher
-// with the matcher rule string.
-func (b RouteBuilder) Rule(matcherRule string) RouteBuilder {
-	if b.err == nil {
-		b.matcher, b.err = b.manager.buildMatcher(matcherRule)
-		b.matchers = nil
-	}
-	return b
-}
-
 // Group appends the prefix of the paths of a group of routes,
 // which will add the prefix into the path of each route
 // when registering it.
@@ -255,17 +239,6 @@ func (b RouteBuilder) Method(method string) RouteBuilder {
 	return b
 }
 
-// ClientIP is the same as b.And(matcher.ClientIP(clientIP)).
-func (b RouteBuilder) ClientIP(clientIP string) RouteBuilder {
-	if b.err == nil {
-		var m matcher.Matcher
-		if m, b.err = matcher.ClientIP(clientIP); b.err == nil {
-			b = b.And(m)
-		}
-	}
-	return b
-}
-
 // Query is the same as b.And(matcher.Query(key, value)).
 func (b RouteBuilder) Query(key, value string) RouteBuilder {
 	if b.err == nil {
@@ -323,7 +296,7 @@ func (b RouteBuilder) HostRegexp(regexpHost string) RouteBuilder {
 
 // Use appends the http handler middlewares that act on the latter handler.
 func (b RouteBuilder) Use(middlewares ...middleware.Middleware) RouteBuilder {
-	b.mdws = b.mdws.Clone(middlewares...)
+	b.mdws = b.mdws.Clone().Append(middlewares...)
 	return b
 }
 

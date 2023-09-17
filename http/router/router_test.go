@@ -22,15 +22,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/internal/test"
-	"github.com/xgfone/go-apiserver/middleware"
 )
 
-func logMiddleware(buf *bytes.Buffer, name string, prio int) middleware.Middleware {
-	return middleware.NewMiddleware(name, prio, func(h interface{}) interface{} {
+func logMiddleware(buf *bytes.Buffer, name string) middleware.Middleware {
+	return middleware.MiddlewareFunc(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(buf, "middleware '%s' before\n", name)
-			h.(http.Handler).ServeHTTP(rw, r)
+			next.ServeHTTP(rw, r)
 			fmt.Fprintf(buf, "middleware '%s' after\n", name)
 		})
 	})
@@ -48,7 +48,7 @@ func TestRouter(t *testing.T) {
 		}
 	}))
 
-	router.Middlewares.Use(logMiddleware(buf, "log1", 1), logMiddleware(buf, "log2", 2))
+	router.Use(logMiddleware(buf, "log1"), logMiddleware(buf, "log2"))
 	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/path1", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
