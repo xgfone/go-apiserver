@@ -16,6 +16,7 @@ package helper
 
 import (
 	"fmt"
+	"testing"
 	"time"
 )
 
@@ -37,4 +38,16 @@ func ExampleTimeAdd() {
 	// Hour: 7
 	// Minute: 7
 	// Second: 7
+}
+
+func TestStopTimer(t *testing.T) {
+	timer := time.NewTimer(time.Second)
+	StopTimer(timer)
+	StopTimer(nil)
+}
+
+func TestStopTicker(t *testing.T) {
+	ticker := time.NewTicker(time.Second)
+	StopTicker(ticker)
+	StopTicker(nil)
 }

@@ -19,8 +19,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/xgfone/go-generics/funcs"
 )
 
 func wrapHandler(next http.HandlerFunc) http.HandlerFunc {
@@ -54,15 +52,6 @@ func TestResponseWriter(t *testing.T) {
 	if w, ok := rw.(interface{ Unwrap() http.ResponseWriter }); !ok {
 		t.Error("expect wrapped ResponseWriter")
 	} else if r, ok := w.Unwrap().(*httptest.ResponseRecorder); !ok {
-		t.Error("expect httptest.ResponseRecorder")
-	} else if r != rec {
-		t.Error("unexpected httptest.ResponseRecorder")
-	}
-
-	if _, ok := funcs.Unwrap[http.ResponseWriter](rw); !ok {
-		t.Error("expect WrappedResponseWriter")
-	}
-	if r, ok := funcs.UnwrapAll[http.ResponseWriter](rw).(*httptest.ResponseRecorder); !ok {
 		t.Error("expect httptest.ResponseRecorder")
 	} else if r != rec {
 		t.Error("unexpected httptest.ResponseRecorder")

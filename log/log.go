@@ -26,7 +26,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/io2"
 	"github.com/xgfone/go-atexit"
 	"github.com/xgfone/go-defaults"
@@ -60,7 +59,7 @@ func replaceSourceAttr(groups []string, a slog.Attr) slog.Attr {
 	switch {
 	case a.Key == slog.SourceKey:
 		if src, ok := a.Value.Any().(*slog.Source); ok {
-			a.Value = slog.StringValue(fmt.Sprintf("%s:%d", helper.TrimPkgFile(src.File), src.Line))
+			a.Value = slog.StringValue(fmt.Sprintf("%s:%d", defaults.TrimPkgFile(src.File), src.Line))
 		}
 	case a.Key == slog.LevelKey:
 		if lvl, ok := a.Value.Any().(slog.Level); ok {

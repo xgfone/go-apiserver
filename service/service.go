@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package service provides a common service interface.
 package service
+
+import "slices"
 
 // DefaultServices is the global default multi-services.
 var DefaultServices Services
@@ -43,9 +46,6 @@ func NewService(activate, deactivate func()) Service {
 	return serviceImpl{activate: activate, deactivate: deactivate}
 }
 
-// NothingService returns a nothing service, which does nothing.
-func NothingService() Service { return NewService(func() {}, func() {}) }
-
 // Service represents a non-blocking service interface.
 type Service interface {
 	// Activate is used to activate the service to work in the background,
@@ -60,18 +60,14 @@ type Service interface {
 // Services represents a group services.
 type Services []Service
 
-// Append appends the new services into the original group
-// and returns the new services.
+// Append appends the new services and returns the new.
 func (ss Services) Append(services ...Service) Services {
 	return append(ss, services...)
 }
 
-// Clone clones itself and appends the new services into the cloned services.
-func (ss Services) Clone(services ...Service) Services {
-	newss := make(Services, len(services)+len(ss))
-	copy(newss[len(ss):], services)
-	copy(newss, ss)
-	return newss
+// Clone clones itself and returns a new one.
+func (ss Services) Clone() Services {
+	return slices.Clone(ss)
 }
 
 // Activate activate all the services in the group.

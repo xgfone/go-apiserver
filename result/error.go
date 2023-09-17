@@ -14,7 +14,11 @@
 
 package result
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+)
 
 var _ CodeGetter = Error{}
 
@@ -83,4 +87,19 @@ func (e Error) WithMessage(msgfmt string, msgargs ...interface{}) Error {
 		e.Message = fmt.Sprintf(msgfmt, msgargs...)
 	}
 	return e
+}
+
+// Decode uses the decode function to decode the result to the error.
+func (e *Error) Decode(decode func(interface{}) error) error {
+	return decode(e)
+}
+
+// DecodeJSON uses json decoder to decode from the reader into the error.
+func (e *Error) DecodeJSON(reader io.Reader) error {
+	return json.NewDecoder(reader).Decode(e)
+}
+
+// DecodeJSONBytes uses json decoder to decode the []byte data into the error.
+func (e *Error) DecodeJSONBytes(data []byte) error {
+	return json.Unmarshal(data, e)
 }

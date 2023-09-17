@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	rpprof "runtime/pprof"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -34,7 +35,6 @@ import (
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router/action"
 	"github.com/xgfone/go-generics/maps"
-	"github.com/xgfone/go-generics/slices"
 )
 
 // DefaultRouter is the default global ruler router.
@@ -139,7 +139,8 @@ func (r *Router) AddRoute(route Route) (err error) {
 	}
 
 	r.rlock.Lock()
-	if maps.Add(r.rmaps, route.Name, route) {
+	if _, ok := r.rmaps[route.Name]; !ok {
+		r.rmaps[route.Name] = route
 		r.updateRoutes()
 	} else {
 		err = fmt.Errorf("the route named '%s' has been added", route.Name)
@@ -156,7 +157,8 @@ func (r *Router) DelRoute(name string) (route Route, ok bool) {
 	}
 
 	r.rlock.Lock()
-	if route, ok = maps.Pop(r.rmaps, name); ok {
+	if route, ok = r.rmaps[name]; ok {
+		delete(r.rmaps, name)
 		r.updateRoutes()
 	}
 	r.rlock.Unlock()
@@ -186,7 +188,7 @@ func (r *Router) ResetRoutes(routes ...Route) (err error) {
 	}
 
 	r.rlock.Lock()
-	maps.Clear(r.rmaps)
+	clear(r.rmaps)
 	maps.AddSliceAsValue(r.rmaps, routes, func(r Route) string { return r.Name })
 	r.updateRoutes()
 	r.rlock.Unlock()

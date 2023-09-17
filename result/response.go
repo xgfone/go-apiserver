@@ -53,9 +53,6 @@ func (r Response) WithError(err error) Response {
 	return r
 }
 
-// Respond sends the response by the context as JSON.
-func (r Response) Respond(responder Responder) { responder.Respond(r) }
-
 // Decode uses the decode function to decode the result to the response.
 func (r *Response) Decode(decode func(interface{}) error) error {
 	return decode(r)
@@ -70,6 +67,9 @@ func (r *Response) DecodeJSON(reader io.Reader) error {
 func (r *Response) DecodeJSONBytes(data []byte) error {
 	return json.Unmarshal(data, r)
 }
+
+// Respond sends the response by the context as JSON.
+func (r Response) Respond(responder Responder) { responder.Respond(r) }
 
 // Respond sends the response by the context as JSON.
 func (e Error) Respond(responder Responder) {

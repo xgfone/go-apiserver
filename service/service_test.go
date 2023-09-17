@@ -34,7 +34,7 @@ func TestServices(t *testing.T) {
 	origs := Services{newTestService("svc1"), newTestService("svc2")}
 
 	svcs1 := origs.Append(newTestService("svc3"))
-	svcs2 := origs.Clone(newTestService("svc4"))
+	svcs2 := origs.Clone().Append(newTestService("svc4"))
 
 	for _, svc := range svcs1 {
 		switch name := svc.(*testService).name; name {

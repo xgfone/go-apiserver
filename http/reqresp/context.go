@@ -17,6 +17,7 @@ package reqresp
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -30,7 +31,6 @@ import (
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/http/render"
-	"github.com/xgfone/go-apiserver/internal/errors2"
 	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-binder"
 	"github.com/xgfone/go-cast"
@@ -167,7 +167,7 @@ func handleContextResult(c *Context) {
 	case http.Handler:
 		e.ServeHTTP(c.ResponseWriter, c.Request)
 	default:
-		c.Text(500, c.Err.Error())
+		_ = c.Text(500, c.Err.Error())
 	}
 }
 
@@ -315,7 +315,7 @@ func (c *Context) UpdateError(err error) {
 		if c.Err == nil {
 			c.Err = err
 		} else {
-			c.Err = errors2.Join(c.Err, err)
+			c.Err = errors.Join(c.Err, err)
 		}
 	}
 }
@@ -645,7 +645,7 @@ func (c *Context) Respond(response result.Response) {
 	if c.ResponseHandler != nil {
 		err = c.ResponseHandler(c, response)
 	} else if DefaultResponseHandler != nil {
-		DefaultResponseHandler(c, response)
+		err = DefaultResponseHandler(c, response)
 	} else {
 		err = c.JSON(200, response)
 	}
@@ -758,7 +758,7 @@ func (c *Context) XML(code int, v interface{}) (err error) {
 	}
 
 	buf := getBuilder()
-	buf.WriteString(xml.Header)
+	_, _ = buf.WriteString(xml.Header)
 	if err = xml.NewEncoder(buf).Encode(v); err == nil {
 		c.SetContentType(header.MIMEApplicationXMLCharsetUTF8)
 		c.WriteHeader(code)

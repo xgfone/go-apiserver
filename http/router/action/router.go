@@ -16,6 +16,7 @@
 package action
 
 import (
+	"maps"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -23,7 +24,6 @@ import (
 	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/result"
-	"github.com/xgfone/go-generics/maps"
 )
 
 // HeaderAction represents the http header to store the action method.
@@ -143,11 +143,14 @@ func (r *Router) GetHandlers() (handlers map[string]http.Handler) {
 }
 
 // GetActions returns the names of all the actions.
-func (r *Router) GetActions() (actions []string) {
+func (r *Router) GetActions() []string {
 	r.alock.RLock()
-	actions = maps.Keys(r.amaps)
+	actions := make([]string, 0, len(r.amaps))
+	for action := range r.amaps {
+		actions = append(actions, action)
+	}
 	r.alock.RUnlock()
-	return
+	return actions
 }
 
 // RegisterContextFuncWithError is the same as RegisterContextFunc,
@@ -176,7 +179,8 @@ func (r *Router) Register(action string, handler http.Handler) (ok bool) {
 	handler = r.checkAction(action, handler)
 
 	r.alock.Lock()
-	if maps.Add(r.amaps, action, handler) {
+	if _, ok := r.amaps[action]; !ok {
+		r.amaps[action] = handler
 		r.updateActions()
 	}
 	r.alock.Unlock()
@@ -208,7 +212,7 @@ func (r *Router) Reset(actions map[string]http.Handler) {
 	}
 
 	r.alock.Lock()
-	maps.Clear(r.amaps)
+	clear(r.amaps)
 	maps.Copy(r.amaps, actions)
 	r.updateActions()
 	r.alock.Unlock()
@@ -221,7 +225,8 @@ func (r *Router) Unregister(action string) (ok bool) {
 	}
 
 	r.alock.Lock()
-	if maps.Delete(r.amaps, action) {
+	if _, ok := r.amaps[action]; ok {
+		delete(r.amaps, action)
 		r.updateActions()
 	}
 	r.alock.Unlock()

@@ -46,7 +46,7 @@ func EncodeJSON(w io.Writer, value interface{}) error {
 //
 // NOTICE: it does not escape the problematic HTML characters.
 func EncodeJSONBytes(value interface{}) (data []byte, err error) {
-	buf := bytes.NewBuffer(make([]byte, 0, 128))
+	buf := bytes.NewBuffer(make([]byte, 0, 512))
 	if err = EncodeJSON(buf, value); err == nil {
 		data = buf.Bytes()
 		if _len := len(data); _len > 0 && data[_len-1] == '\n' {
@@ -60,7 +60,7 @@ func EncodeJSONBytes(value interface{}) (data []byte, err error) {
 //
 // NOTICE: it does not escape the problematic HTML characters.
 func EncodeJSONString(value interface{}) (data string, err error) {
-	pool, buf := pools.GetBuffer(128)
+	pool, buf := pools.GetBuffer(512)
 	if err = EncodeJSON(buf, value); err == nil {
 		data = buf.String()
 		if _len := len(data); _len > 0 && data[_len-1] == '\n' {
