@@ -16,10 +16,9 @@ package log
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
-
-	"golang.org/x/exp/slog"
 )
 
 func ExampleLogger() {
@@ -42,15 +41,15 @@ func ExampleLogger() {
 
 	fmt.Println()
 
-	Log(0, LevelInfo, "log msg", "duration", time.Second)
+	Log(0, slog.LevelInfo, "log msg", "duration", time.Second)
 
 	// Output:
 	//
-	// {"level":"INFO","source":"github.com/xgfone/go-apiserver/log/log_test.go:33","msg":"log msg","ctxkey":"ctxvalue","key1":"value1"}
-	// {"level":"WARN","source":"github.com/xgfone/go-apiserver/log/log_test.go:34","msg":"log msg","ctxkey":"ctxvalue","key1":"value1","key2":"value2"}
+	// {"level":"INFO","source":"github.com/xgfone/go-apiserver/log/log_test.go:32","msg":"log msg","ctxkey":"ctxvalue","key1":"value1"}
+	// {"level":"WARN","source":"github.com/xgfone/go-apiserver/log/log_test.go:33","msg":"log msg","ctxkey":"ctxvalue","key1":"value1","key2":"value2"}
 	//
-	// {"level":"INFO","source":"github.com/xgfone/go-apiserver/log/log_test.go:40","msg":"log msg: key1=value1","ctxkey":"ctxvalue"}
-	// {"level":"WARN","source":"github.com/xgfone/go-apiserver/log/log_test.go:41","msg":"log msg: key1=value1, key2=value2","ctxkey":"ctxvalue"}
+	// {"level":"INFO","source":"github.com/xgfone/go-apiserver/log/log_test.go:39","msg":"log msg: key1=value1","ctxkey":"ctxvalue"}
+	// {"level":"WARN","source":"github.com/xgfone/go-apiserver/log/log_test.go:40","msg":"log msg: key1=value1, key2=value2","ctxkey":"ctxvalue"}
 	//
-	// {"level":"INFO","source":"github.com/xgfone/go-apiserver/log/log_test.go:45","msg":"log msg","ctxkey":"ctxvalue","duration":"1s"}
+	// {"level":"INFO","source":"github.com/xgfone/go-apiserver/log/log_test.go:44","msg":"log msg","ctxkey":"ctxvalue","duration":"1s"}
 }

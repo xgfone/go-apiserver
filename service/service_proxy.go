@@ -21,7 +21,7 @@ import (
 )
 
 // DefaultProxy is the default global proxy service.
-var DefaultProxy = NewProxy(nil)
+var DefaultProxy = NewProxy(context.Background())
 
 type contextInfo struct {
 	context.CancelFunc

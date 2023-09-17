@@ -34,7 +34,6 @@ import (
 	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-binder"
 	"github.com/xgfone/go-cast"
-	"golang.org/x/exp/maps"
 )
 
 type builder struct{ buf []byte }
@@ -323,7 +322,7 @@ func (c *Context) UpdateError(err error) {
 
 // Reset resets the context itself.
 func (c *Context) Reset() {
-	maps.Clear(c.Data)
+	clear(c.Data)
 	*c = Context{
 		Data:            c.Data,
 		Renderer:        c.Renderer,

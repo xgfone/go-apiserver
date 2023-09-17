@@ -60,7 +60,7 @@ func TestWrapPanic(t *testing.T) {
 	}
 
 	if len(expects) != len(stacks) {
-		t.Errorf("expect %d stacks, but got %d", len(expects), len(stacks))
+		t.Errorf("expect %d stacks, but got %d: %v", len(expects), len(stacks), stacks)
 	} else {
 		for i, line := range expects {
 			if stacks[i] != line {

@@ -14,26 +14,29 @@
 
 package service
 
-import "github.com/xgfone/go-apiserver/log"
+import (
+	"context"
+	"log/slog"
+)
 
 // LogService returns a new log Service, which will log the activated
 // or deactivated event.
-func LogService(logLevel log.Level, serviceName string, service Service) Service {
+func LogService(logLevel slog.Level, serviceName string, service Service) Service {
 	return logService{service: service, level: logLevel, sname: serviceName}
 }
 
 type logService struct {
 	service Service
 	sname   string
-	level   log.Level
+	level   slog.Level
 }
 
 func (s logService) Activate() {
-	log.Log(0, s.level, "the service is activated", "service", s.sname)
+	slog.Log(context.Background(), s.level, "the service is activated", "service", s.sname)
 	s.service.Activate()
 }
 
 func (s logService) Deactivate() {
-	log.Log(0, s.level, "the service is deactivated", "service", s.sname)
+	slog.Log(context.Background(), s.level, "the service is deactivated", "service", s.sname)
 	s.service.Deactivate()
 }
