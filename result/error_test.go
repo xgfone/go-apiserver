@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,26 +14,30 @@
 
 package result
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
-func TestIsCode(t *testing.T) {
-	if !IsCode("InstanceNotFound", "") {
-		t.Errorf("expect the true, but got false")
+func TestError(t *testing.T) {
+	e := NewError("Ok", "").WithData(nil).WithError(errors.New("test")).
+		WithMessage("").WithMessage("%s", "msg")
+
+	expect := "Ok: msg"
+	if s := e.Error(); s != expect {
+		t.Errorf("expect '%s', but got '%s'", expect, s)
 	}
 
-	if !IsCode("InstanceNotFound", "InstanceNotFound") {
-		t.Errorf("expect true, but got false")
+	expect = "code=Ok, msg=msg"
+	if s := e.String(); s != expect {
+		t.Errorf("expect '%s', but got '%s'", expect, s)
 	}
 
-	if IsCode("InstanceNotFound", "InstanceUnavailable") {
-		t.Errorf("expect false, but got true")
+	if err := errors.Unwrap(e); err == nil {
+		t.Error("expect an error, but got nil")
+	} else if s := err.Error(); s != "test" {
+		t.Errorf("expect error '%s', but got '%s'", "test", s)
 	}
 
-	if !IsCode("AuthFailure.TokenFailure", "AuthFailure") {
-		t.Errorf("expect true, but got false")
-	}
-
-	if IsCode("AuthFailure", "AuthFailure.TokenFailure") {
-		t.Errorf("expect false, but got true")
-	}
+	_ = e.GetCode()
 }

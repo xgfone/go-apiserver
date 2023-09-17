@@ -159,6 +159,12 @@ func ErrIsCode(err error, targetCode string) bool {
 	}
 }
 
+// IsCode is equal to IsCode(e.Code, target).
+func (e Error) IsCode(target string) bool { return IsCode(e.Code, target) }
+
+// GetCode returns the error code.
+func (e Error) GetCode() string { return e.Code }
+
 // IsBadRequest reports whether the error is CodeBadRequest.
 func (e Error) IsBadRequest() bool { return IsCode(e.Code, CodeBadRequest) }
 

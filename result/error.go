@@ -37,12 +37,6 @@ func NewError(code, msg string) Error { return Error{Code: code, Message: msg} }
 // Unwrap unwraps the inner error.
 func (e Error) Unwrap() error { return e.Err }
 
-// IsCode is equal to IsCode(e.Code, target).
-func (e Error) IsCode(target string) bool { return IsCode(e.Code, target) }
-
-// GetCode returns the error code.
-func (e Error) GetCode() string { return e.Code }
-
 // Error implements the interface error.
 func (e Error) Error() string {
 	if e.Message == "" {
