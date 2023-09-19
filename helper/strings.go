@@ -14,7 +14,10 @@
 
 package helper
 
-import "math/rand"
+import (
+	"math/rand"
+	"unsafe"
+)
 
 // Pre-define some charsets to generate the random string.
 var (
@@ -47,4 +50,18 @@ func Random(buf []byte, charset string) {
 	for i, _len := 0, len(buf); i < _len; i++ {
 		buf[i] = charset[rand.Intn(nlen)]
 	}
+}
+
+// String converts the value b from []byte to string.
+//
+// NOTICE: b must not be modified.
+func String(b []byte) string {
+	return unsafe.String(unsafe.SliceData(b), len(b))
+}
+
+// Bytes converts the value s from string to []byte.
+//
+// NOTICE: s must not be modified.
+func Bytes(s string) []byte {
+	return unsafe.Slice(unsafe.StringData(s), len(s))
 }
