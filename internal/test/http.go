@@ -12,19 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package action
+package test
 
-import "github.com/xgfone/go-apiserver/http/router/action"
+import "net/http"
 
-// Re-export the global variables and functions.
-var (
-	DefaultRouter = action.DefaultRouter
-	HeaderAction  = action.HeaderAction
+var _ http.ResponseWriter = ResponseWriter{}
 
-	NewRouter = action.NewRouter
-)
+type ResponseWriter struct{}
 
-// Re-export the types.
-type (
-	Router = action.Router
-)
+func (w ResponseWriter) Write([]byte) (int, error) { return 0, nil }
+func (w ResponseWriter) Header() http.Header       { return nil }
+func (w ResponseWriter) WriteHeader(int)           {}

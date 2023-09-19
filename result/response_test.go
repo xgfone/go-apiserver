@@ -20,9 +20,13 @@ import (
 	"testing"
 )
 
+type respondfunc func(Response)
+
+func (f respondfunc) Respond(r Response) { f(r) }
+
 func TestResponse(t *testing.T) {
 	resp := NewResponse(0, nil).WithData(123).WithError(errors.New("test"))
-	resp.Respond(ResponderFunc(func(Response) {}))
+	resp.Respond(respondfunc(func(Response) {}))
 
 	resp = Response{}
 	err := resp.Decode(func(i interface{}) error {

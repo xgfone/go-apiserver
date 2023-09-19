@@ -65,6 +65,8 @@ func (e Error) WithError(err error) Error {
 	e.Err = err
 	switch _e := err.(type) {
 	case nil:
+		return Error{}
+
 	case Error:
 		e = _e
 

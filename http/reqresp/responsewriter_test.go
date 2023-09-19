@@ -19,11 +19,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/xgfone/go-apiserver/internal/test"
 )
 
 func wrapHandler(next http.HandlerFunc) http.HandlerFunc {
-	return func(rw http.ResponseWriter, r *http.Request) {
-		next(NewResponseWriter(rw), r)
+	return func(w http.ResponseWriter, r *http.Request) {
+		rw := AcquireResponseWriter(w)
+		defer ReleaseResponseWriter(rw)
+		next(rw, r)
 	}
 }
 
@@ -48,7 +52,7 @@ func TestResponseWriter(t *testing.T) {
 		t.Errorf("expect the response body '%s', but got '%s'", "201", body)
 	}
 
-	rw := NewResponseWriter(rec)
+	rw := AcquireResponseWriter(rec)
 	if w, ok := rw.(interface{ Unwrap() http.ResponseWriter }); !ok {
 		t.Error("expect wrapped ResponseWriter")
 	} else if r, ok := w.Unwrap().(*httptest.ResponseRecorder); !ok {
@@ -61,32 +65,17 @@ func TestResponseWriter(t *testing.T) {
 func BenchmarkResponseWriter(b *testing.B) {
 	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:8001", nil)
 	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		if _, ok := w.(http.Flusher); !ok {
-			panic("not http.Flusher")
-		}
-		if _, ok := w.(http.Hijacker); ok {
-			panic("not expected http.Hijacker")
-		}
-		if _, ok := w.(http.Pusher); ok {
-			panic("not expected http.Pusher")
-		}
 		w.WriteHeader(200)
 	})
 
 	b.ResetTimer()
+	b.ReportAllocs()
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			var rw http.ResponseWriter = testResponseWriter{}
-			rw = NewResponseWriter(rw)
-			handler.ServeHTTP(rw, req)
+			var rw test.ResponseWriter
+			w := AcquireResponseWriter(rw)
+			handler.ServeHTTP(w, req)
+			ReleaseResponseWriter(w)
 		}
 	})
 }
-
-type testResponseWriter struct{}
-
-func (w testResponseWriter) Write([]byte) (int, error) { return 0, nil }
-func (w testResponseWriter) Header() http.Header       { return nil }
-func (w testResponseWriter) WriteHeader(int)           {}
-func (w testResponseWriter) Flush()                    {}
-func (w testResponseWriter) CloseNotify() <-chan bool  { return nil }

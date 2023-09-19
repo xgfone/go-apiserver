@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,29 +17,23 @@ package ruler
 import (
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/http/matcher"
 	"github.com/xgfone/go-apiserver/http/middleware"
 )
 
-// Routes is a group of Routes.
-type Routes []Route
-
-func (rs Routes) Len() int           { return len(rs) }
-func (rs Routes) Swap(i, j int)      { rs[i], rs[j] = rs[j], rs[i] }
-func (rs Routes) Less(i, j int) bool { return rs[j].less(rs[i]) }
+// Matcher is used to check whether the route matches the request.
+type Matcher interface {
+	Match(*http.Request) bool
+}
 
 // Route is a http request route.
 type Route struct {
-	// Name is the unique name of the route.
-	Name string
-
 	// Priority is the priority of the route.
 	//
 	// The bigger the value, the higher the priority.
 	Priority int
 
 	// Matcher is used to match the request.
-	Matcher matcher.Matcher
+	Matcher Matcher
 
 	// Handler is the handler of the route.
 	Handler http.Handler `json:"-"`
@@ -51,46 +45,25 @@ type Route struct {
 }
 
 // NewRoute returns a new Route.
-//
-// If priority is ZERO, it is equal to the priority of the matcher.
-func NewRoute(name string, priority int, m matcher.Matcher, h http.Handler) Route {
-	if priority == 0 {
-		priority = m.Priority()
-	}
-	return Route{Name: name, Priority: priority, Matcher: m, Handler: h}
+func NewRoute(priority int, matcher Matcher, handler http.Handler) Route {
+	return Route{Priority: priority, Matcher: matcher, Handler: handler}
 }
 
 // ServeHTTP implements the interface http.Handler.
-func (r *Route) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+func (r *Route) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if r.handler != nil {
-		r.handler.ServeHTTP(resp, req)
+		r.handler.ServeHTTP(rw, req)
 	} else {
-		r.Handler.ServeHTTP(resp, req)
+		r.Handler.ServeHTTP(rw, req)
 	}
 }
 
-// Use uses the given middlewares to act on the handler.
-//
-// Notice: if using Use to configure the middlewares on the http handler,
-// you should use the method ServeHTTP to handle the http request.
-func (r *Route) Use(mws ...middleware.Middleware) {
-	if r.Handler == nil {
-		panic("the route handler is nil")
+// Use applies the middlewares on the route handler.
+func (r *Route) Use(ms ...middleware.Middleware) {
+	handler := r.Handler
+	if r.handler != nil {
+		handler = r.handler
 	}
 
-	r.handler = r.Handler
-	for _len := len(mws) - 1; _len >= 0; _len-- {
-		r.handler = mws[_len].Handler(r.handler).(http.Handler)
-	}
-}
-
-func (r Route) less(o Route) bool {
-	if r.Priority == o.Priority {
-		rlen, olen := len(r.Name), len(o.Name)
-		if rlen == olen {
-			return r.Name < o.Name
-		}
-		return rlen < olen
-	}
-	return r.Priority < o.Priority
+	r.handler = middleware.Middlewares(ms).Handler(handler)
 }

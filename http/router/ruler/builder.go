@@ -1,4 +1,4 @@
-// Copyright 2021~2023 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,98 +15,79 @@
 package ruler
 
 import (
-	"errors"
-	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
-	"github.com/xgfone/go-apiserver/http/matcher"
 	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
+	matcher "github.com/xgfone/go-http-matcher"
 )
 
-// Name returns a route builder with the name, which is equal to
-// NewRouteBuilder(r).Name(name).
-func (r *Router) Name(name string) RouteBuilder {
-	return NewRouteBuilder(r).Name(name)
-}
-
-// Matcher returns a route builder with the matcher,
-// which is equal to NewRouteBuilder(r).Matcher(matcher).
-func (r *Router) Matcher(matcher matcher.Matcher) RouteBuilder {
-	return NewRouteBuilder(r).Matcher(matcher)
-}
-
 // Group returns a route builder with the prefix path group,
-// which is equal to NewRouteBuilder(r).Group(pathPrefix).
+// which will register the built route into the router.
 func (r *Router) Group(pathPrefix string) RouteBuilder {
-	return NewRouteBuilder(r).Group(pathPrefix)
+	return NewRouteBuilder(r.Register).Group(pathPrefix)
 }
 
 // Path returns a route builder with the path matcher,
-// which is equal to NewRouteBuilder(r).Path(path).
+// which will register the built route into the router.
 func (r *Router) Path(path string) RouteBuilder {
-	return NewRouteBuilder(r).Path(path)
+	return NewRouteBuilder(r.Register).Path(path)
 }
 
 // PathPrefix returns a route builder with the path prefix matcher,
-// which is equal to NewRouteBuilder(r).PathPrefix(pathPrefix).
+// which will register the built route into the router.
 func (r *Router) PathPrefix(pathPrefix string) RouteBuilder {
-	return NewRouteBuilder(r).PathPrefix(pathPrefix)
+	return NewRouteBuilder(r.Register).PathPrefix(pathPrefix)
 }
 
 // Host returns a route builder with the host matcher,
-// which is equal to NewRouteBuilder(r).Host(host).
+// which will register the built route into the router.
 func (r *Router) Host(host string) RouteBuilder {
-	return NewRouteBuilder(r).Host(host)
-}
-
-// HostRegexp returns a route builder with the host regexp matcher,
-// which is equal to NewRouteBuilder(r).HostRegexp(regexpHost).
-func (r *Router) HostRegexp(regexpHost string) RouteBuilder {
-	return NewRouteBuilder(r).HostRegexp(regexpHost)
+	return NewRouteBuilder(r.Register).Host(host)
 }
 
 // RouteBuilder is used to build the route.
 type RouteBuilder struct {
-	group    string
-	manager  *Router
+	register func(Route)
+
 	mdws     middleware.Middlewares
-	name     string
-	extra    interface{}
-	matcher  matcher.Matcher
-	matchers matcher.Matchers
-	priority int
-	panic    bool
-	err      error
+	matchers []matcher.Matcher
+	group    string
+	extra    any
 }
 
-// NewRouteBuilder returns a new RouteBuilder with the route manager.
-func NewRouteBuilder(r *Router) RouteBuilder {
-	return RouteBuilder{manager: r, panic: true}
+// NewRouteBuilder returns a new route builder.
+func NewRouteBuilder(register func(Route)) RouteBuilder {
+	return RouteBuilder{register: register}
 }
 
-// Clone clones and returns a new route builder.
+func (b RouteBuilder) appendMatcher(m matcher.Matcher) RouteBuilder {
+	if m != nil {
+		matchers := make([]matcher.Matcher, 0, len(b.matchers)+1)
+		matchers = append(matchers, b.matchers...)
+		matchers = append(matchers, m)
+		b.matchers = matchers
+	}
+	return b
+}
+
+// Use appends the http handler middlewares that act on the later handler.
+func (b RouteBuilder) Use(middlewares ...middleware.Middleware) RouteBuilder {
+	if _len := len(middlewares); _len > 0 {
+		mdws := make(middleware.Middlewares, 0, len(b.mdws)+_len)
+		mdws = append(mdws, b.mdws)
+		mdws = mdws.Append(middlewares...)
+		b.mdws = mdws
+	}
+	return b
+}
+
+// Clone clones itself and returns a new route builder.
 func (b RouteBuilder) Clone() RouteBuilder {
+	b.matchers = slices.Clone(b.matchers)
 	b.mdws = b.mdws.Clone()
-	b.matchers = append(matcher.Matchers{}, b.matchers...)
-	return b
-}
-
-// GetGroup returns the group of the route builder.
-func (b RouteBuilder) GetGroup() string { return b.group }
-
-// SetPanic sets the flag to panic when failing to add the route.
-//
-// Default: true
-func (b RouteBuilder) SetPanic(panic bool) RouteBuilder {
-	b.panic = panic
-	return b
-}
-
-// Name sets the name of the route.
-func (b RouteBuilder) Name(name string) RouteBuilder {
-	b.name = name
 	return b
 }
 
@@ -116,50 +97,14 @@ func (b RouteBuilder) Extra(extra interface{}) RouteBuilder {
 	return b
 }
 
-// Priority sets the priority of the route.
-func (b RouteBuilder) Priority(priority int) RouteBuilder {
-	b.priority = priority
-	return b
-}
-
-// Matcher resets the matcher of the route.
-func (b RouteBuilder) Matcher(matcher matcher.Matcher) RouteBuilder {
-	b.matcher = matcher
-	b.matchers = nil
-	b.err = nil
-	return b
-}
-
-// And appends the matchers based on AND.
-func (b RouteBuilder) And(matchers ...matcher.Matcher) RouteBuilder {
-	b.matchers = append(b.matchers, matchers...)
-	b.matcher = nil
-	return b
-}
-
-// Or is eqaul to b.And(matcher.Or(matchers...)).
-func (b RouteBuilder) Or(matchers ...matcher.Matcher) RouteBuilder {
-	return b.And(matcher.Or(matchers...))
-}
-
-// Group appends the prefix of the paths of a group of routes,
-// which will add the prefix into the path of each route
-// when registering it.
-//
-// NOTICE: pathPrefix must be empty or start with '/'.
+// Group appends the prefix of the paths of a group of routes
+// when they are registered,
 func (b RouteBuilder) Group(pathPrefix string) RouteBuilder {
-	if b.err != nil {
-		return b
-	}
-
-	if pathPrefix == "" {
-		return b
-	} else if pathPrefix[0] != '/' {
-		b.err = fmt.Errorf("the route path group '%s' must start with '/'", pathPrefix)
-		return b
-	}
-
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
+	if pathPrefix != "" && pathPrefix[0] != '/' {
+		pathPrefix = "/" + pathPrefix
+	}
+
 	if b.group == "" {
 		b.group = pathPrefix
 	} else if pathPrefix != "" {
@@ -168,374 +113,294 @@ func (b RouteBuilder) Group(pathPrefix string) RouteBuilder {
 	return b
 }
 
-// Path is the same as b.And(matcher.Path(path)).
+/// ----------------------------------------------------------------------- ///
+// Matcher
+
+// Path adds the path match rule, which ignores the trailling "/".
 //
-// NOTICE: if the path prefix group is set, it will add the prefix into path.
+//   - If the group is set, it will add it into path as the prefix.
+//   - It supports the path parameters, such as "/prefix/{param1}/path/{param2}/to",
+//     and put the parsed parameter values into the Data field
+//     if a *reqresp.Context can be got from *http.Request.
 func (b RouteBuilder) Path(path string) RouteBuilder {
 	if path == "" {
 		return b
 	}
 
-	if b.err == nil {
-		if path[0] != '/' {
-			b.err = fmt.Errorf("the path '%s' must start with '/'", path)
-			return b
-		}
+	if path[0] != '/' {
+		path = "/" + path
+	}
 
-		if b.group != "" {
-			if path == "/" {
-				path = b.group
-			} else {
-				path = b.group + path
-			}
-		}
-
-		var m matcher.Matcher
-		if m, b.err = matcher.Path(path); b.err == nil {
-			b = b.And(m)
+	if b.group != "" {
+		if path == "/" {
+			path = b.group
+		} else {
+			path = b.group + path
 		}
 	}
-	return b
+
+	return b.appendMatcher(newPathMatcher(path))
 }
 
-// PathPrefix is the same as b.And(matcher.PathPrefix(pathPrefix)).
+// PathPrefix adds the path prefeix match rule, which ignores the trailling "/".
 //
-// NOTICE: if the path prefix group is set, it will add the prefix into pathPrefix.
+//   - If the group is set, it will add it into pathPrefix as the prefix.
+//   - It supports the path parameters, such as "/prefix/{param1}/path/{param2}/to",
+//     and put the parsed parameter values into the Data field
+//     if a *reqresp.Context can be got from *http.Request.
 func (b RouteBuilder) PathPrefix(pathPrefix string) RouteBuilder {
 	if pathPrefix == "" {
 		return b
 	}
 
-	if b.err == nil {
-		if pathPrefix[0] != '/' {
-			b.err = fmt.Errorf("the path prefix '%s' must start with '/'", pathPrefix)
-			return b
-		}
+	if pathPrefix[0] != '/' {
+		pathPrefix = "/" + pathPrefix
+	}
 
-		if b.group != "" {
-			if pathPrefix == "/" {
-				pathPrefix = b.group
-			} else {
-				pathPrefix = b.group + pathPrefix
-			}
-		}
-
-		var m matcher.Matcher
-		if m, b.err = matcher.PathPrefix(pathPrefix); b.err == nil {
-			b = b.And(m)
+	if b.group != "" {
+		if pathPrefix == "/" {
+			pathPrefix = b.group
+		} else {
+			pathPrefix = b.group + pathPrefix
 		}
 	}
-	return b
+
+	return b.appendMatcher(newPathPrefixMatcher(pathPrefix))
 }
 
-// Method is the same as b.And(matcher.Method(method)).
+// Method adds the method match ruler.
 func (b RouteBuilder) Method(method string) RouteBuilder {
-	if b.err == nil {
-		var m matcher.Matcher
-		if m, b.err = matcher.Method(method); b.err == nil {
-			b = b.And(m)
-		}
-	}
-	return b
+	return b.appendMatcher(matcher.Method(method))
 }
 
-// Query is the same as b.And(matcher.Query(key, value)).
+// Query adds the query key-value match ruler.
 func (b RouteBuilder) Query(key, value string) RouteBuilder {
-	if b.err == nil {
-		var m matcher.Matcher
-		if m, b.err = matcher.Query(key, value); b.err == nil {
-			b = b.And(m)
-		}
-	}
-	return b
+	return b.appendMatcher(matcher.Query(key, value))
 }
 
-// Header is the same as b.And(matcher.Header(key, value)).
+// Header adds the header key-value match ruler.
 func (b RouteBuilder) Header(key, value string) RouteBuilder {
-	if b.err == nil {
-		var m matcher.Matcher
-		if m, b.err = matcher.Header(key, value); b.err == nil {
-			b = b.And(m)
-		}
-	}
-	return b
+	return b.appendMatcher(matcher.Header(key, value))
 }
 
-// HeaderRegexp is the same as b.And(matcher.HeaderRegexp(key, regexpValue)).
-func (b RouteBuilder) HeaderRegexp(key, regexpValue string) RouteBuilder {
-	if b.err == nil {
-		var m matcher.Matcher
-		if m, b.err = matcher.HeaderRegexp(key, regexpValue); b.err == nil {
-			b = b.And(m)
-		}
-	}
-	return b
-}
-
-// Host is the same as b.And(matcher.Host(host)).
+// Host adds the host match ruler.
 func (b RouteBuilder) Host(host string) RouteBuilder {
-	if b.err == nil {
-		var m matcher.Matcher
-		if m, b.err = matcher.Host(host); b.err == nil {
-			b = b.And(m)
-		}
-	}
-	return b
+	return b.appendMatcher(matcher.Host(host))
 }
 
-// HostRegexp is the same as b.And(matcher.HostRegexp(regexpHost)).
-func (b RouteBuilder) HostRegexp(regexpHost string) RouteBuilder {
-	if b.err == nil {
-		var m matcher.Matcher
-		if m, b.err = matcher.HostRegexp(regexpHost); b.err == nil {
-			b = b.And(m)
-		}
-	}
-	return b
-}
-
-// Use appends the http handler middlewares that act on the latter handler.
-func (b RouteBuilder) Use(middlewares ...middleware.Middleware) RouteBuilder {
-	b.mdws = b.mdws.Clone().Append(middlewares...)
-	return b
-}
-
-// ContextHandler is the same HandlerFunc, but wraps the request and response
-// into Context.
-func (b RouteBuilder) ContextHandler(h reqresp.Handler) error {
-	return b.Handler(h)
-}
-
-// ContextHandlerWithError is the same ContextHandler, but supports to return
-// an error.
-func (b RouteBuilder) ContextHandlerWithError(h reqresp.HandlerWithError) error {
-	return b.Handler(h)
-}
-
-// HandlerFunc registers the route with the handler functions.
-func (b RouteBuilder) HandlerFunc(handler http.HandlerFunc) error {
-	return b.Handler(handler)
-}
+/// ----------------------------------------------------------------------- ///
+// Handler & Register
 
 // Handler registers the route with the handler.
-func (b RouteBuilder) Handler(handler http.Handler) (err error) {
-	if err = b.err; err == nil {
-		err = b.addRoute(handler)
-	}
-
-	if err != nil && b.panic {
-		panic(err)
-	}
-	return
+func (b RouteBuilder) Handler(handler http.Handler) RouteBuilder {
+	b.register(b.newRoute(handler))
+	return b
 }
 
-// Must is the same as Route, but panics instead if there is an error.
-func (b RouteBuilder) Must(handler http.Handler) Route {
-	route, err := b.Route(handler)
-	if err != nil {
-		panic(err)
-	}
-	return route
-}
-
-// Route returns the built route with the handler.
-func (b RouteBuilder) Route(handler http.Handler) (Route, error) {
-	return b.newRoute(handler)
-}
-
-func (b RouteBuilder) newRoute(handler http.Handler) (route Route, err error) {
-	if b.matcher == nil && len(b.matchers) > 0 {
-		b.matcher = matcher.And(b.matchers...)
-	}
-
-	if b.matcher == nil {
-		err = errors.New("mising the route matcher")
-		return
-	}
-
-	name := b.name
-	if name == "" {
-		name = b.matcher.String()
-	}
-
-	handler = b.mdws.Handler(handler).(http.Handler)
-	route = NewRoute(name, b.priority, b.matcher, handler)
+func (b RouteBuilder) newRoute(handler http.Handler) (route Route) {
+	matcher := matcher.And(b.matchers...)
+	route = NewRoute(matcher.Priority(), matcher, b.mdws.Handler(handler))
 	route.Extra = b.extra
 	return
 }
 
-func (b RouteBuilder) addRoute(handler http.Handler) (err error) {
-	route, err := b.newRoute(handler)
-	if err == nil {
-		err = b.manager.AddRoute(route)
-	}
-	return
-}
+/// ----------------------------------------------------------------------- ///
+// For http.Handler
 
 // GET is a convenient function to register the route with the handler,
 // which is the same as b.Method(http.MethodGet).Handler(handler).
 func (b RouteBuilder) GET(handler http.Handler) RouteBuilder {
-	b.Method(http.MethodGet).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodGet).Handler(handler)
 }
 
 // PUT is a convenient function to register the route with the handler,
 // which is the same as b.Method(http.MethodPut).Handler(handler).
 func (b RouteBuilder) PUT(handler http.Handler) RouteBuilder {
-	b.Method(http.MethodPut).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodPut).Handler(handler)
 }
 
 // POST is a convenient function to register the route with the handler,
 // which is the same as b.Method(http.MethodPost).Handler(handler).
 func (b RouteBuilder) POST(handler http.Handler) RouteBuilder {
-	b.Method(http.MethodPost).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodPost).Handler(handler)
 }
 
 // DELETE is a convenient function to register the route with the handler,
 // which is the same as b.Method(http.MethodDelete).Handler(handler).
 func (b RouteBuilder) DELETE(handler http.Handler) RouteBuilder {
-	b.Method(http.MethodDelete).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodDelete).Handler(handler)
 }
 
 // PATCH is a convenient function to register the route with the handler,
 // which is the same as b.Method(http.MethodPatch).Handler(handler).
 func (b RouteBuilder) PATCH(handler http.Handler) RouteBuilder {
-	b.Method(http.MethodPatch).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodPatch).Handler(handler)
 }
 
 // HEAD is a convenient function to register the route with the handler,
 // which is the same as b.Method(http.MethodHead).Handler(handler).
 func (b RouteBuilder) HEAD(handler http.Handler) RouteBuilder {
-	b.Method(http.MethodHead).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodHead).Handler(handler)
+}
+
+// OPTIONS is a convenient function to register the route with the handler,
+// which is the same as b.Method(http.MethodOptions).Handler(handler).
+func (b RouteBuilder) OPTIONS(handler http.Handler) RouteBuilder {
+	return b.Method(http.MethodOptions).Handler(handler)
+}
+
+/// ----------------------------------------------------------------------- ///
+// For http.HandlerFunc
+
+// HandlerFunc registers the route with the handler functions.
+func (b RouteBuilder) HandlerFunc(handler http.HandlerFunc) RouteBuilder {
+	return b.Handler(handler)
 }
 
 // GETFunc is a convenient function to register the route with the function
 // handler, which is the same as b.Method(http.MethodGet).Handler(handler).
 func (b RouteBuilder) GETFunc(handler http.HandlerFunc) RouteBuilder {
-	b.Method(http.MethodGet).SetPanic(true).Handler(handler)
+	b.Method(http.MethodGet).Handler(handler)
 	return b
 }
 
 // PUTFunc is a convenient function to register the route with the function
 // handler, which is the same as b.Method(http.MethodPut).Handler(handler).
 func (b RouteBuilder) PUTFunc(handler http.HandlerFunc) RouteBuilder {
-	b.Method(http.MethodPut).SetPanic(true).Handler(handler)
+	b.Method(http.MethodPut).Handler(handler)
 	return b
 }
 
 // POSTFunc is a convenient function to register the route with the function
 // handler, which is the same as b.Method(http.MethodPost).Handler(handler).
 func (b RouteBuilder) POSTFunc(handler http.HandlerFunc) RouteBuilder {
-	b.Method(http.MethodPost).SetPanic(true).Handler(handler)
+	b.Method(http.MethodPost).Handler(handler)
 	return b
 }
 
 // DELETEFunc is a convenient function to register the route with the function
 // handler, which is the same as b.Method(http.MethodDelete).Handler(handler).
 func (b RouteBuilder) DELETEFunc(handler http.HandlerFunc) RouteBuilder {
-	b.Method(http.MethodDelete).SetPanic(true).Handler(handler)
+	b.Method(http.MethodDelete).Handler(handler)
 	return b
 }
 
 // PATCHFunc is a convenient function to register the route with the function
 // handler, which is the same as b.Method(http.MethodPatch).Handler(handler).
 func (b RouteBuilder) PATCHFunc(handler http.HandlerFunc) RouteBuilder {
-	b.Method(http.MethodPatch).SetPanic(true).Handler(handler)
+	b.Method(http.MethodPatch).Handler(handler)
 	return b
 }
 
 // HEADFunc is a convenient function to register the route with the function
 // handler, which is the same as b.Method(http.MethodHead).Handler(handler).
 func (b RouteBuilder) HEADFunc(handler http.HandlerFunc) RouteBuilder {
-	b.Method(http.MethodHead).SetPanic(true).Handler(handler)
+	b.Method(http.MethodHead).Handler(handler)
 	return b
+}
+
+// OPTIONS is a convenient function to register the route with the handler,
+// which is the same as b.Method(http.MethodOptions).Handler(handler).
+func (b RouteBuilder) OPTIONSFunc(handler http.HandlerFunc) RouteBuilder {
+	return b.Method(http.MethodOptions).Handler(handler)
+}
+
+/// ----------------------------------------------------------------------- ///
+// For Context
+
+// ContextHandler is the same HandlerFunc, but wraps the request and response into Context.
+func (b RouteBuilder) ContextHandler(h reqresp.Handler) RouteBuilder {
+	return b.Handler(h)
 }
 
 // GETContext is a convenient function to register the route with the context
 // handler, which is the same as b.Method(http.MethodGet).Handler(handler).
 func (b RouteBuilder) GETContext(handler reqresp.Handler) RouteBuilder {
-	b.Method(http.MethodGet).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodGet).Handler(handler)
 }
 
 // PUTContext is a convenient function to register the route with the context
 // handler, which is the same as b.Method(http.MethodPut).Handler(handler).
 func (b RouteBuilder) PUTContext(handler reqresp.Handler) RouteBuilder {
-	b.Method(http.MethodPut).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodPut).Handler(handler)
 }
 
 // POSTContext is a convenient function to register the route with the context
 // handler, which is the same as b.Method(http.MethodPost).Handler(handler).
 func (b RouteBuilder) POSTContext(handler reqresp.Handler) RouteBuilder {
-	b.Method(http.MethodPost).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodPost).Handler(handler)
 }
 
 // DELETEContext is a convenient function to register the route with the context
 // handler, which is the same as b.Method(http.MethodDelete).Handler(handler).
 func (b RouteBuilder) DELETEContext(handler reqresp.Handler) RouteBuilder {
-	b.Method(http.MethodDelete).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodDelete).Handler(handler)
 }
 
 // PATCHContext is a convenient function to register the route with the context
 // handler, which is the same as b.Method(http.MethodPatch).Handler(handler).
 func (b RouteBuilder) PATCHContext(handler reqresp.Handler) RouteBuilder {
-	b.Method(http.MethodPatch).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodPatch).Handler(handler)
 }
 
 // HEADContext is a convenient function to register the route with the context
 // handler, which is the same as b.Method(http.MethodHead).Handler(handler).
 func (b RouteBuilder) HEADContext(handler reqresp.Handler) RouteBuilder {
-	b.Method(http.MethodHead).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodHead).Handler(handler)
+}
+
+// OPTIONSContext is a convenient function to register the route with the context
+// handler, which is the same as b.Method(http.MethodOptions).Handler(handler).
+func (b RouteBuilder) OPTIONSContext(handler reqresp.Handler) RouteBuilder {
+	return b.Method(http.MethodOptions).Handler(handler)
+}
+
+/// ----------------------------------------------------------------------- ///
+// For ContextWithError
+
+// ContextHandlerWithError is the same ContextHandler, but supports to return an error.
+func (b RouteBuilder) ContextHandlerWithError(h reqresp.HandlerWithError) RouteBuilder {
+	return b.Handler(h)
 }
 
 // GETContextWithError is a convenient function to register the route with the
 // context handler, which is the same as b.Method(http.MethodGet).Handler(handler).
 func (b RouteBuilder) GETContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
-	b.Method(http.MethodGet).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodGet).Handler(handler)
 }
 
 // PUTContextWithError is a convenient function to register the route with the
 // context handler, which is the same as b.Method(http.MethodPut).Handler(handler).
 func (b RouteBuilder) PUTContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
-	b.Method(http.MethodPut).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodPut).Handler(handler)
 }
 
 // POSTContextWithError is a convenient function to register the route with the
 // context handler, which is the same as b.Method(http.MethodPost).Handler(handler).
 func (b RouteBuilder) POSTContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
-	b.Method(http.MethodPost).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodPost).Handler(handler)
 }
 
 // DELETEContextWithError is a convenient function to register the route with the
 // context handler, which is the same as b.Method(http.MethodDelete).Handler(handler).
 func (b RouteBuilder) DELETEContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
-	b.Method(http.MethodDelete).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodDelete).Handler(handler)
 }
 
 // PATCHContextWithError is a convenient function to register the route with the
 // context handler, which is the same as b.Method(http.MethodPatch).Handler(handler).
 func (b RouteBuilder) PATCHContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
-	b.Method(http.MethodPatch).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodPatch).Handler(handler)
 }
 
 // HEADContextWithError is a convenient function to register the route with the
 // context handler, which is the same as b.Method(http.MethodHead).Handler(handler).
 func (b RouteBuilder) HEADContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
-	b.Method(http.MethodHead).SetPanic(true).Handler(handler)
-	return b
+	return b.Method(http.MethodHead).Handler(handler)
+}
+
+// OPTIONSContextWithError is a convenient function to register the route with the
+// context handler, which is the same as b.Method(http.MethodOptions).Handler(handler).
+func (b RouteBuilder) OPTIONSContextWithError(handler reqresp.HandlerWithError) RouteBuilder {
+	return b.Method(http.MethodOptions).Handler(handler)
 }

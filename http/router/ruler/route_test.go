@@ -1,4 +1,4 @@
-// Copyright 2022 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,60 +19,47 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/http/matcher"
+	"github.com/xgfone/go-apiserver/http/middleware"
 )
 
-var (
-	getMatcher, _  = matcher.Method("GET")
-	hostMatcher, _ = matcher.Host("127.0.0.1")
-)
+// MatchFunc is a matching function.
+type matchFunc func(*http.Request) bool
+
+// Match implements the interface Matcher.
+func (f matchFunc) Match(r *http.Request) bool { return f(r) }
+
+type testroute struct {
+	path string
+	code int
+}
+
+func newTestRoute(p string, c int) testroute                           { return testroute{path: p, code: c} }
+func (r testroute) Match(req *http.Request) bool                       { return req.URL.Path == r.path }
+func (r testroute) ServeHTTP(w http.ResponseWriter, req *http.Request) { w.WriteHeader(r.code) }
+func (r testroute) Route(p int) Route {
+	return NewRoute(p, matchFunc(r.Match), http.HandlerFunc(r.ServeHTTP))
+}
 
 func TestRoute(t *testing.T) {
-	router := NewRouter()
+	route := newTestRoute("/path", 204).Route(1)
 
-	router.Name("route1").Matcher(hostMatcher).
-		HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
-			rw.WriteHeader(201)
-			rw.Write([]byte(`route1`))
-		})
-
-	router.Matcher(matcher.And(hostMatcher, getMatcher)).Name("route2").
-		HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
-			rw.WriteHeader(202)
-			rw.Write([]byte(`route2`))
-		})
-
-	routes := router.GetRoutes()
-	if _len := len(routes); _len != 2 {
-		t.Errorf("expect %d routes, but got %d", 2, _len)
-	} else {
-		names := []string{"route2", "route1"}
-		for i := 0; i < 2; i++ {
-			if names[i] != routes[i].Name {
-				t.Errorf("expect the route named '%s', but got '%s'",
-					names[i], routes[i].Name)
-			}
-		}
-	}
-
-	req, _ := http.NewRequest("GET", "http://127.0.0.1", nil)
 	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != 202 {
-		t.Errorf("expect the status code '%d', but got '%d'", 202, rec.Code)
-	} else if body := rec.Body.String(); body != "route2" {
-		t.Errorf("expect the body '%s', but got '%s'", "route2", body)
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/path", nil)
+	route.ServeHTTP(rec, req)
+	if rec.Code != 204 {
+		t.Errorf("expect status code %d, but got %d", 204, rec.Code)
 	}
 
-	router.DelRoute("route1")
-	if route, ok := router.GetRoute("route1"); ok {
-		t.Errorf("unexpected the route named '%s': '%s'", "route1", route.Name)
-	}
+	route.Use(middleware.MiddlewareFunc(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Middleware", "1")
+			next.ServeHTTP(w, r)
+		})
+	}))
 
-	router.DelRoute("route2")
-	routes = router.GetRoutes()
-	for _, route := range routes {
-		t.Errorf("unexpected the route named '%s'", route.Name)
+	rec = httptest.NewRecorder()
+	route.ServeHTTP(rec, req)
+	if m := rec.Header().Get("X-Middleware"); m != "1" {
+		t.Errorf("expect got header value '%s', but got '%s'", "1", m)
 	}
 }

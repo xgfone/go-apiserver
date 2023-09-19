@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package middlewares
+// Package logger provides a logger middleware to log the http request.
+package logger
 
 import (
 	"log/slog"
@@ -24,27 +25,54 @@ import (
 	"github.com/xgfone/go-defaults"
 )
 
+var (
+	// Start is used to log the extra information.
+	//
+	// If returning nil, do not log any extra information.
+	//
+	// For the default implementation, it returns nil.
+	Start func(http.ResponseWriter, *http.Request) Collector = defaultStart
+
+	// Enabled is used to decide whether to log the request,
+	//
+	// For the default implementation, it returns true.
+	Enabled func(*http.Request) bool = defaultEnabled
+)
+
+// Collector is used to collect the extra log key-value information.
+//
+// If the returned clean function is nil, it indicates not to need to clean any.
+type Collector func(kvs []interface{}) (newkvs []interface{}, clean func())
+
+func defaultStart(http.ResponseWriter, *http.Request) Collector { return nil }
+func defaultEnabled(*http.Request) bool                         { return true }
+
 // Logger is used to wrap a http handler and return a new http handler,
 // which logs the http request.
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		if !slog.Default().Enabled(ctx, slog.LevelInfo) {
+		if !Enabled(r) || !slog.Default().Enabled(ctx, slog.LevelInfo) {
 			next.ServeHTTP(w, r)
 			return
 		}
 
+		collect := Start(w, r)
 		start := time.Now()
 		next.ServeHTTP(w, r)
 		cost := time.Since(start)
 
-		c := reqresp.GetContext(w, r)
-
-		var code int
 		var err error
-		if c != nil {
+		var code = 200
+		var action string
+		if c := reqresp.GetContext(r.Context()); c != nil {
+			action = c.Action
 			code = c.StatusCode()
-			err = c.Err
+			if c.LogErr != nil {
+				err = c.LogErr
+			} else {
+				err = c.RespErr
+			}
 		} else if rw, ok := w.(reqresp.ResponseWriter); ok {
 			code = rw.StatusCode()
 		}
@@ -60,12 +88,20 @@ func Logger(next http.Handler) http.Handler {
 			"code", code,
 		)
 
-		if c != nil && c.Action != "" {
-			kvs = append(kvs, "action", c.Action)
+		if action != "" {
+			kvs = append(kvs, "action", action)
 		}
 
 		if reqid := defaults.GetRequestID(ctx, r); reqid != "" {
 			kvs = append(kvs, "reqid", reqid)
+		}
+
+		if collect != nil {
+			var clean func()
+			kvs, clean = collect(kvs)
+			if clean != nil {
+				defer clean()
+			}
 		}
 
 		if err != nil {

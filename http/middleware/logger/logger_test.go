@@ -12,8 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ruler
-
-import "testing"
-
-func TestEmpty(t *testing.T) {}
+package logger

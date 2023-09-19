@@ -15,13 +15,11 @@
 package ruler
 
 import (
-	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/http/matcher"
+	"github.com/xgfone/go-apiserver/internal/test"
 )
 
 func BenchmarkExactRouteWithNoopMiddleware4(b *testing.B) {
@@ -34,30 +32,18 @@ func BenchmarkParamRouteWithNoopMiddleware4(b *testing.B) {
 
 func benchmarkRouteWithPath(b *testing.B, path string) {
 	router := NewRouter()
+	router.Path(path).GETFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(200)
+	})
 	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic("notfound")
 	})
 
-	handler := http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
-		rw.WriteHeader(200)
-		io.WriteString(rw, "OK")
-	})
-
-	const method = http.MethodGet
-	m := matcher.And(matcher.Must(matcher.Path(path)), matcher.Must(matcher.Method(method)))
-	router.AddRoute(NewRoute(method+path, 0, m, handler))
-
-	rec := httptest.NewRecorder()
-	rec.Body.WriteString("OK")
-	req := httptest.NewRequest(method, path, nil)
-	if req.Method != method || req.URL.Path != path {
-		panic(fmt.Sprintf("method=%s, path=%s", req.Method, req.URL.Path))
-	}
-
+	req := httptest.NewRequest(http.MethodGet, path, nil)
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		rec.Body.Reset()
-		router.ServeHTTP(rec, req)
+		var rw test.ResponseWriter
+		router.ServeHTTP(rw, req)
 	}
 }

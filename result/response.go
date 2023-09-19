@@ -16,19 +16,17 @@ package result
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"log/slog"
+	"net/http"
+
+	"github.com/xgfone/go-apiserver/http/header"
 )
 
-// Responder is used to send the result to the peer.
-type Responder interface {
-	Respond(Response)
-}
-
-// ResponderFunc is the responser function.
-type ResponderFunc func(Response)
-
-// Respond implements the interface Responser.
-func (f ResponderFunc) Respond(r Response) { f(r) }
+// DefaultResponser is used to send the response by responder,
+// which may be a Responder, http.ResponseWriter or others.
+var DefaultResponser func(responder any, response Response)
 
 // Response represents a response result.
 type Response struct {
@@ -40,6 +38,12 @@ type Response struct {
 func NewResponse(data interface{}, err error) Response {
 	return Response{Data: data, Error: err}
 }
+
+// Success is equal to NewResponse(data, nil).
+func Success(data interface{}) Response { return Response{Data: data} }
+
+// Ok is the alias of Success.
+func Ok(data interface{}) Response { return Response{Data: data} }
 
 // WithData returns a new Response with the given data.
 func (r Response) WithData(data interface{}) Response {
@@ -68,10 +72,51 @@ func (r *Response) DecodeJSONBytes(data []byte) error {
 	return json.Unmarshal(data, r)
 }
 
-// Respond sends the response by the context as JSON.
-func (r Response) Respond(responder Responder) { responder.Respond(r) }
+// RespondHttp sends the response by the responder.
+//
+// If DefaultResponser is set, forward it with responder and response to handle.
+// If not set, it tries to assert responder to one of types as follow:
+//
+//	interface{ Respond(Response) }
+//	interface{ JSON(code int, value interface{}) }
+//	http.ResponseWriter
+func (r Response) Respond(responder any) {
+	if DefaultResponser != nil {
+		DefaultResponser(responder, r)
+		return
+	}
 
-// Respond sends the response by the context as JSON.
-func (e Error) Respond(responder Responder) {
+	if r.Data == nil && r.Error == nil {
+		return
+	}
+
+	switch resp := responder.(type) {
+	case interface{ Respond(Response) }:
+		resp.Respond(r)
+
+	case interface{ JSON(int, interface{}) }:
+		resp.JSON(200, r)
+
+	case http.ResponseWriter:
+		sendjson(resp, r)
+
+	default:
+		panic(fmt.Errorf("Response.Respond: unknown responder type %T", responder))
+	}
+}
+
+// Respond sends the error response as Response by the responder.
+func (e Error) Respond(responder any) {
 	NewResponse(nil, e).Respond(responder)
+}
+
+func sendjson(w http.ResponseWriter, v any) {
+	header.SetContentType(w.Header(), header.MIMEApplicationJSON)
+	w.WriteHeader(200)
+
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		slog.Error("fail to encode and send response to client", "err", err)
+	}
 }

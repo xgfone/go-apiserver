@@ -1,4 +1,4 @@
-// Copyright 2021~2023 xgfone
+// Copyright 2023 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ func TestContextBinder(t *testing.T) {
 	}
 	req.Int = 111
 
-	c := DefaultContextAllocator.Acquire()
+	c := AcquireContext()
 	body := bytes.NewBufferString(`{"Uint":444}`)
 	c.Request, _ = http.NewRequest("GET", "http://localhost", body)
 	c.Request.Header.Set(header.HeaderContentType, header.MIMEApplicationJSON)

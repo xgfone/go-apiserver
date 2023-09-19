@@ -18,7 +18,8 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/http/middleware/middlewares"
+	"github.com/xgfone/go-apiserver/http/middleware/context"
+	"github.com/xgfone/go-apiserver/http/middleware/logger"
 )
 
 var (
@@ -28,8 +29,8 @@ var (
 
 // DefaultMiddlewares is a set of the default middlewares.
 var DefaultMiddlewares = Middlewares{
-	MiddlewareFunc(middlewares.Context),
-	MiddlewareFunc(middlewares.Logger),
+	MiddlewareFunc(context.Context),
+	MiddlewareFunc(logger.Logger),
 }
 
 // Middleware is a http handler middleware.

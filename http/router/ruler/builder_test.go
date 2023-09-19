@@ -17,89 +17,76 @@ package ruler
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/xgfone/go-apiserver/http/handler"
+	"github.com/xgfone/go-apiserver/http/middleware"
+	"github.com/xgfone/go-apiserver/http/reqresp"
 )
 
-func ExampleRouteBuilder_Group() {
-	router := NewRouter()
+func TestRouteBuilder(t *testing.T) {
+	b := NewRouteBuilder(func(r Route) {
+		desc := r.Matcher.(fmt.Stringer).String()
+		if expect := r.Extra.(string); !strings.Contains(desc, expect) {
+			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
+		}
+		if expect := "prefix"; !strings.Contains(desc, expect) {
+			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
+		}
+		if expect := "path"; !strings.Contains(desc, expect) {
+			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
+		}
+		if expect := "q1"; !strings.Contains(desc, expect) {
+			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
+		}
+		if expect := "K1"; !strings.Contains(desc, expect) {
+			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
+		}
+		if expect := "localhost"; !strings.Contains(desc, expect) {
+			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
+		}
+	})
 
-	// ----- V1 Version -----
-	v1 := router.Group("/v1")
+	b = b.Group("/prefix").Clone().Path("/path").PathPrefix("/prefix").
+		Query("q1", "v1").Header("k1", "v1").Host("localhost").
+		Use(middleware.MiddlewareFunc(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				next.ServeHTTP(w, r)
+			})
+		}))
 
-	v1auth := v1.Group("/auth")
-	v1auth.Path("/login").POSTFunc(func(w http.ResponseWriter, r *http.Request) { /* TODO */ })
-	v1auth.Path("/logout").POSTFunc(func(w http.ResponseWriter, r *http.Request) { /* TODO */ })
+	b.Extra(http.MethodGet).GET(handler.Handler204)
+	b.Extra(http.MethodPut).PUT(handler.Handler204)
+	b.Extra(http.MethodPost).POST(handler.Handler204)
+	b.Extra(http.MethodDelete).DELETE(handler.Handler204)
+	b.Extra(http.MethodPatch).PATCH(handler.Handler204)
+	b.Extra(http.MethodHead).HEAD(handler.Handler204)
+	b.Extra(http.MethodOptions).OPTIONS(handler.Handler204)
 
-	v1svc1 := v1.Group("/svc1")
-	v1svc1.Path("/path").GETFunc(func(w http.ResponseWriter, r *http.Request) { /* TODO */ })
+	b.Extra(http.MethodGet).GETFunc(handler.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodPut).PUTFunc(handler.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodPost).POSTFunc(handler.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodHead).HEADFunc(handler.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodPatch).PATCHFunc(handler.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodDelete).DELETEFunc(handler.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodOptions).OPTIONSFunc(handler.Handler204.(http.HandlerFunc))
 
-	v1svc2 := v1.Group("/svc2")
-	v1svc2.Path("/path").GETFunc(func(w http.ResponseWriter, r *http.Request) { /* TODO */ })
+	chandler := func(c *reqresp.Context) {}
+	b.Extra(http.MethodGet).GETContext(reqresp.Handler(chandler))
+	b.Extra(http.MethodPut).PUTContext(reqresp.Handler(chandler))
+	b.Extra(http.MethodPost).POSTContext(reqresp.Handler(chandler))
+	b.Extra(http.MethodHead).HEADContext(reqresp.Handler(chandler))
+	b.Extra(http.MethodPatch).PATCHContext(reqresp.Handler(chandler))
+	b.Extra(http.MethodDelete).DELETEContext(reqresp.Handler(chandler))
+	b.Extra(http.MethodOptions).OPTIONSContext(reqresp.Handler(chandler))
 
-	// ----- V2 Version -----
-	v2 := router.Group("/v2")
-
-	v2auth := v2.Group("/auth")
-	v2auth.Path("/login").POSTFunc(func(w http.ResponseWriter, r *http.Request) { /* TODO */ })
-	v2auth.Path("/logout").POSTFunc(func(w http.ResponseWriter, r *http.Request) { /* TODO */ })
-
-	v2svc1 := v2.Group("/svc1")
-	v2svc1.Path("/path").GETFunc(func(w http.ResponseWriter, r *http.Request) { /* TODO */ })
-
-	v2svc2 := v2.Group("/svc2")
-	v2svc2.Path("/path").GETFunc(func(w http.ResponseWriter, r *http.Request) { /* TODO */ })
-
-	for _, route := range router.GetRoutes() {
-		fmt.Println(route.Matcher.String())
-	}
-
-	// Output:
-	// (Path(`/v2/auth/logout`) && Method(`POST`))
-	// (Path(`/v1/auth/logout`) && Method(`POST`))
-	// (Path(`/v2/auth/login`) && Method(`POST`))
-	// (Path(`/v1/auth/login`) && Method(`POST`))
-	// (Path(`/v2/svc2/path`) && Method(`GET`))
-	// (Path(`/v2/svc1/path`) && Method(`GET`))
-	// (Path(`/v1/svc2/path`) && Method(`GET`))
-	// (Path(`/v1/svc1/path`) && Method(`GET`))
-}
-
-func TestRouteBuilder_Group_Path(t *testing.T) {
-	router := NewRouter()
-	group := router.Group("/group/")
-
-	r1, err := group.Path("/").Route(handler.Handler200)
-	if err != nil {
-		t.Error(err)
-	} else if r1.Name != "Path(`/group`)" {
-		t.Errorf("expect '%s', but got '%s'", "Path(`/group`)", r1.Name)
-	}
-
-	r2, err := group.Path("/path/").Route(handler.Handler200)
-	if err != nil {
-		t.Error(err)
-	} else if r2.Name != "Path(`/group/path/`)" {
-		t.Errorf("expect '%s', but got '%s'", "Path(`/group/path/`)", r2.Name)
-	}
-}
-
-func TestRouteBuilder_Group_PathPrefix(t *testing.T) {
-	router := NewRouter()
-	group := router.Group("/group/")
-
-	r1, err := group.PathPrefix("/").Route(handler.Handler200)
-	if err != nil {
-		t.Error(err)
-	} else if r1.Name != "PathPrefix(`/group`)" {
-		t.Errorf("expect '%s', but got '%s'", "PathPrefix(`/group`)", r1.Name)
-	}
-
-	r2, err := group.PathPrefix("/prefix/").Route(handler.Handler200)
-	if err != nil {
-		t.Error(err)
-	} else if r2.Name != "PathPrefix(`/group/prefix/`)" {
-		t.Errorf("expect '%s', but got '%s'", "PathPrefix(`/group/prefix/`)", r2.Name)
-	}
+	cehandler := func(c *reqresp.Context) error { return nil }
+	b.Extra(http.MethodGet).GETContextWithError(reqresp.HandlerWithError(cehandler))
+	b.Extra(http.MethodPut).PUTContextWithError(reqresp.HandlerWithError(cehandler))
+	b.Extra(http.MethodPost).POSTContextWithError(reqresp.HandlerWithError(cehandler))
+	b.Extra(http.MethodHead).HEADContextWithError(reqresp.HandlerWithError(cehandler))
+	b.Extra(http.MethodPatch).PATCHContextWithError(reqresp.HandlerWithError(cehandler))
+	b.Extra(http.MethodDelete).DELETEContextWithError(reqresp.HandlerWithError(cehandler))
+	b.Extra(http.MethodOptions).OPTIONSContextWithError(reqresp.HandlerWithError(cehandler))
 }
