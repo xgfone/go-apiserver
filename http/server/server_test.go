@@ -16,7 +16,6 @@ package server
 
 import (
 	"context"
-	"net"
 	"net/http"
 	"testing"
 	"time"
@@ -43,7 +42,7 @@ func TestStartServer(t *testing.T) {
 	})
 
 	server := New("127.0.0.1:8800", handler)
-	go Serve(server, func(l net.Listener) net.Listener { return l })
+	go Serve(server)
 	time.Sleep(time.Millisecond * 100)
 
 	resp, err := http.Get("http://127.0.0.1:8800")

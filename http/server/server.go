@@ -21,9 +21,11 @@ import (
 	"net"
 	"net/http"
 	"time"
-
-	"github.com/xgfone/go-atexit"
 )
+
+// ServeWithListener is used to start the http server with listener
+// until it is stopped.
+var ServeWithListener func(ln net.Listener, server *http.Server) = serveWithListener
 
 // New returns a new http server with the handler.
 func New(addr string, handler http.Handler) *http.Server {
@@ -42,7 +44,7 @@ func New(addr string, handler http.Handler) *http.Server {
 }
 
 // Serve starts the http server with server.Addr until it is stopped.
-func Serve(server *http.Server, cb func(net.Listener) net.Listener) {
+func Serve(server *http.Server) {
 	ln, err := net.Listen("tcp", server.Addr)
 	if err != nil {
 		slog.Error("fail to open the listener on the address",
@@ -50,27 +52,19 @@ func Serve(server *http.Server, cb func(net.Listener) net.Listener) {
 		return
 	}
 
-	if cb != nil {
-		ln = cb(ln)
-	}
-
+	slog.Info("start the http server", "addr", server.Addr)
+	defer slog.Info("stop the http server", "addr", server.Addr)
 	ServeWithListener(ln, server)
 }
 
 // ServeWithListener starts the http server with listener until it is stopped.
-func ServeWithListener(ln net.Listener, server *http.Server) {
-	slog.Info("start the http server", "addr", server.Addr)
-	defer slog.Info("stop the http server", "addr", server.Addr)
-
-	server.RegisterOnShutdown(atexit.Execute)
-	atexit.OnExit(func() { Stop(server) })
+func serveWithListener(ln net.Listener, server *http.Server) {
 	_ = server.Serve(ln)
-	atexit.Wait()
 }
 
 // Start is a convenient function to start the http server with addr and handler.
 func Start(addr string, handler http.Handler) {
-	Serve(New(addr, handler), nil)
+	Serve(New(addr, handler))
 }
 
 // Stop is a convenient function to stop the http server.
