@@ -27,25 +27,30 @@ import (
 // Group returns a route builder with the prefix path group,
 // which will register the built route into the router.
 func (r *Router) Group(pathPrefix string) RouteBuilder {
-	return NewRouteBuilder(r.Register).Group(pathPrefix)
+	return r.RouteBuilder().Group(pathPrefix)
 }
 
 // Path returns a route builder with the path matcher,
 // which will register the built route into the router.
 func (r *Router) Path(path string) RouteBuilder {
-	return NewRouteBuilder(r.Register).Path(path)
+	return r.RouteBuilder().Path(path)
 }
 
 // PathPrefix returns a route builder with the path prefix matcher,
 // which will register the built route into the router.
 func (r *Router) PathPrefix(pathPrefix string) RouteBuilder {
-	return NewRouteBuilder(r.Register).PathPrefix(pathPrefix)
+	return r.RouteBuilder().PathPrefix(pathPrefix)
 }
 
 // Host returns a route builder with the host matcher,
 // which will register the built route into the router.
 func (r *Router) Host(host string) RouteBuilder {
-	return NewRouteBuilder(r.Register).Host(host)
+	return r.RouteBuilder().Host(host)
+}
+
+// Route returns a new route builder.
+func (r *Router) RouteBuilder() RouteBuilder {
+	return NewRouteBuilder(r.Register)
 }
 
 // RouteBuilder is used to build the route.
@@ -54,6 +59,7 @@ type RouteBuilder struct {
 
 	mdws     middleware.Middlewares
 	matchers []matcher.Matcher
+	priority int
 	group    string
 	extra    any
 }
@@ -110,6 +116,12 @@ func (b RouteBuilder) Group(pathPrefix string) RouteBuilder {
 	} else if pathPrefix != "" {
 		b.group += pathPrefix
 	}
+	return b
+}
+
+// Priority sets the priority the route.
+func (b RouteBuilder) Priority(priority int) RouteBuilder {
+	b.priority = priority
 	return b
 }
 
@@ -199,7 +211,12 @@ func (b RouteBuilder) Handler(handler http.Handler) RouteBuilder {
 
 func (b RouteBuilder) newRoute(handler http.Handler) (route Route) {
 	matcher := matcher.And(b.matchers...)
-	route = NewRoute(matcher.Priority(), matcher, b.mdws.Handler(handler))
+	priority := b.priority
+	if priority == 0 {
+		priority = matcher.Priority()
+	}
+
+	route = NewRoute(priority, matcher, b.mdws.Handler(handler))
 	route.Extra = b.extra
 	return
 }
