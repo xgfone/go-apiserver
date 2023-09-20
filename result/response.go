@@ -24,9 +24,9 @@ import (
 	"github.com/xgfone/go-apiserver/http/header"
 )
 
-// DefaultResponser is used to send the response by responder,
-// which may be a Responder, http.ResponseWriter or others.
-var DefaultResponser func(responder any, response Response)
+// Respond is used to send the response by responder,
+// such as http.ResponseWriter.
+var Respond func(responder any, response Response)
 
 // Response represents a response result.
 type Response struct {
@@ -39,10 +39,7 @@ func NewResponse(data interface{}, err error) Response {
 	return Response{Data: data, Error: err}
 }
 
-// Success is equal to NewResponse(data, nil).
-func Success(data interface{}) Response { return Response{Data: data} }
-
-// Ok is the alias of Success.
+// Ok is equal to NewResponse(data, nil).
 func Ok(data interface{}) Response { return Response{Data: data} }
 
 // WithData returns a new Response with the given data.
@@ -72,17 +69,17 @@ func (r *Response) DecodeJSONBytes(data []byte) error {
 	return json.Unmarshal(data, r)
 }
 
-// RespondHttp sends the response by the responder.
+// Respond sends the response by the responder.
 //
-// If DefaultResponser is set, forward it with responder and response to handle.
+// If Respond is set, forward it with responder and response to handle.
 // If not set, it tries to assert responder to one of types as follow:
 //
 //	interface{ Respond(Response) }
 //	interface{ JSON(code int, value interface{}) }
 //	http.ResponseWriter
 func (r Response) Respond(responder any) {
-	if DefaultResponser != nil {
-		DefaultResponser(responder, r)
+	if Respond != nil {
+		Respond(responder, r)
 		return
 	}
 
@@ -105,7 +102,7 @@ func (r Response) Respond(responder any) {
 	}
 }
 
-// Respond sends the error response as Response by the responder.
+// Respond sends the error as Response by the responder.
 func (e Error) Respond(responder any) {
 	NewResponse(nil, e).Respond(responder)
 }
