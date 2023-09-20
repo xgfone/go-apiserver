@@ -16,19 +16,51 @@ package reqresp
 
 import "net/http"
 
+// DefaultHandler is handle the response when not respond to client.
+//
+// Default: nil
+var DefaultHandler func(c *Context)
+
 func handleContextResult(c *Context) {
 	if c.ResponseWriter.WroteHeader() {
 		return
 	}
 
-	switch e := c.RespErr.(type) {
-	case nil:
+	switch {
+	case DefaultHandler != nil:
+		DefaultHandler(c)
+
+	case c.Err == nil:
 		c.WriteHeader(200)
+
+	case !respondError(c, c.Err):
+		c.Text(500, c.Err.Error())
+	}
+}
+
+func respondError(c *Context, err error) (ok bool) {
+	switch e := err.(type) {
+	case interface{ Respond(*Context) }:
+		e.Respond(c)
+		ok = true
+
 	case http.Handler:
 		e.ServeHTTP(c.ResponseWriter, c.Request)
-	default:
-		c.Text(500, c.RespErr.Error())
+		ok = true
+
+	case interface{ Unwrap() error }:
+		if err = e.Unwrap(); err != nil {
+			ok = respondError(c, err)
+		}
+
+	case interface{ Unwrap() []error }:
+		for _, err := range e.Unwrap() {
+			if ok = respondError(c, err); ok {
+				break
+			}
+		}
 	}
+	return
 }
 
 // Handler is a handler based on Context to handle the http request.
@@ -65,6 +97,6 @@ func (h HandlerWithError) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer ReleaseResponseWriter(c.ResponseWriter)
 	}
 
-	c.RespErr = h(c)
+	c.AppendError(h(c))
 	handleContextResult(c)
 }
