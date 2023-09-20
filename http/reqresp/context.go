@@ -64,13 +64,11 @@ type Context struct {
 	ResponseWriter
 	*http.Request
 
-	LogErr  error // Used to save the error to log. If nil, try log RespErr.
-	RespErr error // Used to save the error to respond to client. If nil, do nothing.
-
 	// As a general rule, the data keys starting with "_" are private.
 	Data map[string]interface{} // A set of any key-value pairs
 	Reg1 interface{}            // The register to save the temporary context value.
 	Reg2 interface{}            // The register to save the temporary context value.
+	Err  error                  // Used to save the context error.
 
 	// The extra context information, which may be used by other service,
 	// such as the action router.
@@ -344,12 +342,13 @@ func (c *Context) GetCookie(name string) *http.Cookie {
 // Response
 // ---------------------------------------------------------------------------
 
-func (c *Context) appendLogError(err error) {
+// AppendError appends the error err into c.Err.
+func (c *Context) AppendError(err error) {
 	if err != nil {
-		if c.LogErr == nil {
-			c.LogErr = err
+		if c.Err == nil {
+			c.Err = err
 		} else {
-			c.LogErr = errors.Join(c.LogErr, err)
+			c.Err = errors.Join(c.Err, err)
 		}
 	}
 }
@@ -412,7 +411,7 @@ func (c *Context) Redirect(code int, toURL string) {
 //	If err implements http.Handler, it is equal to err.ServeHTTP(c.ResponseWriter, c.Request).
 //	Or, it is equal to c.Text(500, err.Error()).
 func (c *Context) Error(err error) {
-	c.RespErr = err
+	c.AppendError(c.Err)
 	switch e := err.(type) {
 	case nil:
 		c.WriteHeader(200)
@@ -431,7 +430,7 @@ func (c *Context) Blob(code int, contentType string, data []byte) {
 	c.WriteHeader(code)
 	if len(data) > 0 {
 		_, err := c.Write(data)
-		c.appendLogError(err)
+		c.AppendError(err)
 	}
 }
 
@@ -447,7 +446,7 @@ func (c *Context) BlobText(code int, contentType string, format string, args ...
 		} else {
 			_, err = io.WriteString(c.ResponseWriter, format)
 		}
-		c.appendLogError(err)
+		c.AppendError(err)
 	}
 }
 
@@ -469,11 +468,11 @@ func (c *Context) JSON(code int, v interface{}) {
 	}
 
 	buf := getBuilder()
-	if c.RespErr = helper.EncodeJSON(buf, v); c.RespErr == nil {
+	if err := helper.EncodeJSON(buf, v); err == nil {
 		c.SetContentType(header.MIMEApplicationJSONCharsetUTF8)
 		c.WriteHeader(code)
 		_, err := buf.WriteTo(c.ResponseWriter)
-		c.appendLogError(err)
+		c.AppendError(err)
 	}
 	putBuilder(buf)
 }
@@ -487,11 +486,11 @@ func (c *Context) XML(code int, v interface{}) {
 
 	buf := getBuilder()
 	_, _ = buf.WriteString(xml.Header)
-	if c.RespErr = xml.NewEncoder(buf).Encode(v); c.RespErr == nil {
+	if err := xml.NewEncoder(buf).Encode(v); err == nil {
 		c.SetContentType(header.MIMEApplicationXMLCharsetUTF8)
 		c.WriteHeader(code)
 		_, err := buf.WriteTo(c.ResponseWriter)
-		c.appendLogError(err)
+		c.AppendError(err)
 	}
 	putBuilder(buf)
 }
@@ -503,7 +502,7 @@ func (c *Context) Stream(code int, contentType string, r io.Reader) {
 	c.SetContentType(contentType)
 	c.WriteHeader(code)
 	_, err := io.CopyBuffer(c.ResponseWriter, r, make([]byte, 1024))
-	c.appendLogError(err)
+	c.AppendError(err)
 }
 
 // Attachment sends a file as attachment.
@@ -535,7 +534,7 @@ func (c *Context) sendfile(name, path, dtype string) {
 
 	file, err := os.Open(path)
 	if err != nil {
-		c.RespErr = err
+		c.AppendError(err)
 		return
 	}
 	defer file.Close()
@@ -544,7 +543,7 @@ func (c *Context) sendfile(name, path, dtype string) {
 	if err != nil {
 		return
 	} else if stat.IsDir() {
-		c.RespErr = fmt.Errorf("file '%s' is a directory", path)
+		c.AppendError(fmt.Errorf("file '%s' is a directory", path))
 		return
 	}
 
