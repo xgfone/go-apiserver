@@ -20,6 +20,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/middleware/context"
 	"github.com/xgfone/go-apiserver/http/middleware/logger"
+	"github.com/xgfone/go-apiserver/http/middleware/recover"
 )
 
 var (
@@ -31,6 +32,7 @@ var (
 var DefaultMiddlewares = Middlewares{
 	MiddlewareFunc(context.Context),
 	MiddlewareFunc(logger.Logger),
+	MiddlewareFunc(recover.Recover),
 }
 
 // Middleware is a http handler middleware.
