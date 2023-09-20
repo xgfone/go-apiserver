@@ -14,8 +14,48 @@
 
 package server
 
-import "testing"
+import (
+	"context"
+	"net"
+	"net/http"
+	"testing"
+	"time"
+)
 
-func TestNewServer(t *testing.T) {
-	_ = New("", nil)
+func TestStartServer(t *testing.T) {
+	func() {
+		start := time.Now()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+
+		go func() {
+			Start("1.2.3.4:123", nil)
+			cancel()
+		}()
+
+		<-ctx.Done()
+		if time.Since(start) >= time.Second {
+			t.Error("expect to fail to start http server, but got success")
+		}
+	}()
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(204)
+	})
+
+	server := New("127.0.0.1:8800", handler)
+	go Serve(server, func(l net.Listener) net.Listener { return l })
+	time.Sleep(time.Millisecond * 100)
+
+	resp, err := http.Get("http://127.0.0.1:8800")
+	if err != nil {
+		t.Error(err)
+	} else {
+		resp.Body.Close()
+		if resp.StatusCode != 204 {
+			t.Errorf("expect status code %d, but got %d", 204, resp.StatusCode)
+		}
+	}
+
+	Stop(server)
+	time.Sleep(time.Millisecond * 100)
 }

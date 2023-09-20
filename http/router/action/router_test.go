@@ -17,10 +17,11 @@ package action
 import (
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/internal/test"
 )
 
 func TestActionRoute(t *testing.T) {
@@ -35,7 +36,11 @@ func TestActionRoute(t *testing.T) {
 	if actions := router.Actions(); len(actions) != 2 {
 		t.Errorf("expect '%d' actions, but got '%d': %v", 2, len(actions), actions)
 	} else {
-		test.InStrings(t, "TestActionRoute", actions, []string{"Test1", "Test2"})
+		sort.Strings(actions)
+		expects := []string{"Test1", "Test2"}
+		if !reflect.DeepEqual(actions, expects) {
+			t.Errorf("expect actions %v, but got %v", expects, actions)
+		}
 	}
 	if n := len(router.Handlers()); n != 2 {
 		t.Errorf("expect %d action handlers, but got %d", 2, n)
@@ -45,15 +50,21 @@ func TestActionRoute(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://127.0.0.1", nil)
 	req.Header.Set(HeaderAction, "Test1")
 	router.ServeHTTP(rec, req)
-	test.CheckStatusCode(t, "TestActionRoute", rec.Code, 201)
+	if rec.Code != 201 {
+		t.Errorf("expect the status code '%d', but got '%d'", rec.Code, 201)
+	}
 
 	rec = httptest.NewRecorder()
 	req.Header.Set(HeaderAction, "Test2")
 	router.ServeHTTP(rec, req)
-	test.CheckStatusCode(t, "TestActionRoute", rec.Code, 202)
+	if rec.Code != 202 {
+		t.Errorf("expect the status code '%d', but got '%d'", rec.Code, 202)
+	}
 
 	req.Header.Set(HeaderAction, "Test")
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
-	test.CheckStatusCode(t, "TestActionRoute", rec.Code, 204)
+	if rec.Code != 204 {
+		t.Errorf("expect the status code '%d', but got '%d'", rec.Code, 204)
+	}
 }

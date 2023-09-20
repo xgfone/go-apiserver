@@ -18,8 +18,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/xgfone/go-apiserver/internal/test"
 )
 
 func BenchmarkExactRouteWithNoopMiddleware4(b *testing.B) {
@@ -43,7 +41,13 @@ func benchmarkRouteWithPath(b *testing.B, path string) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		var rw test.ResponseWriter
+		var rw NoneResponseWriter
 		router.ServeHTTP(rw, req)
 	}
 }
+
+type NoneResponseWriter struct{}
+
+func (NoneResponseWriter) Write([]byte) (int, error) { return 0, nil }
+func (NoneResponseWriter) Header() http.Header       { return nil }
+func (NoneResponseWriter) WriteHeader(int)           {}

@@ -19,8 +19,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/xgfone/go-apiserver/internal/test"
 )
 
 func wrapHandler(next http.HandlerFunc) http.HandlerFunc {
@@ -72,10 +70,16 @@ func BenchmarkResponseWriter(b *testing.B) {
 	b.ReportAllocs()
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			var rw test.ResponseWriter
+			var rw NoneResponseWriter
 			w := AcquireResponseWriter(rw)
 			handler.ServeHTTP(w, req)
 			ReleaseResponseWriter(w)
 		}
 	})
 }
+
+type NoneResponseWriter struct{}
+
+func (NoneResponseWriter) Write([]byte) (int, error) { return 0, nil }
+func (NoneResponseWriter) Header() http.Header       { return nil }
+func (NoneResponseWriter) WriteHeader(int)           {}

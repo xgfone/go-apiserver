@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package server provides a common http server.
+// Package server provides a simple common http server starter.
 package server
 
 import (
@@ -41,13 +41,8 @@ func New(addr string, handler http.Handler) *http.Server {
 	}
 }
 
-// Start just starts the http server, which is equal to
-//
-//	StartWithListenerCallback(server, nil)
-func Start(server *http.Server) { StartWithListenerCallback(server, nil) }
-
-// StartWithListenerCallback starts the http server until it is stopped.
-func StartWithListenerCallback(server *http.Server, cb func(net.Listener) net.Listener) {
+// Serve starts the http server with server.Addr until it is stopped.
+func Serve(server *http.Server, cb func(net.Listener) net.Listener) {
 	ln, err := net.Listen("tcp", server.Addr)
 	if err != nil {
 		slog.Error("fail to open the listener on the address",
@@ -59,6 +54,11 @@ func StartWithListenerCallback(server *http.Server, cb func(net.Listener) net.Li
 		ln = cb(ln)
 	}
 
+	ServeWithListener(ln, server)
+}
+
+// ServeWithListener starts the http server with listener until it is stopped.
+func ServeWithListener(ln net.Listener, server *http.Server) {
 	slog.Info("start the http server", "addr", server.Addr)
 	defer slog.Info("stop the http server", "addr", server.Addr)
 
@@ -68,14 +68,12 @@ func StartWithListenerCallback(server *http.Server, cb func(net.Listener) net.Li
 	atexit.Wait()
 }
 
-// Stop just stops the http server, which is equal to
-//
-//	StopWithContext(context.Background(), server)
-func Stop(server *http.Server) {
-	StopWithContext(context.Background(), server)
+// Start is a convenient function to start the http server with addr and handler.
+func Start(addr string, handler http.Handler) {
+	Serve(New(addr, handler), nil)
 }
 
-// StopWithContext stops the http server.
-func StopWithContext(ctx context.Context, server *http.Server) {
-	_ = server.Shutdown(ctx)
+// Stop is a convenient function to stop the http server.
+func Stop(server *http.Server) {
+	_ = server.Shutdown(context.Background())
 }

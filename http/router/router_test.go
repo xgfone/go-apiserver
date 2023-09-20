@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/xgfone/go-apiserver/http/middleware"
-	"github.com/xgfone/go-apiserver/internal/test"
 )
 
 func logMiddleware(buf *bytes.Buffer, name string) middleware.Middleware {
@@ -55,14 +55,19 @@ func TestRouter(t *testing.T) {
 	if rec.Code != 201 {
 		t.Errorf("expect status code '%d', but got '%d'", 201, rec.Code)
 	} else {
-		test.CheckStrings(t, "TestRouter", strings.Split(buf.String(), "\n"), []string{
+		expects := []string{
 			"middleware 'log1' before",
 			"middleware 'log2' before",
 			"handler",
 			"middleware 'log2' after",
 			"middleware 'log1' after",
 			"",
-		})
+		}
+
+		results := strings.Split(buf.String(), "\n")
+		if !reflect.DeepEqual(results, expects) {
+			t.Errorf("expect strings %v, but got %v'", expects, results)
+		}
 	}
 
 	buf.Reset()
@@ -72,13 +77,18 @@ func TestRouter(t *testing.T) {
 	if rec.Code != 204 {
 		t.Errorf("expect status code '%d', but got '%d'", 201, rec.Code)
 	} else {
-		test.CheckStrings(t, "TestRouter", strings.Split(buf.String(), "\n"), []string{
+		expects := []string{
 			"middleware 'log1' before",
 			"middleware 'log2' before",
 			"notfound",
 			"middleware 'log2' after",
 			"middleware 'log1' after",
 			"",
-		})
+		}
+
+		results := strings.Split(buf.String(), "\n")
+		if !reflect.DeepEqual(results, expects) {
+			t.Errorf("expect strings %v, but got %v'", expects, results)
+		}
 	}
 }
