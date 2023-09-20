@@ -68,11 +68,13 @@ type Context struct {
 	Data map[string]interface{} // A set of any key-value pairs
 	Reg1 interface{}            // The register to save the temporary context value.
 	Reg2 interface{}            // The register to save the temporary context value.
+	Reg3 interface{}            // The register to save the temporary context value.
 	Err  error                  // Used to save the context error.
 
 	// The extra context information, which may be used by other service,
 	// such as the action router.
-	Action string
+	Version string
+	Action  string
 
 	// Bind the value to the request body
 	//
