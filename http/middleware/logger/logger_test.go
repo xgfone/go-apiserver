@@ -13,3 +13,23 @@
 // limitations under the License.
 
 package logger
+
+import (
+	"errors"
+	"reflect"
+	"strings"
+	"testing"
+)
+
+type stacks []string
+
+func (ss stacks) Stacks() []string { return ss }
+func (ss stacks) Error() string    { return strings.Join(ss, ", ") }
+
+func TestGetStacks(t *testing.T) {
+	expects := []string{"func1", "func2"}
+	stacks := getStacks(errors.Join(errors.New("test1"), errors.New("test2"), stacks(expects)))
+	if !reflect.DeepEqual(expects, stacks) {
+		t.Errorf("expect stacks %v, but got %v", expects, stacks)
+	}
+}

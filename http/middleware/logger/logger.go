@@ -16,48 +16,38 @@
 package logger
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/internal/pools"
 	"github.com/xgfone/go-defaults"
 )
 
 var (
-	// Start is used to log the extra information.
+	// Collect is used to collect the extra key-value attributes if set.
 	//
-	// If returning nil, do not log any extra information.
-	//
-	// For the default implementation, it returns nil.
-	Start func(http.ResponseWriter, *http.Request) Collector = defaultStart
+	// Default: nil
+	Collect func(w http.ResponseWriter, r *http.Request, append func(...slog.Attr))
 
-	// Enabled is used to decide whether to log the request,
+	// Enabled is used to decide whether to log the request if set.
 	//
-	// For the default implementation, it returns true.
-	Enabled func(*http.Request) bool = defaultEnabled
+	// Default: nil
+	Enabled func(*http.Request) bool
 )
-
-// Collector is used to collect the extra log key-value information.
-//
-// If the returned clean function is nil, it indicates not to need to clean any.
-type Collector func(kvs []interface{}) (newkvs []interface{}, clean func())
-
-func defaultStart(http.ResponseWriter, *http.Request) Collector { return nil }
-func defaultEnabled(*http.Request) bool                         { return true }
 
 // Logger is used to wrap a http handler and return a new http handler,
 // which logs the http request.
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		if !Enabled(r) || !slog.Default().Enabled(ctx, slog.LevelInfo) {
+		if (Enabled != nil && !Enabled(r)) || !slog.Default().Enabled(ctx, slog.LevelInfo) {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		collect := Start(w, r)
 		start := time.Now()
 		next.ServeHTTP(w, r)
 		cost := time.Since(start)
@@ -68,51 +58,70 @@ func Logger(next http.Handler) http.Handler {
 		if c := reqresp.GetContext(r.Context()); c != nil {
 			action = c.Action
 			code = c.StatusCode()
-			if c.LogErr != nil {
-				err = c.LogErr
-			} else {
-				err = c.RespErr
+			if c.Err != nil {
+				err = c.Err
 			}
 		} else if rw, ok := w.(reqresp.ResponseWriter); ok {
 			code = rw.StatusCode()
 		}
 
-		ipool, ikvs := pools.GetInterfaces(32)
-		kvs := ikvs.Interfaces
-		kvs = append(kvs,
-			"raddr", r.RemoteAddr,
-			"method", r.Method,
-			"path", r.URL.Path,
-			"start", start.Unix(),
-			"cost", cost.String(),
-			"code", code,
+		attrs := getattrs()
+		defer putattrs(attrs)
+
+		attrs.Append(
+			slog.String("raddr", r.RemoteAddr),
+			slog.String("method", r.Method),
+			slog.String("path", r.URL.Path),
 		)
 
-		if action != "" {
-			kvs = append(kvs, "action", action)
-		}
-
 		if reqid := defaults.GetRequestID(ctx, r); reqid != "" {
-			kvs = append(kvs, "reqid", reqid)
+			attrs.Append(slog.String("reqid", reqid))
+		}
+		if action != "" {
+			attrs.Append(slog.String("action", action))
 		}
 
-		if collect != nil {
-			var clean func()
-			kvs, clean = collect(kvs)
-			if clean != nil {
-				defer clean()
-			}
+		attrs.Append(
+			slog.Int("code", code),
+			slog.Int64("start", start.Unix()),
+			slog.String("cost", cost.String()),
+		)
+
+		if Collect != nil {
+			Collect(w, r, attrs.Append)
 		}
 
 		if err != nil {
-			kvs = append(kvs, "err", err)
-			if se, ok := err.(interface{ Stacks() []string }); ok {
-				kvs = append(kvs, "stacks", se.Stacks())
+			attrs.Append(slog.String("err", err.Error()))
+			if stacks := getStacks(err); stacks != nil {
+				attrs.Append(slog.Any("stacks", stacks))
 			}
 		}
 
-		slog.Info("log http request", kvs...)
-		ikvs.Interfaces = kvs
-		pools.PutInterfaces(ipool, ikvs)
+		slog.LogAttrs(r.Context(), slog.LevelInfo, "log http request", attrs.Attrs...)
 	})
 }
+
+func getStacks(err error) []string {
+	type stack interface {
+		Stacks() []string
+	}
+
+	var s stack
+	if errors.As(err, &s) {
+		return s.Stacks()
+	}
+	return nil
+}
+
+type attrswrapper struct{ Attrs []slog.Attr }
+
+func (w *attrswrapper) Reset()                { ; clear(w.Attrs); w.Attrs = w.Attrs[:0] }
+func (w *attrswrapper) Append(a ...slog.Attr) { w.Attrs = append(w.Attrs, a...) }
+
+var attrspool = &sync.Pool{New: func() interface{} {
+	return &attrswrapper{Attrs: make([]slog.Attr, 0, 36)}
+}}
+
+func getattrs() *attrswrapper  { return attrspool.Get().(*attrswrapper) }
+func putattrs(w *attrswrapper) { w.Reset(); attrspool.Put(w) }
