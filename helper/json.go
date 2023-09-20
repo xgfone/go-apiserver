@@ -19,8 +19,7 @@ import (
 	"encoding/json"
 	"io"
 	"strings"
-
-	"github.com/xgfone/go-apiserver/internal/pools"
+	"sync"
 )
 
 // DecodeJSONFromString decodes the json raw string s into dst.
@@ -60,13 +59,20 @@ func EncodeJSONBytes(value interface{}) (data []byte, err error) {
 //
 // NOTICE: it does not escape the problematic HTML characters.
 func EncodeJSONString(value interface{}) (data string, err error) {
-	pool, buf := pools.GetBuffer(512)
+	buf := getbuffer()
 	if err = EncodeJSON(buf, value); err == nil {
 		data = buf.String()
 		if _len := len(data); _len > 0 && data[_len-1] == '\n' {
 			data = data[:_len-1]
 		}
 	}
-	pool.Put(buf)
+	putbuffer(buf)
 	return
 }
+
+var bufpool = &sync.Pool{New: func() any {
+	return bytes.NewBuffer(make([]byte, 0, 512))
+}}
+
+func getbuffer() *bytes.Buffer  { return bufpool.Get().(*bytes.Buffer) }
+func putbuffer(b *bytes.Buffer) { b.Reset(); bufpool.Put(b) }
