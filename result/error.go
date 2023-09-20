@@ -27,12 +27,12 @@ type CodeError interface {
 	CodeError() Error
 }
 
-// Error represents an error.
+// Error represents a code error.
 type Error struct {
 	Code    string `json:"code,omitempty" yaml:"code,omitempty" xml:"code,omitempty"`
 	Message string `json:"message,omitempty" yaml:"message,omitempty" xml:"message,omitempty"`
-	Data    any    `json:"data,omitempty" yaml:"data,omitempty" xml:"data,omitempty"`
-	Err     error  `json:"-" yaml:"-" xml:"-"`
+
+	Err error `json:"-" yaml:"-" xml:"-"`
 }
 
 // NewError returns a new Error.
@@ -52,12 +52,6 @@ func (e Error) Error() string {
 // String implements the interface fmt.Stringer.
 func (e Error) String() string {
 	return fmt.Sprintf("code=%s, msg=%s", e.Code, e.Message)
-}
-
-// WithMessage returns a new Error with the data.
-func (e Error) WithData(data any) Error {
-	e.Data = data
-	return e
 }
 
 // WithError returns a new Error, which inspects the error code and message from err.
