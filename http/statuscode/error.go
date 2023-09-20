@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/xgfone/go-apiserver/http/handler"
 )
 
 // Pre-define some errors with the status code.
@@ -86,11 +84,6 @@ func (e Error) WithMessage(msg string, args ...interface{}) Error {
 
 // ServeHTTP implements the interface http.Handler.
 func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if handler.ServeHTTPWithError != nil {
-		handler.ServeHTTPWithError(w, r, e)
-		return
-	}
-
 	if e.Err == nil {
 		w.WriteHeader(e.Code)
 		return
