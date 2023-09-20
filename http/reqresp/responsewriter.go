@@ -20,6 +20,22 @@ import (
 	"sync"
 )
 
+// WroteHeader reports whether the response writer has wrote header.
+func WroteHeader(w http.ResponseWriter) bool {
+	for {
+		switch rw := w.(type) {
+		case interface{ WroteHeader() bool }:
+			return rw.WroteHeader()
+
+		case interface{ Unwrap() http.ResponseWriter }:
+			w = rw.Unwrap()
+
+		default:
+			return false
+		}
+	}
+}
+
 // ResponseWriter is an extended http.ResponseWriter.
 type ResponseWriter interface {
 	http.ResponseWriter
