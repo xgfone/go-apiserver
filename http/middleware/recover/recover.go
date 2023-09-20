@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package recover provides a recover middleware to wrap and log the panic.
 package recover
 
 import (
