@@ -161,12 +161,23 @@ func buildPathMatcher(desc, path string, isPrefix bool) matcher.Matcher {
 	return matcher.New(prio, desc, p.Match)
 }
 
+func fixPath(path string) string {
+	if path == "/" {
+		return path
+	} else if path = strings.TrimRight(path, "/"); path != "" {
+		return path
+	}
+	return "/"
+}
+
 func newPathMatcher(path string) matcher.Matcher {
+	path = fixPath(path)
 	desc := fmt.Sprintf("Path(`%s`)", path)
 	return buildPathMatcher(desc, path, false)
 }
 
 func newPathPrefixMatcher(pathPrefix string) matcher.Matcher {
+	pathPrefix = fixPath(pathPrefix)
 	desc := fmt.Sprintf("PathPrefix(`%s`)", pathPrefix)
 	if pathPrefix == "/" {
 		return matcher.New(matcher.PriorityPathPrefix, desc, matcher.AlwaysTrue)
