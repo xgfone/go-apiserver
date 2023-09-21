@@ -30,16 +30,19 @@ type Route struct {
 	// Priority is the priority of the route.
 	//
 	// The bigger the value, the higher the priority.
-	Priority int
+	Priority int `json:"priority" yaml:"priority" xml:"priority"`
 
 	// Matcher is used to match the request.
-	Matcher Matcher
+	Matcher Matcher `json:"-"`
 
 	// Handler is the handler of the route.
 	Handler http.Handler `json:"-"`
 
 	// Extra is the extra data of the route.
-	Extra interface{} `json:",omitempty"`
+	Extra interface{} `json:"extra,omitempty" yaml:"extra,omitempty" xml:"extra,omitempty"`
+
+	// Desc is the description of the route, which may be matcher string.
+	Desc string `json:"desc,omitempty" yaml:"desc,omitempty" xml:"desc,omitempty"`
 
 	handler http.Handler
 }

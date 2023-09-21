@@ -59,9 +59,8 @@ type RouteBuilder struct {
 
 	mdws     middleware.Middlewares
 	matchers []matcher.Matcher
-	priority int
 	group    string
-	extra    any
+	route    Route
 }
 
 // NewRouteBuilder returns a new route builder.
@@ -99,7 +98,7 @@ func (b RouteBuilder) Clone() RouteBuilder {
 
 // Extra sets the extra data of the route.
 func (b RouteBuilder) Extra(extra interface{}) RouteBuilder {
-	b.extra = extra
+	b.route.Extra = extra
 	return b
 }
 
@@ -121,7 +120,13 @@ func (b RouteBuilder) Group(pathPrefix string) RouteBuilder {
 
 // Priority sets the priority the route.
 func (b RouteBuilder) Priority(priority int) RouteBuilder {
-	b.priority = priority
+	b.route.Priority = priority
+	return b
+}
+
+// Desc sets the description of the route.
+func (b RouteBuilder) Desc(desc string) RouteBuilder {
+	b.route.Desc = desc
 	return b
 }
 
@@ -211,13 +216,19 @@ func (b RouteBuilder) Handler(handler http.Handler) RouteBuilder {
 
 func (b RouteBuilder) newRoute(handler http.Handler) (route Route) {
 	matcher := matcher.And(b.matchers...)
-	priority := b.priority
-	if priority == 0 {
-		priority = matcher.Priority()
+
+	route = b.route
+	route.Matcher = matcher
+	route.Handler = handler
+	route.Use(b.mdws)
+
+	if route.Priority == 0 {
+		route.Priority = matcher.Priority()
+	}
+	if route.Desc == "" {
+		route.Desc = matcher.String()
 	}
 
-	route = NewRoute(priority, matcher, b.mdws.Handler(handler))
-	route.Extra = b.extra
 	return
 }
 
