@@ -31,9 +31,6 @@ func TestRouteBuilder(t *testing.T) {
 		if expect := r.Extra.(string); !strings.Contains(desc, expect) {
 			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
 		}
-		if expect := "prefix"; !strings.Contains(desc, expect) {
-			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
-		}
 		if expect := "path"; !strings.Contains(desc, expect) {
 			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
 		}
@@ -48,8 +45,7 @@ func TestRouteBuilder(t *testing.T) {
 		}
 	})
 
-	b = b.Group("/prefix").Clone().Path("/path").PathPrefix("/prefix").
-		Query("q1", "v1").Header("k1", "v1").Host("localhost").
+	b = b.Group("/prefix").Clone().Path("/path").Host("localhost").Query("q1", "v1").Header("k1", "v1").
 		Use(middleware.MiddlewareFunc(func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				next.ServeHTTP(w, r)
