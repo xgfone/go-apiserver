@@ -57,10 +57,15 @@ func (r *Router) RouteBuilder() RouteBuilder {
 type RouteBuilder struct {
 	register func(Route)
 
-	mdws     middleware.Middlewares
-	matchers []matcher.Matcher
-	group    string
-	route    Route
+	mdws  middleware.Middlewares
+	group string
+	route Route
+
+	host    matcher.Matcher
+	path    matcher.Matcher
+	method  matcher.Matcher
+	headers []matcher.Matcher
+	queries []matcher.Matcher
 }
 
 // NewRouteBuilder returns a new route builder.
@@ -68,14 +73,14 @@ func NewRouteBuilder(register func(Route)) RouteBuilder {
 	return RouteBuilder{register: register}
 }
 
-func (b RouteBuilder) appendMatcher(m matcher.Matcher) RouteBuilder {
+func appendMatcher(ms []matcher.Matcher, m matcher.Matcher) []matcher.Matcher {
 	if m != nil {
-		matchers := make([]matcher.Matcher, 0, len(b.matchers)+1)
-		matchers = append(matchers, b.matchers...)
+		matchers := make([]matcher.Matcher, 0, len(ms)+1)
+		matchers = append(matchers, ms...)
 		matchers = append(matchers, m)
-		b.matchers = matchers
+		ms = matchers
 	}
-	return b
+	return ms
 }
 
 // Use appends the http handler middlewares that act on the later handler.
@@ -91,7 +96,8 @@ func (b RouteBuilder) Use(middlewares ...middleware.Middleware) RouteBuilder {
 
 // Clone clones itself and returns a new route builder.
 func (b RouteBuilder) Clone() RouteBuilder {
-	b.matchers = slices.Clone(b.matchers)
+	b.headers = slices.Clone(b.headers)
+	b.queries = slices.Clone(b.queries)
 	b.mdws = b.mdws.Clone()
 	return b
 }
@@ -156,7 +162,8 @@ func (b RouteBuilder) Path(path string) RouteBuilder {
 		}
 	}
 
-	return b.appendMatcher(newPathMatcher(path))
+	b.path = newPathMatcher(path)
+	return b
 }
 
 // PathPrefix adds the path prefeix match rule, which ignores the trailling "/".
@@ -182,27 +189,32 @@ func (b RouteBuilder) PathPrefix(pathPrefix string) RouteBuilder {
 		}
 	}
 
-	return b.appendMatcher(newPathPrefixMatcher(pathPrefix))
+	b.path = newPathPrefixMatcher(pathPrefix)
+	return b
 }
 
 // Method adds the method match ruler.
 func (b RouteBuilder) Method(method string) RouteBuilder {
-	return b.appendMatcher(matcher.Method(method))
+	b.method = matcher.Method(method)
+	return b
 }
 
 // Query adds the query key-value match ruler.
 func (b RouteBuilder) Query(key, value string) RouteBuilder {
-	return b.appendMatcher(matcher.Query(key, value))
+	b.queries = appendMatcher(b.queries, matcher.Query(key, value))
+	return b
 }
 
 // Header adds the header key-value match ruler.
 func (b RouteBuilder) Header(key, value string) RouteBuilder {
-	return b.appendMatcher(matcher.Header(key, value))
+	b.headers = appendMatcher(b.headers, matcher.Header(key, value))
+	return b
 }
 
 // Host adds the host match ruler.
 func (b RouteBuilder) Host(host string) RouteBuilder {
-	return b.appendMatcher(matcher.Host(host))
+	b.host = matcher.Host(host)
+	return b
 }
 
 /// ----------------------------------------------------------------------- ///
@@ -214,8 +226,29 @@ func (b RouteBuilder) Handler(handler http.Handler) RouteBuilder {
 	return b
 }
 
+func tryAppendMatcher(ms []matcher.Matcher, m matcher.Matcher) []matcher.Matcher {
+	if m != nil {
+		ms = append(ms, m)
+	}
+	return ms
+}
+
 func (b RouteBuilder) newRoute(handler http.Handler) (route Route) {
-	matcher := matcher.And(b.matchers...)
+	var headers, queries matcher.Matcher
+	if len(b.headers) > 0 {
+		headers = matcher.And(b.headers...)
+	}
+	if len(b.queries) > 0 {
+		queries = matcher.And(b.queries...)
+	}
+
+	matchers := make([]matcher.Matcher, 0, 4)
+	matchers = tryAppendMatcher(matchers, b.host)
+	matchers = tryAppendMatcher(matchers, b.path)
+	matchers = tryAppendMatcher(matchers, b.method)
+	matchers = tryAppendMatcher(matchers, headers)
+	matchers = tryAppendMatcher(matchers, queries)
+	matcher := matcher.And(matchers...)
 
 	route = b.route
 	route.Matcher = matcher
