@@ -47,12 +47,12 @@ func NormalizeMac(mac string) string {
 	return ""
 }
 
-// IPIsOnInterface reports whether the ip is on the given network interface
-// named ifaceName.
+// IPIsOnDev reports whether the ip is on the given network card device
+// named devName.
 //
 // If ip is empty or invalid, return false.
 // If ifaceName is empty, it checks all the network interfaces.
-func IPIsOnInterface(ip, ifaceName string) (on bool, err error) {
+func IPIsOnDev(ip, devName string) (on bool, err error) {
 	netip := net.ParseIP(strings.TrimSpace(ip))
 	if netip == nil {
 		return false, nil
@@ -60,9 +60,9 @@ func IPIsOnInterface(ip, ifaceName string) (on bool, err error) {
 
 	var addrs []net.Addr
 	var iface *net.Interface
-	if ifaceName == "" {
+	if devName == "" {
 		addrs, err = net.InterfaceAddrs()
-	} else if iface, err = net.InterfaceByName(ifaceName); err == nil {
+	} else if iface, err = net.InterfaceByName(devName); err == nil {
 		addrs, err = iface.Addrs()
 	}
 
