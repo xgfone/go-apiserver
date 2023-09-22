@@ -16,6 +16,8 @@ package middleware
 
 import (
 	"net/http"
+	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -24,5 +26,36 @@ func TestMiddlewares(t *testing.T) {
 	ms = ms.Clone().Append(MiddlewareFunc(func(next http.Handler) http.Handler { return next }))
 	if handler := ms.Handler(nil); handler != nil {
 		t.Error("unexpect a http handler, but got one")
+	}
+}
+
+func TestNamedPriorityMiddleware(t *testing.T) {
+	ms := Middlewares{
+		New("m1", 1, func(next http.Handler) http.Handler { return next }),
+		New("m4", 3, func(next http.Handler) http.Handler { return next }),
+		New("m2", 2, func(next http.Handler) http.Handler { return next }),
+		New("m3", 3, func(next http.Handler) http.Handler { return next }),
+	}
+	if h := ms[0].Handler(nil); h != nil {
+		t.Errorf("expect handler nil, but got %T", h)
+	}
+
+	type (
+		priority interface{ Priority() int }
+		namer    interface{ Name() string }
+	)
+
+	slices.SortFunc(ms, func(a, b Middleware) int {
+		return a.(priority).Priority() - b.(priority).Priority()
+	})
+
+	names := make([]string, len(ms))
+	for i, m := range ms {
+		names[i] = m.(namer).Name()
+	}
+
+	expects := []string{"m1", "m2", "m4", "m3"}
+	if !reflect.DeepEqual(names, expects) {
+		t.Errorf("expect %v, but got %v", expects, names)
 	}
 }

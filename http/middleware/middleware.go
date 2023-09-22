@@ -31,10 +31,10 @@ var (
 
 // DefaultMiddlewares is a set of the default middlewares.
 var DefaultMiddlewares = Middlewares{
-	MiddlewareFunc(requestid.RequestID(nil)),
-	MiddlewareFunc(context.Context),
-	MiddlewareFunc(logger.Logger),
-	MiddlewareFunc(recover.Recover),
+	New("requestid", 10, requestid.RequestID(nil)),
+	New("context", 20, context.Context),
+	New("logger", 30, logger.Logger),
+	New("recover", 40, recover.Recover),
 }
 
 // Middleware is a http handler middleware.
@@ -70,3 +70,28 @@ func (ms Middlewares) Handler(next http.Handler) http.Handler {
 	}
 	return next
 }
+
+// middleware is a named priority middleware.
+type middleware struct {
+	f MiddlewareFunc
+	n string
+	p int
+}
+
+// New returns a new named priority middleware,
+// which has the methods as follows:
+//
+//	Name() string
+//	Priority() int
+//
+// For the priority, the smaller the value, the higher the priority.
+func New(name string, priority int, mfunc MiddlewareFunc) Middleware {
+	if mfunc == nil {
+		panic("Middleware.New: the middleware function must not be nil")
+	}
+	return &middleware{n: name, p: priority, f: mfunc}
+}
+
+func (m *middleware) Name() string                           { return m.n }
+func (m *middleware) Priority() int                          { return m.p }
+func (m *middleware) Handler(next http.Handler) http.Handler { return m.f(next) }
