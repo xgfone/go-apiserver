@@ -25,7 +25,7 @@ import (
 
 // ServeWithListener is used to start the http server with listener
 // until it is stopped.
-var ServeWithListener func(ln net.Listener, server *http.Server) = serveWithListener
+var ServeWithListener func(server *http.Server, ln net.Listener) = serveWithListener
 
 // New returns a new http server with the handler.
 func New(addr string, handler http.Handler) *http.Server {
@@ -54,11 +54,11 @@ func Serve(server *http.Server) {
 
 	slog.Info("start the http server", "addr", server.Addr)
 	defer slog.Info("stop the http server", "addr", server.Addr)
-	ServeWithListener(ln, server)
+	ServeWithListener(server, ln)
 }
 
 // ServeWithListener starts the http server with listener until it is stopped.
-func serveWithListener(ln net.Listener, server *http.Server) {
+func serveWithListener(server *http.Server, ln net.Listener) {
 	_ = server.Serve(ln)
 }
 
