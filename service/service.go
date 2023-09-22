@@ -35,8 +35,8 @@ type serviceImpl struct {
 func (s serviceImpl) Activate()   { s.activate() }
 func (s serviceImpl) Deactivate() { s.deactivate() }
 
-// NewService converts the activate and deactivate functions to the service.
-func NewService(activate, deactivate func()) Service {
+// New converts the activate and deactivate functions to the service.
+func New(activate, deactivate func()) Service {
 	if activate == nil {
 		activate = nothing
 	}
