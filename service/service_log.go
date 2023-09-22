@@ -15,28 +15,26 @@
 package service
 
 import (
-	"context"
 	"log/slog"
 )
 
-// LogService returns a new log Service, which will log the activated
-// or deactivated event.
-func LogService(logLevel slog.Level, serviceName string, service Service) Service {
-	return logService{service: service, level: logLevel, sname: serviceName}
+// Log returns a new Service, which will log the activated or deactivated event
+// with the service name.
+func Log(name string, service Service) Service {
+	return logService{service: service, name: name}
 }
 
 type logService struct {
 	service Service
-	sname   string
-	level   slog.Level
+	name    string
 }
 
 func (s logService) Activate() {
-	slog.Log(context.Background(), s.level, "the service is activated", "service", s.sname)
+	slog.Info("the service is activated", "service", s.name)
 	s.service.Activate()
 }
 
 func (s logService) Deactivate() {
-	slog.Log(context.Background(), s.level, "the service is deactivated", "service", s.sname)
+	slog.Info("the service is deactivated", "service", s.name)
 	s.service.Deactivate()
 }
