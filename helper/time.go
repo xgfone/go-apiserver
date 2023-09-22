@@ -22,32 +22,6 @@ const (
 	Week = Day * 7
 )
 
-// StopTimer stops the timer.
-func StopTimer(timer *time.Timer) {
-	if timer != nil {
-		if !timer.Stop() {
-			select {
-			case <-timer.C:
-			default:
-			}
-		}
-	}
-}
-
-// StopTicker stops the time ticker.
-func StopTicker(ticker *time.Ticker) {
-	if ticker != nil {
-		ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-			default:
-				return
-			}
-		}
-	}
-}
-
 // TimeAdd adds a duration to t and returns a new time.Time.
 func TimeAdd(t time.Time, years, months, days, hours, minutes, seconds int) time.Time {
 	if years > 0 || months > 0 || days > 0 {
