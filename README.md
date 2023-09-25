@@ -1,6 +1,7 @@
 # go-apiserver [![Build Status](https://github.com/xgfone/go-apiserver/actions/workflows/go.yml/badge.svg)](https://github.com/xgfone/go-apiserver/actions/workflows/go.yml) [![GoDoc](https://pkg.go.dev/badge/github.com/xgfone/go-apiserver)](https://pkg.go.dev/github.com/xgfone/go-apiserver) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://raw.githubusercontent.com/xgfone/go-apiserver/master/LICENSE)
 
-The library to build an API server, such as `API Gateway`, based on `Go1.19+`.
+
+The library is used to build an API server, requiring `Go1.21+`.
 
 
 ## Features
@@ -25,43 +26,38 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/entrypoint"
-	"github.com/xgfone/go-apiserver/http/middlewares"
+	"github.com/xgfone/go-apiserver/http/middleware"
+	"github.com/xgfone/go-apiserver/http/middleware/context"
+	"github.com/xgfone/go-apiserver/http/middleware/logger"
+	"github.com/xgfone/go-apiserver/http/middleware/recover"
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/router"
 	"github.com/xgfone/go-apiserver/http/router/ruler"
+	"github.com/xgfone/go-apiserver/http/server"
 )
 
 func httpHandler(route string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c := reqresp.GetContext(w, r)
+		c := reqresp.GetContext(r.Context())
 		fmt.Fprintf(w, "%s: %s", route, c.Data["id"])
 	}
 }
 
 func main() {
+	// Build the routes.
 	routeManager := ruler.NewRouter()
-
-	// Route 1: Build the route by the matcher rule string
-	routeManager.
-		Rule("Method(`GET`) && Path(`/path1/{id}`)"). // Build the matcher
-		Handler(httpHandler("route1"))                // Set the handler
-
-	// Route 2: Build the route by assembling the matcher.
-	routeManager.
-		Path("/path2/{id}").Method("GET"). // Assemble the matchers
-		Handler(httpHandler("route2"))     // Set the handler
-
-	routeManager.
-		Path("/path3/{id}").Method("GET"). // Assemble the matchers
-		HandlerFunc(httpHandler("route3")) // Set the handler function
+	routeManager.Path("/path1/{id}").Method("GET").Handler(httpHandler("route1"))
+	routeManager.Path("/path2/{id}").GET(httpHandler("route2"))
 
 	router := router.NewRouter(routeManager)
-	router.Middlewares.Use(middlewares.Context(0)) // Add Context to support path parameters
-	router.Middlewares.Use(middlewares.Logger(1), middlewares.Recover(2))
+	router.Use(middleware.MiddlewareFunc(context.Context)) // Use a function as middleware
+	router.Use(
+		middleware.New("logger", 1, logger.Logger),    // Use the named priority middleware
+		middleware.New("recover", 2, recover.Recover), // Use the named priority middleware
+	)
 
 	// http.ListenAndServe("127.0.0.1:80", router)
-	entrypoint.Start("127.0.0.1:80", router)
+	server.Start("127.0.0.1:80", router)
 
 	// Open a terminal and run the program:
 	// $ go run main.go
@@ -71,295 +67,5 @@ func main() {
 	// route1: 123
 	// $ curl http://127.0.0.1/path2/123
 	// route2: 123
-	// $ curl http://127.0.0.1/path3/123
-	// route3: 123
 }
-```
-
-### Virtual Host
-```go
-package main
-
-import (
-	"fmt"
-	"net/http"
-
-	"github.com/xgfone/go-apiserver/http/middlewares"
-	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/http/router"
-	"github.com/xgfone/go-apiserver/http/router/ruler"
-	"github.com/xgfone/go-apiserver/http/vhost"
-)
-
-func httpHandler(route string) http.HandlerFunc {
-	return func(rw http.ResponseWriter, r *http.Request) {
-		c := reqresp.GetContext(rw, r)
-		fmt.Fprintf(rw, "%s: %s", route, c.Data["id"])
-	}
-}
-
-func main() {
-	vhosts := vhost.NewManager()
-
-	// Set the default
-	defaultVhost := ruler.NewRouter()
-	defaultVhost.Path("/path/{id}").GET(httpHandler("default"))
-	vhosts.SetDefaultVHost(defaultVhost)
-	// vhosts.SetDefaultVHost(httpHandler("default")) // Use the http handler as vhost.
-
-	// VHost 1: www.example1.com
-	vhost1 := ruler.NewRouter()
-	vhost1.Path("/path/{id}").GET(httpHandler("route1"))
-	vhosts.AddVHost("www.example1.com", vhost1)
-
-	// VHost 2: www.example2.com
-	vhost2 := ruler.NewRouter()
-	vhost2.Path("/path/{id}").GET(httpHandler("route2"))
-	vhosts.AddVHost("www.example2.com", vhost2)
-
-	// VHost 3: *.example1.com
-	vhost3 := ruler.NewRouter()
-	vhost3.Path("/path/{id}").GET(httpHandler("route3"))
-	vhosts.AddVHost("*.example1.com", vhost3)
-
-	// VHost 4: www.example2.com
-	vhost4 := ruler.NewRouter()
-	vhost4.Path("/path/{id}").GET(httpHandler("route4"))
-	vhosts.AddVHost("*.example2.com", vhost4)
-
-	router := router.NewRouter(vhosts)
-	router.Middlewares.Use(middlewares.Context(0)) // Add Context to support path parameters
-	http.ListenAndServe("127.0.0.1:80", router)
-
-	// Open a terminal and run the program:
-	// $ go run main.go
-	//
-	// Open another terminal and run the http client:
-	// $ curl http://127.0.0.1/path/123 -H 'Host: www.example1.com'
-	// route1: 123
-	// $ curl http://127.0.0.1/path/123 -H 'Host: www.example2.com'
-	// route2: 123
-	// $ curl http://127.0.0.1/path/123 -H 'Host: abc.example1.com'
-	// route3: 123
-	// $ curl http://127.0.0.1/path/123 -H 'Host: abc.example2.com'
-	// route4: 123
-	// $ curl http://127.0.0.1/path/123 -H 'Host: www.example.com'
-	// default: 123
-}
-```
-
-### TLS Certificate
-```go
-package main
-
-import (
-	"context"
-	"crypto/tls"
-	"flag"
-	"time"
-
-	"github.com/xgfone/go-apiserver/entrypoint"
-	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/http/router/ruler"
-	tls2 "github.com/xgfone/go-apiserver/tls"
-	"github.com/xgfone/go-apiserver/tls/tlscert/provider"
-)
-
-var (
-	addr     = flag.String("addr", "127.0.0.1:80", "The address to listen to.")
-	keyFile  = flag.String("keyfile", "", "The Key file.")
-	certFile = flag.String("certfile", "", "The Certificate file.")
-	forceTLS = flag.Bool("forcetls", false, "If true, use TLS forcibly when setting the certificate")
-)
-
-func main() {
-	// Parse the CLI arguments.
-	flag.Parse()
-
-	// New the http router.
-	router := ruler.NewRouter()
-	router.Path("/").ContextHandler(func(c *reqresp.Context) { c.Text(200, "OK") })
-
-	// Initialize the certificate.
-	var tlsconfig *tls.Config
-	if *keyFile != "" && *certFile != "" {
-		config := tls2.NewServerConfig(nil)
-		tlsconfig = config.GetTLSConfig()
-
-		// Use the file provider to monitor the change of the certificate files.
-		// When the certificate files have changed, it will be reloaded.
-		tlsFileProvider := provider.NewFileProvider(time.Second * 10)
-		tlsFileProvider.AddCertFile("tlsfile", *keyFile, *certFile)
-
-		// Use the provider manager to manage all the certificate providers,
-		// and update the certificate into the entrypoint when it has changed.
-		tlsProviderManager := provider.NewManager(config)
-		tlsProviderManager.AddProvider("tlsFileProvider", tlsFileProvider)
-		tlsProviderManager.Start(context.Background())
-		defer tlsProviderManager.Stop()
-	}
-
-	// Start the HTTP server.
-	entrypoint.StartTLS("name", *addr, router, tlsconfig, *forceTLS)
-
-	// TEST 1:
-	// Open a terminal and run the program:
-	// $ go run main.go
-	//
-	// Open another terminal and run the http client:
-	// $ curl http://localhost:80
-	// OK
-	// $ curl https://localhost:80 --cacert ca.pem
-	// curl: (35) error:1408F10B:SSL routines:ssl3_get_record:wrong version number
-	//
-	//
-	// TEST 2:
-	// Open a terminal and run the program:
-	// $ go run main.go -keyfile key.pem -certfile cert.pem
-	//
-	// Open another terminal and run the http client:
-	// $ curl http://localhost:80
-	// OK
-	// $ curl https://localhost:80 --cacert ca.pem
-	// OK
-	//
-	//
-	// TEST 3:
-	// Open a terminal and run the program:
-	// $ go run main.go -keyfile key.pem -certfile cert.pem --forcetls
-	//
-	// Open another terminal and run the http client:
-	// $ curl http://localhost:80
-	// curl: (56) Recv failure: Connection was reset
-	// $ curl https://localhost:80 --cacert ca.pem
-	// OK
-}
-```
-
-### Mini API Gateway
-```go
-package main
-
-import (
-	"flag"
-
-	"github.com/xgfone/go-apiserver/entrypoint"
-	"github.com/xgfone/go-apiserver/http/middlewares"
-	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/http/router"
-	"github.com/xgfone/go-apiserver/http/router/ruler"
-	"github.com/xgfone/go-loadbalancer/balancer"
-	"github.com/xgfone/go-loadbalancer/endpoint"
-	"github.com/xgfone/go-loadbalancer/forwarder"
-	"github.com/xgfone/go-loadbalancer/healthcheck"
-	httpep "github.com/xgfone/go-loadbalancer/http/endpoint"
-)
-
-var (
-	listenAddr = flag.String("listen-addr", ":80", "The address that api gateway listens on.")
-	manageCIDR = flag.String("manage-cidr", "127.0.0.0/8", "The CIDR of the management network.")
-)
-
-func main() {
-	flag.Parse()
-
-	routeManager := ruler.NewRouter()
-	initAdminManageAPI(routeManager)
-	healthcheck.DefaultHealthChecker.Start()
-	defer healthcheck.DefaultHealthChecker.Stop()
-
-	router := router.NewRouter(routeManager)
-	router.Middlewares.Use(middlewares.DefaultMiddlewares...)
-	entrypoint.Start(*listenAddr, router)
-}
-
-func initAdminManageAPI(router *ruler.Router) {
-	router.
-		Path("/admin/route").
-		Method("POST").
-		ClientIP(*manageCIDR). // Only allow the specific clients to add the route.
-		ContextHandler(func(ctx *reqresp.Context) {
-			var req struct {
-				Matcher  string `json:"matcher" validate:"required"` // Route Matcher Rule
-				Upstream struct {
-					ForwardPolicy string              `json:"forwardPolicy" default:"weight_random"`
-					HealthCheck   healthcheck.Checker `json:"healthCheck"`
-					Servers       []struct {
-						IP     string `json:"ip" validate:"ip"`
-						Port   uint16 `json:"port" validate:"ranger(1,65535)"`
-						Weight int    `json:"weight" default:"1" validate:"min(1)"`
-					} `json:"servers"`
-				} `json:"upstream"`
-			}
-
-			if err := ctx.BindBody(&req); err != nil {
-				ctx.Text(400, "invalid request route paramenter: %s", err)
-				return
-			}
-
-			// Build the upstream backend servers.
-			endpoints := make(endpoint.Endpoints, len(req.Upstream.Servers))
-			for i, server := range req.Upstream.Servers {
-				endpoints[i] = httpep.Config{
-					IP:     server.IP,
-					Port:   server.Port,
-					Weight: server.Weight,
-				}.NewEndpoint()
-			}
-
-			// Build the loadbalancer forwarder.
-			balancer, _ := balancer.Build(req.Upstream.ForwardPolicy, nil)
-			forwarder := forwarder.NewForwarder(req.Matcher, balancer)
-
-			healthcheck.DefaultHealthChecker.AddUpdater(forwarder.Name(), forwarder)
-			healthcheck.DefaultHealthChecker.UpsertEndpoints(endpoints, req.Upstream.HealthCheck)
-
-			// Build the route and forward the request to forwarder.
-			// You can use forwarder.ForwardHTTP to control the request and response.
-			err := router.Rule(req.Matcher).Handler(forwarder)
-			if err != nil {
-				ctx.Text(400, "invalid route rule '%s': %s", req.Matcher, err.Error())
-			}
-		})
-}
-```
-
-```shell
-# Run the mini API-Gateway on the host 192.168.1.10
-$ nohup go run main.go &
-
-# Add the route
-# Notice: remove the characters from // to the line end.
-$ curl -XPOST http://127.0.0.1/admin/route -H 'Content-Type: application/json' -d '
-{
-    "matcher": "Method(`GET`) && Path(`/path`)",
-    "upstream": {
-        "forwardPolicy": "weight_round_robin",
-        "servers": [
-            {"ip": "192.168.1.11", "port": 80, "weight": 10}, // 33.3% requests
-            {"ip": "192.168.1.12", "port": 80, "weight": 20}  // 66.7% requests
-        ]
-    }
-}'
-
-# Access the backend servers by the mini API-Gateway:
-# 2/6(33.3%) requests -> 192.168.1.11
-# 4/6(66.7%) requests -> 192.168.1.12
-$ curl http://192.168.1.10/path
-192.168.1.11/backend/path
-
-$ curl http://192.168.1.10/path
-192.168.1.12/backend/path
-
-$ curl http://192.168.1.10/path
-192.168.1.12/backend/path
-
-$ curl http://192.168.1.10/path
-192.168.1.11/backend/path
-
-$ curl http://192.168.1.10/path
-192.168.1.12/backend/path
-
-$ curl http://192.168.1.10/path
-192.168.1.12/backend/path
 ```
