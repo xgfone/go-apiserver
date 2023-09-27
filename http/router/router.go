@@ -56,6 +56,14 @@ func (r *Router) Use(ms ...middleware.Middleware) *Router {
 	return r
 }
 
+// UseFunc appends a set of function middlewares into the middleware manager.
+func (r *Router) UseFunc(ms ...middleware.MiddlewareFunc) *Router {
+	for _, m := range ms {
+		r.Middlewares.Append(m)
+	}
+	return r
+}
+
 // ServeHTTP implements the interface http.Handler.
 func (r *Router) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	r.Middlewares.ServeHTTP(resp, req)
