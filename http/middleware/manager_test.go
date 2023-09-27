@@ -20,10 +20,21 @@ import (
 	"testing"
 )
 
+func appendPathSuffix(suffix string) MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.URL.Path += suffix
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 func TestManager(t *testing.T) {
 	m := NewManager(nil)
 	m.Append()
-	m.Append(MiddlewareFunc(func(next http.Handler) http.Handler { return next }))
+	m.Insert()
+	m.Append(appendPathSuffix("/mw1"))
+	m.Insert(appendPathSuffix("/mw2"))
 
 	func() {
 		defer func() {
@@ -43,7 +54,7 @@ func TestManager(t *testing.T) {
 	}))
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "http://localhost", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/mw2/mw1", nil)
 	m.ServeHTTP(rec, req)
 	if rec.Code != 204 {
 		t.Errorf("expect status code %d, but got %d", 204, rec.Code)

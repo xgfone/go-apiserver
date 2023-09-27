@@ -45,6 +45,19 @@ func (m *Manager) SetHandler(handler http.Handler) {
 	m.update()
 }
 
+// Insert inserts the new middlewares to the front.
+func (m *Manager) Insert(ms ...Middleware) {
+	if len(ms) == 0 {
+		return
+	}
+
+	mdws := make(Middlewares, 0, len(m.mdws)+len(ms))
+	mdws = append(mdws, ms...)
+	mdws = append(mdws, m.mdws...)
+	m.mdws = mdws
+	m.update()
+}
+
 // Append appends the new middlewares.
 func (m *Manager) Append(ms ...Middleware) {
 	if len(ms) == 0 {
