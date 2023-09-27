@@ -51,8 +51,9 @@ func NewDefaultRouter(router http.Handler) *Router {
 }
 
 // Use appends a set of middlewares into the middleware manager.
-func (r *Router) Use(ms ...middleware.Middleware) {
+func (r *Router) Use(ms ...middleware.Middleware) *Router {
 	r.Middlewares.Append(ms...)
+	return r
 }
 
 // ServeHTTP implements the interface http.Handler.
