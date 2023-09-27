@@ -17,6 +17,7 @@ package middleware
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/xgfone/go-apiserver/http/middleware/context"
 	"github.com/xgfone/go-apiserver/http/middleware/logger"
@@ -95,3 +96,16 @@ func New(name string, priority int, mfunc MiddlewareFunc) Middleware {
 func (m *middleware) Name() string                           { return m.n }
 func (m *middleware) Priority() int                          { return m.p }
 func (m *middleware) Handler(next http.Handler) http.Handler { return m.f(next) }
+
+// Sort sorts a set of middlewares, which must have implemented
+//
+//	interface{ Priority() int }
+func Sort(ms []Middleware) {
+	slices.SortStableFunc(ms, func(a, b Middleware) int {
+		return getPriority(a) - getPriority(b)
+	})
+}
+
+func getPriority(m Middleware) int {
+	return m.(interface{ Priority() int }).Priority()
+}

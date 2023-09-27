@@ -17,7 +17,6 @@ package middleware
 import (
 	"net/http"
 	"reflect"
-	"slices"
 	"testing"
 )
 
@@ -40,18 +39,10 @@ func TestNamedPriorityMiddleware(t *testing.T) {
 		t.Errorf("expect handler nil, but got %T", h)
 	}
 
-	type (
-		priority interface{ Priority() int }
-		namer    interface{ Name() string }
-	)
-
-	slices.SortFunc(ms, func(a, b Middleware) int {
-		return a.(priority).Priority() - b.(priority).Priority()
-	})
-
+	Sort(ms)
 	names := make([]string, len(ms))
 	for i, m := range ms {
-		names[i] = m.(namer).Name()
+		names[i] = m.(interface{ Name() string }).Name()
 	}
 
 	expects := []string{"m1", "m2", "m4", "m3"}
