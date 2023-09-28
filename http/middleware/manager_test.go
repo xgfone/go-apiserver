@@ -33,8 +33,14 @@ func TestManager(t *testing.T) {
 	m := NewManager(nil)
 	m.Append()
 	m.Insert()
+	m.AppendFunc()
+	m.InsertFunc()
+
 	m.Append(appendPathSuffix("/mw1"))
 	m.Insert(appendPathSuffix("/mw2"))
+
+	m.AppendFunc(appendPathSuffix("/mw3"))
+	m.InsertFunc(appendPathSuffix("/mw4"))
 
 	func() {
 		defer func() {
@@ -54,7 +60,7 @@ func TestManager(t *testing.T) {
 	}))
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "http://localhost/mw2/mw1", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/mw4/mw2/mw1/mw3", nil)
 	m.ServeHTTP(rec, req)
 	if rec.Code != 204 {
 		t.Errorf("expect status code %d, but got %d", 204, rec.Code)

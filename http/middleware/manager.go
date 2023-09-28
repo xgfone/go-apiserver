@@ -45,6 +45,26 @@ func (m *Manager) SetHandler(handler http.Handler) {
 	m.update()
 }
 
+// InsertFunc inserts the new function middlewares to the front.
+func (m *Manager) InsertFunc(ms ...MiddlewareFunc) {
+	if len(ms) == 0 {
+		return
+	}
+
+	m.mdws = m.mdws.InsertFunc(ms...)
+	m.update()
+}
+
+// AppendFunc appends the new function middlewares.
+func (m *Manager) AppendFunc(ms ...MiddlewareFunc) {
+	if len(ms) == 0 {
+		return
+	}
+
+	m.mdws.AppendFunc(ms...)
+	m.update()
+}
+
 // Insert inserts the new middlewares to the front.
 func (m *Manager) Insert(ms ...Middleware) {
 	if len(ms) == 0 {
