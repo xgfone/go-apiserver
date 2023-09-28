@@ -61,7 +61,7 @@ func (m *Manager) AppendFunc(ms ...MiddlewareFunc) {
 		return
 	}
 
-	m.mdws.AppendFunc(ms...)
+	m.mdws = m.mdws.AppendFunc(ms...)
 	m.update()
 }
 
@@ -71,10 +71,7 @@ func (m *Manager) Insert(ms ...Middleware) {
 		return
 	}
 
-	mdws := make(Middlewares, 0, len(m.mdws)+len(ms))
-	mdws = append(mdws, ms...)
-	mdws = append(mdws, m.mdws...)
-	m.mdws = mdws
+	m.mdws = m.mdws.Insert(ms...)
 	m.update()
 }
 

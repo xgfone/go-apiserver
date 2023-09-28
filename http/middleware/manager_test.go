@@ -54,15 +54,19 @@ func TestManager(t *testing.T) {
 		m.ServeHTTP(rec, req)
 	}()
 
-	m.Reset()
 	m.SetHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
 	}))
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "http://localhost/mw4/mw2/mw1/mw3", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/path", nil)
 	m.ServeHTTP(rec, req)
 	if rec.Code != 204 {
 		t.Errorf("expect status code %d, but got %d", 204, rec.Code)
+	}
+
+	const expect = "/path/mw4/mw2/mw1/mw3"
+	if req.URL.Path != expect {
+		t.Errorf("expect path '%s', but got '%s'", expect, req.URL.Path)
 	}
 }
