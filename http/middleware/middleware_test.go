@@ -16,15 +16,26 @@ package middleware
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 )
 
 func TestMiddlewares(t *testing.T) {
-	ms := Middlewares(nil)
-	ms = ms.Clone().Append(MiddlewareFunc(func(next http.Handler) http.Handler { return next }))
-	if handler := ms.Handler(nil); handler != nil {
-		t.Error("unexpect a http handler, but got one")
+	ms := Middlewares(nil).Clone().
+		Append(appendPathSuffix("/m1")).
+		AppendFunc(appendPathSuffix("/m2")).
+		InsertFunc(appendPathSuffix("/m3")).
+		Insert(appendPathSuffix("/m4"))
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/path", nil)
+	h := ms.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	h.ServeHTTP(rec, req)
+
+	expect := "/path/m4/m3/m1/m2"
+	if req.URL.Path != expect {
+		t.Errorf("expect path '%s', but got '%s'", expect, req.URL.Path)
 	}
 }
 

@@ -59,6 +59,41 @@ func (ms Middlewares) Clone() Middlewares {
 	return _ms
 }
 
+// InsertFunc inserts a set of function middlewares into the front
+// and return a new middleware slice.
+func (ms Middlewares) InsertFunc(m ...MiddlewareFunc) Middlewares {
+	if len(m) == 0 {
+		return ms
+	}
+
+	_ms := make(Middlewares, 0, len(ms)+len(m))
+	_ms = _ms.AppendFunc(m...)
+	_ms = _ms.Append(ms...)
+	return _ms
+}
+
+// Insert inserts a set of middlewares into the front
+// and return a new middleware slice.
+func (ms Middlewares) Insert(m ...Middleware) Middlewares {
+	if len(m) == 0 {
+		return ms
+	}
+
+	_ms := make(Middlewares, 0, len(ms)+len(m))
+	_ms = _ms.Append(m...)
+	_ms = _ms.Append(ms...)
+	return _ms
+}
+
+// AppendFunc appends a set of function middlewares
+// and return a new middleware slice.
+func (ms Middlewares) AppendFunc(m ...MiddlewareFunc) Middlewares {
+	for _, _m := range m {
+		ms = append(ms, _m)
+	}
+	return ms
+}
+
 // Append appends a set of middlewares and return a new middleware slice.
 func (ms Middlewares) Append(m ...Middleware) Middlewares {
 	return append(ms, m...)
