@@ -85,12 +85,13 @@ func appendMatcher(ms []matcher.Matcher, m matcher.Matcher) []matcher.Matcher {
 
 // Use appends the http handler middlewares that act on the later handler.
 func (b RouteBuilder) Use(middlewares ...middleware.Middleware) RouteBuilder {
-	if _len := len(middlewares); _len > 0 {
-		mdws := make(middleware.Middlewares, 0, len(b.mdws)+_len)
-		mdws = append(mdws, b.mdws)
-		mdws = mdws.Append(middlewares...)
-		b.mdws = mdws
-	}
+	b.mdws = b.mdws.Append(middlewares...)
+	return b
+}
+
+// UseFunc appends the http handler function middlewares that act on the later handler.
+func (b RouteBuilder) UseFunc(middlewares ...middleware.MiddlewareFunc) RouteBuilder {
+	b.mdws = b.mdws.AppendFunc(middlewares...)
 	return b
 }
 
