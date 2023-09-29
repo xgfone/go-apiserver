@@ -52,6 +52,10 @@ func TestRouteBuilder(t *testing.T) {
 			})
 		}))
 
+	if b.Prefix() != "/prefix" {
+		t.Errorf("expec group prefix '%s', but got '%s'", "/prefix", b.Prefix())
+	}
+
 	b.Extra(http.MethodGet).GET(handler.Handler204)
 	b.Extra(http.MethodPut).PUT(handler.Handler204)
 	b.Extra(http.MethodPost).POST(handler.Handler204)

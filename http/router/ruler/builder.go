@@ -83,6 +83,9 @@ func appendMatcher(ms []matcher.Matcher, m matcher.Matcher) []matcher.Matcher {
 	return ms
 }
 
+// Prefix returns the group path prefix, which is not the path prefix matcher.
+func (b RouteBuilder) Prefix() string { return b.group }
+
 // Use appends the http handler middlewares that act on the later handler.
 func (b RouteBuilder) Use(middlewares ...middleware.Middleware) RouteBuilder {
 	b.mdws = b.mdws.Append(middlewares...)
