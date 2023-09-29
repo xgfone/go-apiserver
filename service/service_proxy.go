@@ -21,6 +21,8 @@ import (
 	"sync/atomic"
 )
 
+func init() { Append(DefaultProxy) }
+
 // DefaultProxy is the default global proxy service.
 var DefaultProxy = NewProxy(context.Background())
 
