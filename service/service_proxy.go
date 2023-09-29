@@ -16,6 +16,7 @@ package service
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 )
@@ -68,6 +69,7 @@ func (p *Proxy) Activate() {
 			p.context.Store(contextInfo{Context: ctx, CancelFunc: cancel})
 		}
 		p.clock.Unlock()
+		slog.Info("the service proxy is activated")
 	}
 }
 
@@ -83,6 +85,7 @@ func (p *Proxy) Deactivate() {
 		if cancel != nil {
 			cancel()
 		}
+		slog.Info("the service proxy is deactivated")
 	}
 }
 
