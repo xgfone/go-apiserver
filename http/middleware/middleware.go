@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/middleware/context"
 	"github.com/xgfone/go-apiserver/http/middleware/logger"
 	"github.com/xgfone/go-apiserver/http/middleware/recover"
@@ -49,54 +50,71 @@ type MiddlewareFunc func(next http.Handler) http.Handler
 // Handler implements the interface Middleware.
 func (f MiddlewareFunc) Handler(next http.Handler) http.Handler { return f(next) }
 
+func funcs2mws(fs []MiddlewareFunc) Middlewares {
+	if len(fs) == 0 {
+		return nil
+	}
+
+	ms := make(Middlewares, len(fs))
+	for i, f := range fs {
+		ms[i] = f
+	}
+	return ms
+}
+
 // Middlewares is a set of middlewares.
 type Middlewares []Middleware
 
 // Clone clones itself to a new middlewares.
 func (ms Middlewares) Clone() Middlewares {
-	_ms := make(Middlewares, len(ms))
-	copy(_ms, ms)
-	return _ms
+	return slices.Clone(ms)
 }
 
 // InsertFunc inserts a set of function middlewares into the front
 // and return a new middleware slice.
 func (ms Middlewares) InsertFunc(m ...MiddlewareFunc) Middlewares {
-	if len(m) == 0 {
+	switch _len := len(m); _len {
+	case 0:
 		return ms
+
+	case 1:
+		return ms.Insert(m[0])
+
+	case 2:
+		return ms.Insert(m[0], m[1])
+
+	default:
+		return ms.Insert(funcs2mws(m)...)
 	}
-
-	_ms := make(Middlewares, 0, len(ms)+len(m))
-	_ms = _ms.AppendFunc(m...)
-	_ms = _ms.Append(ms...)
-	return _ms
-}
-
-// Insert inserts a set of middlewares into the front
-// and return a new middleware slice.
-func (ms Middlewares) Insert(m ...Middleware) Middlewares {
-	if len(m) == 0 {
-		return ms
-	}
-
-	_ms := make(Middlewares, 0, len(ms)+len(m))
-	_ms = _ms.Append(m...)
-	_ms = _ms.Append(ms...)
-	return _ms
 }
 
 // AppendFunc appends a set of function middlewares
 // and return a new middleware slice.
 func (ms Middlewares) AppendFunc(m ...MiddlewareFunc) Middlewares {
-	for _, _m := range m {
-		ms = append(ms, _m)
+	switch _len := len(m); _len {
+	case 0:
+		return ms
+
+	case 1:
+		return ms.Append(m[0])
+
+	case 2:
+		return ms.Append(m[0], m[1])
+
+	default:
+		return ms.Append(funcs2mws(m)...)
 	}
-	return ms
+}
+
+// Insert inserts a set of middlewares into the front
+// and return a new middleware slice.
+func (ms Middlewares) Insert(m ...Middleware) Middlewares {
+	return helper.MergeSlice(m, ms)
 }
 
 // Append appends a set of middlewares and return a new middleware slice.
 func (ms Middlewares) Append(m ...Middleware) Middlewares {
-	return append(ms, m...)
+	return helper.MergeSlice(ms, m)
 }
 
 // Handler implements the interface Middleware.

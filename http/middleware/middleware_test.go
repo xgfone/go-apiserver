@@ -28,6 +28,14 @@ func TestMiddlewares(t *testing.T) {
 		InsertFunc(appendPathSuffix("/m3")).
 		Insert(appendPathSuffix("/m4"))
 
+	nothing := func(next http.Handler) http.Handler { return next }
+	ms = ms.InsertFunc(nothing)
+	ms = ms.InsertFunc(nothing, nothing)
+	ms = ms.InsertFunc(nothing, nothing, nothing)
+	ms = ms.AppendFunc(nothing)
+	ms = ms.AppendFunc(nothing, nothing)
+	ms = ms.AppendFunc(nothing, nothing, nothing)
+
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/path", nil)
 	h := ms.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))

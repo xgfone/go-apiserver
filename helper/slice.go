@@ -31,3 +31,56 @@ func MakeSlice[S ~[]E, E any, I ~int | ~int64](len, cap, defaultCap I) S {
 	}
 	return make(S, len, cap)
 }
+
+// MergeSlice merges a set of slices in turn to one slice.
+//
+// If no arguments, return nil.
+// If all the arguments are empty, return a empty slice with cap==0.
+func MergeSlice[S ~[]E, E any](ss ...S) S {
+	switch _len := len(ss); _len {
+	case 0:
+		return nil
+
+	case 1:
+		return ss[0]
+
+	case 2:
+		len1, len2 := len(ss[0]), len(ss[1])
+		switch {
+		case len1 == 0:
+			return ss[1]
+
+		case len2 == 0:
+			return ss[0]
+
+		default:
+			vs := make(S, len1+len2)
+			copy(vs, ss[0])
+			copy(vs[len1:], ss[1])
+			return vs
+		}
+
+	default:
+		var tlen int
+		var nonil bool
+		for i := 0; i < _len; i++ {
+			if ss[i] != nil {
+				nonil = true
+				tlen += len(ss[i])
+			}
+		}
+
+		if !nonil {
+			return nil
+		}
+		if tlen == 0 {
+			return S{}
+		}
+
+		vs := make(S, 0, tlen)
+		for i := 0; i < _len; i++ {
+			vs = append(vs, ss[i]...)
+		}
+		return vs
+	}
+}
