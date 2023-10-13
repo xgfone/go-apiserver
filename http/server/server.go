@@ -51,14 +51,13 @@ func Serve(server *http.Server) {
 			"protocol", "tcp", "addr", server.Addr, "err", err)
 		return
 	}
-
-	slog.Info("start the http server", "addr", server.Addr)
-	defer slog.Info("stop the http server", "addr", server.Addr)
 	ServeWithListener(server, ln)
 }
 
 // ServeWithListener starts the http server with listener until it is stopped.
 func serveWithListener(server *http.Server, ln net.Listener) {
+	slog.Info("start the http server", "addr", server.Addr)
+	defer slog.Info("stop the http server", "addr", server.Addr)
 	_ = server.Serve(ln)
 }
 
