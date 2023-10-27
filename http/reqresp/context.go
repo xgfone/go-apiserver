@@ -28,11 +28,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-binder"
-	"github.com/xgfone/go-cast"
 )
 
 type contextkey struct{ key uint8 }
@@ -203,36 +203,21 @@ func (c *Context) Scheme() string {
 // Data
 // ---------------------------------------------------------------------------
 
-// GetDataInt64 returns the value as int64 by the key from the field Data.
-//
-// If the key does not exist and required is false, return (0, nil).
-func (c *Context) GetDataInt64(key string, required bool) (value int64, err error) {
-	if v, exist := c.Data[key]; exist {
-		value, err = cast.ToInt64(v)
-	} else if required {
-		err = fmt.Errorf("missing %s", key)
-	}
-	return
-}
-
-// GetDataUint64 returns the value as uint64 by the key from the field Data.
-//
-// If the key does not exist and required is false, return (0, nil).
-func (c *Context) GetDataUint64(key string, required bool) (value uint64, err error) {
-	if v, exist := c.Data[key]; exist {
-		value, err = cast.ToUint64(v)
-	} else if required {
-		err = fmt.Errorf("missing %s", key)
-	}
-	return
-}
-
 // GetDataString returns the value as string by the key from the field Data.
 //
 // If the key does not exist, return "".
 func (c *Context) GetDataString(key string) string {
 	if value, ok := c.Data[key]; ok {
-		return cast.Must(cast.ToString(value))
+		switch v := value.(type) {
+		case string:
+			return v
+		case []byte:
+			return string(v)
+		case time.Time:
+			return v.Format(time.RFC3339Nano)
+		default:
+			return fmt.Sprint(value)
+		}
 	}
 	return ""
 }

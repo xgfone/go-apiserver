@@ -52,29 +52,6 @@ func TestContextBinder(t *testing.T) {
 	}
 }
 
-func TestContextGetDataInt64(t *testing.T) {
-	c := Context{Data: make(map[string]interface{}, 2)}
-	c.Data["key"] = "123"
-
-	if v, err := c.GetDataInt64("key", true); err != nil {
-		t.Error(err)
-	} else if v != 123 {
-		t.Errorf("expect %d, but got %d", 123, v)
-	}
-
-	if v, err := c.GetDataInt64("abc", false); err != nil {
-		t.Error(err)
-	} else if v != 0 {
-		t.Errorf("expect %d, but got %d", 0, v)
-	}
-
-	if _, err := c.GetDataInt64("abc", true); err == nil {
-		t.Errorf("expect an error, but got nil")
-	} else if s := err.Error(); s != "missing abc" {
-		t.Errorf("expect error '%s', but got '%s'", "missing abc", s)
-	}
-}
-
 func TestContextGetQueryInt64(t *testing.T) {
 	c := Context{Query: make(url.Values, 2)}
 	c.Query.Set("key", "123")
