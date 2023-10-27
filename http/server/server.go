@@ -21,6 +21,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/xgfone/go-atexit"
 )
 
 // ServeWithListener is used to start the http server with listener
@@ -54,13 +56,6 @@ func Serve(server *http.Server) {
 	ServeWithListener(server, ln)
 }
 
-// ServeWithListener starts the http server with listener until it is stopped.
-func serveWithListener(server *http.Server, ln net.Listener) {
-	slog.Info("start the http server", "addr", server.Addr)
-	defer slog.Info("stop the http server", "addr", server.Addr)
-	_ = server.Serve(ln)
-}
-
 // Start is a convenient function to start the http server with addr and handler.
 func Start(addr string, handler http.Handler) {
 	Serve(New(addr, handler))
@@ -69,4 +64,18 @@ func Start(addr string, handler http.Handler) {
 // Stop is a convenient function to stop the http server.
 func Stop(server *http.Server) {
 	_ = server.Shutdown(context.Background())
+}
+
+// ServeWithListener starts the http server with listener until it is stopped.
+func serveWithListener(server *http.Server, ln net.Listener) {
+	atexit.OnExit(func() { _ = server.Shutdown(context.Background()) })
+	serve(server, ln)
+	atexit.Execute()
+	atexit.Wait()
+}
+
+func serve(server *http.Server, ln net.Listener) {
+	slog.Info("start the http server", "addr", server.Addr)
+	defer slog.Info("stop the http server", "addr", server.Addr)
+	_ = server.Serve(ln)
 }
