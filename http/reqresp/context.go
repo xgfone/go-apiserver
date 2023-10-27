@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 
 	"github.com/xgfone/go-apiserver/helper"
@@ -287,7 +288,7 @@ func (c *Context) GetQueryInt64(key string, required bool) (value int64, err err
 		switch len(vs) {
 		case 0:
 		case 1:
-			value, err = cast.ToInt64(vs[0])
+			value, err = strconv.ParseInt(vs[0], 10, 64)
 		default:
 			err = fmt.Errorf("too query values for %s", key)
 		}
@@ -305,7 +306,7 @@ func (c *Context) GetQueryUint64(key string, required bool) (value uint64, err e
 		switch len(vs) {
 		case 0:
 		case 1:
-			value, err = cast.ToUint64(vs[0])
+			value, err = strconv.ParseUint(vs[0], 10, 64)
 		default:
 			err = fmt.Errorf("too query values for %s", key)
 		}
