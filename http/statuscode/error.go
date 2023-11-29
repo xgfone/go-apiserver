@@ -76,10 +76,10 @@ func (e Error) WithError(err error) Error {
 // WithMessage is a convenient method that convert the format message
 // to an error and set it, then return the new error.
 func (e Error) WithMessage(msg string, args ...interface{}) Error {
-	if len(args) > 0 {
-		msg = fmt.Sprintf(msg, args...)
+	if len(args) == 0 {
+		return e.WithError(errors.New(msg))
 	}
-	return e.WithError(errors.New(msg))
+	return e.WithError(fmt.Errorf(msg, args...))
 }
 
 // ServeHTTP implements the interface http.Handler.
@@ -89,7 +89,19 @@ func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(e.Code)
-	_, _ = io.WriteString(w, e.Err.Error())
+	switch err := e.Err.(type) {
+	case nil:
+		w.WriteHeader(e.Code)
+
+	case codeHandler:
+		err.ServeHTTP(w, r, e.Code)
+
+	default:
+		w.WriteHeader(e.Code)
+		_, _ = io.WriteString(w, e.Err.Error())
+	}
+}
+
+type codeHandler interface {
+	ServeHTTP(http.ResponseWriter, *http.Request, int)
 }
