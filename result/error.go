@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 )
 
 var _ CodeGetter = Error{}
@@ -83,6 +84,11 @@ func (e Error) WithMessage(msgfmt string, msgargs ...interface{}) Error {
 		e.Message = fmt.Sprintf(msgfmt, msgargs...)
 	}
 	return e
+}
+
+// ServeHTTP implements the interface http.Handler.
+func (e Error) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+	e.Respond(w)
 }
 
 // Decode uses the decode function to decode the result to the error.
