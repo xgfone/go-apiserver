@@ -44,6 +44,12 @@ var (
 	_ http.Handler = Error{}
 )
 
+// HandleError is the default global handler to handle the statuscode error
+// by Error.ServeHTTP if set.
+//
+// Default: nil
+var HandleError func(http.ResponseWriter, *http.Request, Error)
+
 // Error represents an error with the status code.
 type Error struct {
 	Code int
@@ -84,6 +90,11 @@ func (e Error) WithMessage(msg string, args ...interface{}) Error {
 
 // ServeHTTP implements the interface http.Handler.
 func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if HandleError != nil {
+		HandleError(w, r, e)
+		return
+	}
+
 	if e.Err == nil {
 		w.WriteHeader(e.Code)
 		return
