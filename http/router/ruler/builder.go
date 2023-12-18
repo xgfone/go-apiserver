@@ -73,6 +73,13 @@ func NewRouteBuilder(register func(Route)) RouteBuilder {
 	return RouteBuilder{register: register}
 }
 
+// WrapRegister wraps the register and returns a new route builder.
+func (b RouteBuilder) WrapRegister(wrap func(register func(Route), route Route)) RouteBuilder {
+	register := b.register
+	b.register = func(rooute Route) { wrap(register, rooute) }
+	return b
+}
+
 func appendMatcher(ms []matcher.Matcher, m matcher.Matcher) []matcher.Matcher {
 	if m != nil {
 		matchers := make([]matcher.Matcher, 0, len(ms)+1)

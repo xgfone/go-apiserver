@@ -90,3 +90,25 @@ func TestRouteBuilder(t *testing.T) {
 	b.Extra(http.MethodDelete).DELETEContextWithError(reqresp.HandlerWithError(cehandler))
 	b.Extra(http.MethodOptions).OPTIONSContextWithError(reqresp.HandlerWithError(cehandler))
 }
+
+func TestRouteBuilder_WrapRegister(t *testing.T) {
+	var routes []Route
+	b := NewRouteBuilder(func(route Route) { routes = append(routes, route) })
+	b = b.WrapRegister(func(register func(Route), route Route) {
+		route.Desc = "wrap"
+		register(route)
+	})
+
+	b.Path("/path1").GETFunc(func(w http.ResponseWriter, r *http.Request) {})
+	b.Path("/path2").GETFunc(func(w http.ResponseWriter, r *http.Request) {})
+
+	if len(routes) != 2 {
+		t.Fatalf("expect %d routes, but got %d", 2, len(routes))
+	}
+
+	for _, r := range routes {
+		if r.Desc != "wrap" {
+			t.Errorf("missing the flag desc 'wrap'")
+		}
+	}
+}
