@@ -17,8 +17,7 @@ package handler
 
 import (
 	"net/http"
-
-	"github.com/xgfone/go-atomicvalue"
+	"sync/atomic"
 )
 
 // Pre-define some http handlers.
@@ -53,9 +52,11 @@ var (
 	})
 )
 
+type handlerWrapper struct{ http.Handler }
+
 // SwitchHandler is a HTTP handler that is used to switch the real handler.
 type SwitchHandler struct {
-	handler atomicvalue.Value[http.Handler]
+	handler atomic.Value
 }
 
 // NewSwitchHandler returns a new switch handler with the initial handler.
@@ -63,24 +64,26 @@ func NewSwitchHandler(handler http.Handler) *SwitchHandler {
 	if handler == nil {
 		panic("SwitchHandler: the http handler is nil")
 	}
-	return &SwitchHandler{handler: atomicvalue.NewValue(handler)}
+	sh := new(SwitchHandler)
+	sh.Set(handler)
+	return sh
 }
 
 // Set sets the http handler to new.
-func (sh *SwitchHandler) Set(new http.Handler) { sh.handler.Store(new) }
+func (sh *SwitchHandler) Set(new http.Handler) { sh.handler.Store(handlerWrapper{new}) }
 
 // Get returns the current handler.
-func (sh *SwitchHandler) Get() http.Handler { return sh.handler.Load() }
+func (sh *SwitchHandler) Get() http.Handler { return sh.handler.Load().(handlerWrapper).Handler }
 
 // Swap stores the new handler and returns the old.
 func (sh *SwitchHandler) Swap(new http.Handler) (old http.Handler) {
 	if new == nil {
 		panic("SwitchHandler.Swap: the new http handler is nil")
 	}
-	return sh.handler.Swap(new)
+	return sh.handler.Swap(handlerWrapper{new}).(handlerWrapper).Handler
 }
 
 // ServeHTTP implements the interface http.Handler.
 func (sh *SwitchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	sh.handler.Load().ServeHTTP(w, r)
+	sh.Get().ServeHTTP(w, r)
 }
