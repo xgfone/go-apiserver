@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/xgfone/go-apiserver/http/statuscode"
+	"github.com/xgfone/go-apiserver/result"
 )
 
 func TestHandlerWithError(t *testing.T) {
@@ -105,7 +106,12 @@ func TestHandlerWithError(t *testing.T) {
 		t.Errorf("expect status code %d, but got %d", 415, rec.Code)
 	}
 
-	DefaultHandler = func(c *Context) { c.ResponseWriter.WriteHeader(204) }
+	_respond := result.Respond
+	defer func() { result.Respond = _respond }()
+	result.Respond = func(responder any, _ result.Response) {
+		responder.(*Context).ResponseWriter.WriteHeader(204)
+	}
+
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)
 	HandlerWithError(func(c *Context) error {

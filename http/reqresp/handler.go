@@ -14,12 +14,11 @@
 
 package reqresp
 
-import "net/http"
+import (
+	"net/http"
 
-// DefaultHandler is handle the response when not respond to client.
-//
-// Default: nil
-var DefaultHandler func(c *Context)
+	"github.com/xgfone/go-apiserver/result"
+)
 
 func handleContextResult(c *Context) {
 	if c.ResponseWriter.WroteHeader() {
@@ -27,8 +26,8 @@ func handleContextResult(c *Context) {
 	}
 
 	switch {
-	case DefaultHandler != nil:
-		DefaultHandler(c)
+	case result.Respond != nil:
+		result.Respond(c, result.Err(c.Err))
 
 	case c.Err == nil:
 		c.WriteHeader(200)
