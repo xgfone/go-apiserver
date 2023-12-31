@@ -16,7 +16,6 @@ package reqresp
 
 import (
 	"context"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -30,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xgfone/go-apiserver/helper"
+	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-binder"
 )
@@ -465,37 +464,12 @@ func (c *Context) HTML(code int, format string, args ...interface{}) {
 
 // JSON sends a JSON response with the status code.
 func (c *Context) JSON(code int, v interface{}) {
-	if v == nil {
-		c.WriteHeader(code)
-		return
-	}
-
-	buf := getBuilder()
-	if err := helper.EncodeJSON(buf, v); err == nil {
-		c.SetContentType(header.MIMEApplicationJSONCharsetUTF8)
-		c.WriteHeader(code)
-		_, err := buf.WriteTo(c.ResponseWriter)
-		c.AppendError(err)
-	}
-	putBuilder(buf)
+	c.AppendError(handler.JSON(c.ResponseWriter, code, v))
 }
 
 // XML sends a XML response with the status code.
 func (c *Context) XML(code int, v interface{}) {
-	if v == nil {
-		c.WriteHeader(code)
-		return
-	}
-
-	buf := getBuilder()
-	_, _ = buf.WriteString(xml.Header)
-	if err := xml.NewEncoder(buf).Encode(v); err == nil {
-		c.SetContentType(header.MIMEApplicationXMLCharsetUTF8)
-		c.WriteHeader(code)
-		_, err := buf.WriteTo(c.ResponseWriter)
-		c.AppendError(err)
-	}
-	putBuilder(buf)
+	c.AppendError(handler.XML(c.ResponseWriter, code, v))
 }
 
 // Stream sends a streaming response with the status code and the content type.
@@ -553,31 +527,3 @@ func (c *Context) sendfile(name, path, dtype string) {
 	c.SetContentDisposition(dtype, name)
 	http.ServeContent(c.ResponseWriter, c.Request, stat.Name(), stat.ModTime(), file)
 }
-
-/// ----------------------------------------------------------------------- ///
-
-type builder struct{ buf []byte }
-
-func (b *builder) Reset() { b.buf = b.buf[:0] }
-
-func (b *builder) WriteTo(w io.Writer) (int64, error) {
-	n, err := w.Write(b.buf)
-	return int64(n), err
-}
-
-func (b *builder) Write(p []byte) (int, error) {
-	b.buf = append(b.buf, p...)
-	return len(p), nil
-}
-
-func (b *builder) WriteString(s string) (int, error) {
-	b.buf = append(b.buf, s...)
-	return len(s), nil
-}
-
-var bpool = sync.Pool{New: func() interface{} {
-	return &builder{make([]byte, 0, 1024)}
-}}
-
-func getBuilder() *builder  { return bpool.Get().(*builder) }
-func putBuilder(b *builder) { b.Reset(); bpool.Put(b) }

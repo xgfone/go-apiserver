@@ -21,7 +21,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/http/header"
+	"github.com/xgfone/go-apiserver/http/handler"
 )
 
 // Respond is used to send the response by responder,
@@ -113,12 +113,8 @@ func getStatusCode(err error) int {
 }
 
 func sendjson(w http.ResponseWriter, v Response) {
-	header.SetContentType(w.Header(), header.MIMEApplicationJSON)
-	w.WriteHeader(getStatusCode(v.Error))
-
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(v); err != nil {
+	err := handler.JSON(w, getStatusCode(v.Error), v)
+	if err != nil {
 		slog.Error("fail to encode and send response to client", "err", err)
 	}
 }
