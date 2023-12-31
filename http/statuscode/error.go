@@ -95,17 +95,12 @@ func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if e.Err == nil {
-		w.WriteHeader(e.Code)
-		return
-	}
-
 	switch err := e.Err.(type) {
 	case nil:
 		w.WriteHeader(e.Code)
 
 	case codeHandler:
-		err.ServeHTTP(w, r, e.Code)
+		err.ServeHTTPWithCode(w, r, e.Code)
 
 	default:
 		w.WriteHeader(e.Code)
@@ -114,5 +109,5 @@ func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type codeHandler interface {
-	ServeHTTP(http.ResponseWriter, *http.Request, int)
+	ServeHTTPWithCode(http.ResponseWriter, *http.Request, int)
 }
