@@ -76,6 +76,7 @@ type Context struct {
 	// such as the action router.
 	Version string
 	Action  string
+	Route   any
 
 	// Bind the value to the request body
 	//
@@ -107,12 +108,10 @@ func (c *Context) Reset() {
 	clear(c.Data)
 	*c = Context{
 		Data: c.Data,
-		// Renderer:        c.Renderer,
+
 		BodyDecoder:   c.BodyDecoder,
 		QueryDecoder:  c.QueryDecoder,
 		HeaderDecoder: c.HeaderDecoder,
-		// DefaultHandler:  c.DefaultHandler,
-		// ResponseHandler: c.ResponseHandler,
 	}
 }
 
