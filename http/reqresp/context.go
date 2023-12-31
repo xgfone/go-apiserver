@@ -207,18 +207,34 @@ func (c *Context) Scheme() string {
 //
 // If the key does not exist, return "".
 func (c *Context) GetDataString(key string) string {
+	return c.getDataString(key, false)
+}
+
+// MustGetDataString is the same as GetDataString, but panics if key does not found.
+func (c *Context) MustGetDataString(key string) string {
+	return c.getDataString(key, true)
+}
+
+func (c *Context) getDataString(key string, required bool) string {
 	if value, ok := c.Data[key]; ok {
 		switch v := value.(type) {
 		case string:
 			return v
 		case []byte:
 			return string(v)
+		case time.Duration:
+			return v.String()
 		case time.Time:
 			return v.Format(time.RFC3339Nano)
 		default:
 			return fmt.Sprint(value)
 		}
 	}
+
+	if required {
+		panic(fmt.Errorf("missing '%s'", key))
+	}
+
 	return ""
 }
 
