@@ -106,10 +106,15 @@ func (r Response) Respond(responder any) {
 }
 
 func getStatusCode(err error) int {
+	if err == nil {
+		return 200
+	}
+
 	if v, ok := err.(interface{ StatusCode() int }); ok {
 		return v.StatusCode()
 	}
-	return 200
+
+	return 500
 }
 
 func sendjson(w http.ResponseWriter, v Response) {
