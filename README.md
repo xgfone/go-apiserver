@@ -4,12 +4,6 @@
 The library is used to build an API server, requiring `Go1.21+`.
 
 
-## Features
-- CURD are thread-safe and operated during the program is running.
-- For the data plane, such as routing the request, it is atomic and not affected by CURD.
-- Each package is standalone and used independently. Moreover, they are also combined to work.
-
-
 ## Install
 ```shell
 $ go get -u github.com/xgfone/go-apiserver
