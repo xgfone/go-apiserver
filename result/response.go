@@ -42,6 +42,9 @@ func NewResponse(data interface{}, err error) Response {
 // Ok is equal to NewResponse(data, nil).
 func Ok(data interface{}) Response { return Response{Data: data} }
 
+// Err is equal to NewResponse(nil, err).
+func Err(err error) Response { return Response{Error: err} }
+
 // WithData returns a new Response with the given data.
 func (r Response) WithData(data interface{}) Response {
 	r.Data = data
@@ -92,7 +95,7 @@ func (r Response) Respond(responder any) {
 		resp.Respond(r)
 
 	case interface{ JSON(int, interface{}) }:
-		resp.JSON(200, r)
+		resp.JSON(getStatusCode(r.Error), r)
 
 	case http.ResponseWriter:
 		sendjson(resp, r)
@@ -102,14 +105,16 @@ func (r Response) Respond(responder any) {
 	}
 }
 
-// Respond sends the error as Response by the responder.
-func (e Error) Respond(responder any) {
-	NewResponse(nil, e).Respond(responder)
+func getStatusCode(err error) int {
+	if v, ok := err.(interface{ StatusCode() int }); ok {
+		return v.StatusCode()
+	}
+	return 200
 }
 
-func sendjson(w http.ResponseWriter, v any) {
+func sendjson(w http.ResponseWriter, v Response) {
 	header.SetContentType(w.Header(), header.MIMEApplicationJSON)
-	w.WriteHeader(200)
+	w.WriteHeader(getStatusCode(v.Error))
 
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)

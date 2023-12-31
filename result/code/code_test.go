@@ -1,4 +1,4 @@
-// Copyright 2023 xgfone
+// Copyright 2024 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package result
+package code
 
 import "testing"
 
-func TestIsCode(t *testing.T) {
-	if !ErrIsCode(ErrBadRequest, "BadRequest") {
+func TestIs(t *testing.T) {
+	if !ErrIs(ErrBadRequest, "BadRequest") {
 		t.Error("fail")
 	}
 
@@ -30,23 +30,35 @@ func TestIsCode(t *testing.T) {
 		t.Error("fail")
 	}
 
-	if !IsCode("InstanceNotFound", "") {
+	if !Is("InstanceNotFound", "") {
 		t.Errorf("expect the true, but got false")
 	}
 
-	if !IsCode("InstanceNotFound", "InstanceNotFound") {
+	if !Is("InstanceNotFound", "InstanceNotFound") {
 		t.Errorf("expect true, but got false")
 	}
 
-	if IsCode("InstanceNotFound", "InstanceUnavailable") {
+	if Is("InstanceNotFound", "InstanceUnavailable") {
 		t.Errorf("expect false, but got true")
 	}
 
-	if !IsCode("AuthFailure.TokenFailure", "AuthFailure") {
+	if !Is("AuthFailure.TokenFailure", "AuthFailure") {
 		t.Errorf("expect true, but got false")
 	}
 
-	if IsCode("AuthFailure", "AuthFailure.TokenFailure") {
+	if Is("AuthFailure", "AuthFailure.TokenFailure") {
+		t.Errorf("expect false, but got true")
+	}
+
+	if !Is(123, 123) {
+		t.Errorf("expect true, but got false")
+	}
+
+	if Is(123, 456) {
+		t.Errorf("expect false, but got true")
+	}
+
+	if Is(int64(123), uint64(123)) { // Because the types of them are not the same.
 		t.Errorf("expect false, but got true")
 	}
 }

@@ -20,7 +20,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/result"
+	"github.com/xgfone/go-apiserver/result/code"
 )
 
 // HeaderAction is the http header to store the action method.
@@ -106,9 +106,9 @@ func (r *Router) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 func notFoundHandler(resp http.ResponseWriter, req *http.Request) {
 	c := reqresp.GetContext(req.Context())
 	if len(c.Action) == 0 {
-		result.ErrBadRequestInvalidAction.WithMessage("missing the action").Respond(c)
+		code.ErrBadRequestInvalidAction.WithMessage("missing the action").Respond(c)
 	} else {
-		result.ErrBadRequestInvalidAction.WithMessage("action '%s' is unsupported", c.Action).Respond(c)
+		code.ErrBadRequestInvalidAction.WithMessage("action '%s' is unsupported", c.Action).Respond(c)
 	}
 }
 
