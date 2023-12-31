@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 
 	"github.com/xgfone/go-apiserver/result"
 )
@@ -95,25 +94,6 @@ func (e Error[T]) WithMessage(msgfmt string, msgargs ...interface{}) Error[T] {
 		e.Message = fmt.Sprintf(msgfmt, msgargs...)
 	}
 	return e
-}
-
-// StatusCode tries to inspect e.Ctx to the status code.
-// If failed, return 200 instead.
-func (e Error[T]) StatusCode() int {
-	if code, ok := e.Ctx.(int); ok && code >= 100 && code < 600 {
-		return code
-	}
-	return 200
-}
-
-// ServeHTTPWithCode stores the status code to e.Ctx and calls ServeHTTP.
-func (e Error[T]) ServeHTTPWithCode(w http.ResponseWriter, _ *http.Request, code int) {
-	e.WithCtx(code).Respond(w)
-}
-
-// ServeHTTP implements the interface http.Handler.
-func (e Error[T]) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
-	e.Respond(w)
 }
 
 // Respond sends the error as result.Response by the responder.
