@@ -108,6 +108,9 @@ var (
 	ErrInternalServerErrorUnavailable = NewError(InternalServerErrorUnavailable, "service is unavailable")
 )
 
+// Equal is used by Is to compare whether code is target.
+var Equal func(code, target any) bool
+
 // CodeGetter is an interface used to get the error code.
 type CodeGetter[T any] interface {
 	GetCode() T
@@ -136,6 +139,10 @@ func stris(code, target string) bool {
 //
 // For other types, it just compares whether both of them are equal or not.
 func Is(code, target any) bool {
+	if Equal != nil {
+		return Equal(code, target)
+	}
+
 	switch src := code.(type) {
 	case string:
 		return stris(src, target.(string))

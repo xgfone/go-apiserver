@@ -107,8 +107,8 @@ func (e Error[T]) StatusCode() int {
 }
 
 // ServeHTTPWithCode stores the status code to e.Ctx and calls ServeHTTP.
-func (e Error[T]) ServeHTTPWithCode(w http.ResponseWriter, r *http.Request, code int) {
-	e.WithCtx(code).ServeHTTP(w, r)
+func (e Error[T]) ServeHTTPWithCode(w http.ResponseWriter, _ *http.Request, code int) {
+	e.WithCtx(code).Respond(w)
 }
 
 // ServeHTTP implements the interface http.Handler.
