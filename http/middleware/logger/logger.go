@@ -61,7 +61,7 @@ func Logger(next http.Handler) http.Handler {
 			if c.Err != nil {
 				err = c.Err
 			}
-		} else if rw, ok := w.(reqresp.ResponseWriter); ok {
+		} else if rw, ok := w.(interface{ StatusCode() int }); ok {
 			code = rw.StatusCode()
 		}
 
