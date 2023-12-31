@@ -95,7 +95,7 @@ func (r Response) Respond(responder any) {
 		resp.Respond(r)
 
 	case interface{ JSON(int, interface{}) }:
-		resp.JSON(getStatusCode(r.Error), r)
+		resp.JSON(r.StatusCode(), r)
 
 	case http.ResponseWriter:
 		sendjson(resp, r)
@@ -105,12 +105,13 @@ func (r Response) Respond(responder any) {
 	}
 }
 
-func getStatusCode(err error) int {
-	if err == nil {
+// StatusCode inspects and returns the status code by the error.
+func (r Response) StatusCode() int {
+	if r.Error == nil {
 		return 200
 	}
 
-	if v, ok := err.(interface{ StatusCode() int }); ok {
+	if v, ok := r.Error.(interface{ StatusCode() int }); ok {
 		return v.StatusCode()
 	}
 
@@ -118,7 +119,7 @@ func getStatusCode(err error) int {
 }
 
 func sendjson(w http.ResponseWriter, v Response) {
-	err := handler.JSON(w, getStatusCode(v.Error), v)
+	err := handler.JSON(w, v.StatusCode(), v)
 	if err != nil {
 		slog.Error("fail to encode and send response to client", "err", err)
 	}
