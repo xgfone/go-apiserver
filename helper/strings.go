@@ -14,10 +14,7 @@
 
 package helper
 
-import (
-	"math/rand"
-	"unsafe"
-)
+import "unsafe"
 
 // Pre-define some charsets to generate the random string.
 var (
@@ -48,7 +45,7 @@ func RandomString(n int, charset string) string {
 func Random(buf []byte, charset string) {
 	nlen := len(charset)
 	for i, _len := 0, len(buf); i < _len; i++ {
-		buf[i] = charset[rand.Intn(nlen)]
+		buf[i] = charset[IntN(nlen)]
 	}
 }
 
