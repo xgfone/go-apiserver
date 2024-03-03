@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	"testing"
@@ -54,4 +55,85 @@ func TestMapValues(t *testing.T) {
 	if !slices.Equal(expectstrs, strs) {
 		t.Errorf("expect %v, but got %v", expectstrs, strs)
 	}
+}
+
+func ExampleMapKeysFunc() {
+	type Key struct {
+		K string
+		V int32
+	}
+	maps := map[Key]bool{
+		{K: "a", V: 1}: true,
+		{K: "b", V: 2}: true,
+		{K: "c", V: 3}: true,
+	}
+
+	keys := MapKeysFunc(maps, func(k Key) string { return k.K })
+	slices.Sort(keys)
+	fmt.Println(keys)
+
+	// Output:
+	// [a b c]
+}
+
+func ExampleMapValuesFunc() {
+	type Value struct {
+		V int
+	}
+	maps := map[string]Value{
+		"a": {V: 1},
+		"b": {V: 2},
+		"c": {V: 3},
+	}
+
+	values := MapValuesFunc(maps, func(v Value) int { return v.V })
+	slices.Sort(values)
+	fmt.Println(values)
+
+	// Output:
+	// [1 2 3]
+}
+
+func ExampleToSetMap() {
+	setmap := ToSetMap([]string{"a", "b", "c"})
+	fmt.Println(setmap)
+
+	// Output:
+	// map[a:{} b:{} c:{}]
+}
+
+func ExampleToBoolMap() {
+	boolmap := ToBoolMap([]string{"a", "b", "c"})
+	fmt.Println(boolmap)
+
+	// Output:
+	// map[a:true b:true c:true]
+}
+
+func ExampleToSetMapFunc() {
+	type S struct {
+		K string
+		V int32
+	}
+
+	values := []S{{K: "a", V: 1}, {K: "b", V: 2}, {K: "c", V: 3}}
+	setmap := ToSetMapFunc(values, func(s S) string { return s.K })
+	fmt.Println(setmap)
+
+	// Output:
+	// map[a:{} b:{} c:{}]
+}
+
+func ExampleToBoolMapFunc() {
+	type S struct {
+		K string
+		V int32
+	}
+
+	values := []S{{K: "a", V: 1}, {K: "b", V: 2}, {K: "c", V: 3}}
+	setmap := ToBoolMapFunc(values, func(s S) string { return s.K })
+	fmt.Println(setmap)
+
+	// Output:
+	// map[a:true b:true c:true]
 }
