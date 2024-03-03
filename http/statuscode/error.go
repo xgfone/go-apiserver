@@ -69,8 +69,17 @@ func (e Error) Error() string {
 
 // WithError returns a new Error with the new error.
 func (e Error) WithError(err error) Error {
-	e.Err = err
-	return e
+	switch _err := err.(type) {
+	case nil:
+		return Error{Code: 200}
+
+	case Error:
+		return _err
+
+	default:
+		e.Err = err
+		return e
+	}
 }
 
 // WithMessage is a convenient method that convert the format message
