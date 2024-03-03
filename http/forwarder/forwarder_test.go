@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/xgfone/go-apiserver/http/handler"
 )
@@ -36,6 +37,7 @@ func TestForwarder(t *testing.T) {
 		}()
 		_ = server.ListenAndServe()
 	}()
+	time.Sleep(time.Millisecond * 500)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/", nil)
