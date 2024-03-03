@@ -64,11 +64,11 @@ func (e Error[T]) WithCtx(ctx any) Error[T] {
 	return e
 }
 
-// WithError returns a new Error, which inspects the error code and message from err.
-func (e Error[T]) WithError(err error) Error[T] {
+// WithError returns a new error, which inspects the error code and message from err.
+func (e Error[T]) WithError(err error) error {
 	switch _e := err.(type) {
 	case nil:
-		return Error[T]{}
+		return nil
 
 	case Error[T]:
 		return _e

@@ -20,8 +20,8 @@ import (
 )
 
 func TestError(t *testing.T) {
-	e := NewError("Ok", "").WithError(errors.New("test")).WithCtx(200).
-		WithMessage("").WithMessage("%s", "msg")
+	e := NewError("Ok", "").WithError(errors.New("test")).(Error[string]).
+		WithCtx(200).WithMessage("").WithMessage("%s", "msg")
 
 	expect := "Ok: msg"
 	if s := e.Error(); s != expect {
