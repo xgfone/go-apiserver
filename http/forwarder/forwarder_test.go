@@ -41,7 +41,7 @@ func TestForwarder(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/", nil)
-	err := DefaultForwarder.Forward(w, r, host)
+	err := Forward(w, r, host)
 	if err != nil {
 		t.Fatal(err)
 	}

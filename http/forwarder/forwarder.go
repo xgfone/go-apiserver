@@ -24,6 +24,11 @@ import (
 // DefaultForwarder is the default request forwarder.
 var DefaultForwarder = NewForwarder("")
 
+// Forward is equal to DefaultForwarder.Forward(w, r, host).
+func Forward(w http.ResponseWriter, r *http.Request, host string) error {
+	return DefaultForwarder.Forward(w, r, host)
+}
+
 // Forwarder is used to forwards a request to another host.
 type Forwarder struct {
 	Scheme string
