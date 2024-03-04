@@ -1,4 +1,4 @@
-// Copyright 2021~2023 xgfone
+// Copyright 2021~2024 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,7 +32,29 @@ import (
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-binder"
+	"github.com/xgfone/go-defaults"
 )
+
+func init() {
+	binder.QueryDecoder = binder.DecoderFunc(func(dst, src interface{}) error {
+		if req, ok := src.(*http.Request); ok {
+			var queries url.Values
+			if c := GetContext(req.Context()); c != nil {
+				queries = c.GetQueries()
+			} else {
+				queries = req.URL.Query()
+			}
+
+			err := binder.BindStructToURLValues(dst, "query", queries)
+			if err == nil {
+				err = defaults.ValidateStruct(dst)
+			}
+
+			return err
+		}
+		return fmt.Errorf("binder.DefaultQueryDecoder: unsupport to decode %T", src)
+	})
+}
 
 type contextkey struct{ key uint8 }
 
