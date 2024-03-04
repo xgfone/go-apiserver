@@ -91,9 +91,10 @@ func (f *Forwarder) Forward(w http.ResponseWriter, r *http.Request, host string)
 	return
 }
 
-// CopyResponse copyies the response to the request client.
-func CopyResponse(w http.ResponseWriter, resp *http.Response) (err error) {
-	// Copy response header
+// CopyResponseHeader copies the response header to the client.
+//
+// If filter is set and returns true for a certain key, which filters the key.
+func CopyResponseHeader(w http.ResponseWriter, resp *http.Response, filter func(string) bool) {
 	header := w.Header()
 	for k, vs := range resp.Header {
 		switch {
@@ -103,12 +104,17 @@ func CopyResponse(w http.ResponseWriter, resp *http.Response) (err error) {
 		case k == "Host":
 		case k == "Connection":
 
+		case filter != nil && filter(k):
+
 		default:
 			header[k] = vs
 		}
 	}
+}
 
-	// Copy response body
+// CopyResponse copyies the response to the request client.
+func CopyResponse(w http.ResponseWriter, resp *http.Response) (err error) {
+	CopyResponseHeader(w, resp, nil)
 	w.WriteHeader(resp.StatusCode)
 	_, err = io.CopyBuffer(w, resp.Body, make([]byte, 1024))
 	return
