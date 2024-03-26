@@ -67,11 +67,13 @@ func (e Error) Error() string {
 	return e.Err.Error()
 }
 
-// WithError returns a new error.
-func (e Error) WithError(err error) error {
+// WithError returns a new Error.
+//
+// If err is nil, Code of the returned error is equal to 200.
+func (e Error) WithError(err error) Error {
 	switch _err := err.(type) {
 	case nil:
-		return nil
+		return Error{Code: 200}
 
 	case Error:
 		return _err
@@ -91,6 +93,13 @@ func (e Error) WithMessage(msg string, args ...interface{}) Error {
 		e.Err = fmt.Errorf(msg, args...)
 	}
 	return e
+}
+
+func (e Error) ToError(err error) error {
+	if err != nil {
+		err = e.WithError(err)
+	}
+	return err
 }
 
 // ServeHTTP implements the interface http.Handler.

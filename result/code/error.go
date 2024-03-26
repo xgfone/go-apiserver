@@ -64,11 +64,13 @@ func (e Error[T]) WithCtx(ctx any) Error[T] {
 	return e
 }
 
-// WithError returns a new error, which inspects the error code and message from err.
-func (e Error[T]) WithError(err error) error {
+// WithError returns a new Error, which inspects the error code and message from err.
+//
+// If err is nil, return an empty Error ZERO.
+func (e Error[T]) WithError(err error) Error[T] {
 	switch _e := err.(type) {
 	case nil:
-		return nil
+		return Error[T]{}
 
 	case Error[T]:
 		return _e
@@ -94,6 +96,13 @@ func (e Error[T]) WithMessage(msgfmt string, msgargs ...interface{}) Error[T] {
 		e.Message = fmt.Sprintf(msgfmt, msgargs...)
 	}
 	return e
+}
+
+func (e Error[T]) ToError(err error) error {
+	if err != nil {
+		err = e.WithError(err)
+	}
+	return err
 }
 
 // Respond sends the error as result.Response by the responder.
