@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/xgfone/go-apiserver/result"
 )
 
 // Pre-define some errors with the status code.
@@ -100,6 +102,15 @@ func (e Error) ToError(err error) error {
 		err = e.WithError(err)
 	}
 	return err
+}
+
+func (e Error) Respond(responder any) {
+	switch e {
+	case (Error{}), (Error{Code: 200}):
+		result.Ok(nil).Respond(responder)
+	default:
+		result.Err(e).Respond(responder)
+	}
 }
 
 // ServeHTTP implements the interface http.Handler.
