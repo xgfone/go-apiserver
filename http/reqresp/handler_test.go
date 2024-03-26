@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package reqresp
+package reqresp_test
 
 import (
 	"errors"
@@ -20,6 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/http/statuscode"
 	"github.com/xgfone/go-apiserver/result"
 )
@@ -27,16 +28,16 @@ import (
 func TestHandlerWithError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "http://localhost", nil)
 
-	c := AcquireContext()
+	c := reqresp.AcquireContext()
 	resetContextResponse := func(w http.ResponseWriter) {
 		c.Reset()
-		c.Request = req.WithContext(SetContext(req.Context(), c))
-		c.ResponseWriter = AcquireResponseWriter(w)
+		c.Request = req.WithContext(reqresp.SetContext(req.Context(), c))
+		c.ResponseWriter = reqresp.AcquireResponseWriter(w)
 	}
 
 	rec := httptest.NewRecorder()
 	resetContextResponse(rec)
-	Handler(func(c *Context) {
+	reqresp.Handler(func(c *reqresp.Context) {
 		c.ResponseWriter.WriteHeader(204)
 	}).ServeHTTP(c.ResponseWriter, c.Request)
 	if rec.Code != 204 {
@@ -45,14 +46,14 @@ func TestHandlerWithError(t *testing.T) {
 
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)
-	Handler(func(c *Context) {}).ServeHTTP(c.ResponseWriter, c.Request)
+	reqresp.Handler(func(c *reqresp.Context) {}).ServeHTTP(c.ResponseWriter, c.Request)
 	if rec.Code != 200 {
 		t.Errorf("expect status code %d, but got %d", 200, rec.Code)
 	}
 
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)
-	Handler(func(c *Context) {
+	reqresp.Handler(func(c *reqresp.Context) {
 		c.Err = statuscode.ErrBadRequest
 	}).ServeHTTP(c.ResponseWriter, c.Request)
 	if rec.Code != 400 {
@@ -61,7 +62,7 @@ func TestHandlerWithError(t *testing.T) {
 
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)
-	HandlerWithError(func(c *Context) error {
+	reqresp.HandlerWithError(func(c *reqresp.Context) error {
 		return nil
 	}).ServeHTTP(c.ResponseWriter, c.Request)
 	if rec.Code != 200 {
@@ -70,7 +71,7 @@ func TestHandlerWithError(t *testing.T) {
 
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)
-	HandlerWithError(func(c *Context) error {
+	reqresp.HandlerWithError(func(c *reqresp.Context) error {
 		c.NoContent(204)
 		return nil
 	}).ServeHTTP(c.ResponseWriter, c.Request)
@@ -80,7 +81,7 @@ func TestHandlerWithError(t *testing.T) {
 
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)
-	HandlerWithError(func(c *Context) error {
+	reqresp.HandlerWithError(func(c *reqresp.Context) error {
 		c.NoContent(204)
 		return errors.New("test")
 	}).ServeHTTP(c.ResponseWriter, c.Request)
@@ -90,7 +91,7 @@ func TestHandlerWithError(t *testing.T) {
 
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)
-	HandlerWithError(func(c *Context) error {
+	reqresp.HandlerWithError(func(c *reqresp.Context) error {
 		return statuscode.ErrBadRequest
 	}).ServeHTTP(c.ResponseWriter, c.Request)
 	if rec.Code != 400 {
@@ -99,7 +100,7 @@ func TestHandlerWithError(t *testing.T) {
 
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)
-	HandlerWithError(func(c *Context) error {
+	reqresp.HandlerWithError(func(c *reqresp.Context) error {
 		return errors.Join(statuscode.ErrUnsupportedMediaType, statuscode.ErrBadRequest)
 	}).ServeHTTP(c.ResponseWriter, c.Request)
 	if rec.Code != 415 {
@@ -109,12 +110,12 @@ func TestHandlerWithError(t *testing.T) {
 	_respond := result.Respond
 	defer func() { result.Respond = _respond }()
 	result.Respond = func(responder any, _ result.Response) {
-		responder.(*Context).ResponseWriter.WriteHeader(204)
+		responder.(*reqresp.Context).ResponseWriter.WriteHeader(204)
 	}
 
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)
-	HandlerWithError(func(c *Context) error {
+	reqresp.HandlerWithError(func(c *reqresp.Context) error {
 		return statuscode.ErrBadRequest
 	}).ServeHTTP(c.ResponseWriter, c.Request)
 	if rec.Code != 204 {
