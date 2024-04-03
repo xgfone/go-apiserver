@@ -14,9 +14,12 @@
 
 package helper
 
-// Must panics if err is not nil
-func Must(err error) {
+// MustV returns value if err is nil. Or, panic with err instead.
+//
+// DEPRECATED!!!
+func MustV[T any](value T, err error) T {
 	if err != nil {
 		panic(err)
 	}
+	return value
 }

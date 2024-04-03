@@ -41,25 +41,3 @@ func TestMust(t *testing.T) {
 		Must(errors.New("test"))
 	}()
 }
-
-func TestMustV(t *testing.T) {
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("unexpect a panic, but got one: %v", r)
-			}
-		}()
-		MustV(123, nil)
-	}()
-
-	func() {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("expect a panic, but got not")
-			} else if s := fmt.Sprint(r); s != "test" {
-				t.Errorf("expect '%s', but got '%s'", "test", s)
-			}
-		}()
-		MustV(123, errors.New("test"))
-	}()
-}

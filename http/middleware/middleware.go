@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/middleware/context"
 	"github.com/xgfone/go-apiserver/http/middleware/logger"
 	"github.com/xgfone/go-apiserver/http/middleware/recover"
@@ -109,12 +108,12 @@ func (ms Middlewares) AppendFunc(m ...MiddlewareFunc) Middlewares {
 // Insert inserts a set of middlewares into the front
 // and return a new middleware slice.
 func (ms Middlewares) Insert(m ...Middleware) Middlewares {
-	return helper.MergeSlice(m, ms)
+	return mergeMiddlewares(m, ms)
 }
 
 // Append appends a set of middlewares and return a new middleware slice.
 func (ms Middlewares) Append(m ...Middleware) Middlewares {
-	return helper.MergeSlice(ms, m)
+	return mergeMiddlewares(ms, m)
 }
 
 // Handler implements the interface Middleware.
@@ -161,4 +160,21 @@ func Sort(ms []Middleware) {
 
 func getPriority(m Middleware) int {
 	return m.(interface{ Priority() int }).Priority()
+}
+
+func mergeMiddlewares(mws1, mws2 Middlewares) Middlewares {
+	len1, len2 := len(mws1), len(mws2)
+	switch {
+	case len1 == 0:
+		return mws2
+
+	case len2 == 0:
+		return mws1
+
+	default:
+		vs := make(Middlewares, len1+len2)
+		copy(vs, mws1)
+		copy(vs[len1:], mws2)
+		return vs
+	}
 }

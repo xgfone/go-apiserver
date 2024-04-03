@@ -19,6 +19,8 @@ package helper
 // If both cap and defaultCap are equal to 0, it is equal to make(S, len).
 // If cap is equal to 0, use defaultCap as cap instead, which is equal to
 // make(S, len, defaultCap).
+//
+// DEPRECATED!!!
 func MakeSlice[S ~[]E, E any, I ~int | ~int64](len, cap, defaultCap I) S {
 	if cap == 0 {
 		if cap = defaultCap; cap == 0 {
@@ -36,6 +38,8 @@ func MakeSlice[S ~[]E, E any, I ~int | ~int64](len, cap, defaultCap I) S {
 //
 // If no arguments, return nil.
 // If all the arguments are empty, return a empty slice with cap==0.
+//
+// DEPRECATED!!!
 func MergeSlice[S ~[]E, E any](ss ...S) S {
 	switch _len := len(ss); _len {
 	case 0:

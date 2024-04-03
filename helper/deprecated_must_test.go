@@ -14,9 +14,30 @@
 
 package helper
 
-// Must panics if err is not nil
-func Must(err error) {
-	if err != nil {
-		panic(err)
-	}
+import (
+	"errors"
+	"fmt"
+	"testing"
+)
+
+func TestMustV(t *testing.T) {
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("unexpect a panic, but got one: %v", r)
+			}
+		}()
+		MustV(123, nil)
+	}()
+
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect a panic, but got not")
+			} else if s := fmt.Sprint(r); s != "test" {
+				t.Errorf("expect '%s', but got '%s'", "test", s)
+			}
+		}()
+		MustV(123, errors.New("test"))
+	}()
 }
