@@ -21,7 +21,7 @@ import (
 )
 
 func TestRequestId(t *testing.T) {
-	handler := RequestId()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	handler := RequestId(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)

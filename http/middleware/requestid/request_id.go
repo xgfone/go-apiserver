@@ -32,15 +32,13 @@ func generate(*http.Request) string {
 	return helper.RandomString(24, helper.AlphaNumCharset)
 }
 
-// RequestId returns a http middleware to set the request header "X-Request-Id"
+// RequestId is a http middleware to set the request header "X-Request-Id"
 // if not set.
-func RequestId() func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get(header.HeaderXRequestID) == "" {
-				r.Header.Set(header.HeaderXRequestID, Generate(r))
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
+func RequestId(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get(header.HeaderXRequestID) == "" {
+			r.Header.Set(header.HeaderXRequestID, Generate(r))
+		}
+		next.ServeHTTP(w, r)
+	})
 }

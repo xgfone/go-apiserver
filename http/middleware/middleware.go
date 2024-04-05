@@ -32,7 +32,7 @@ var (
 
 // DefaultMiddlewares is a set of the default middlewares.
 var DefaultMiddlewares = Middlewares{
-	New("requestid", 10, requestid.RequestId()),
+	New("requestid", 10, requestid.RequestId),
 	New("context", 20, context.Context),
 	New("logger", 30, logger.Logger),
 	New("recover", 40, recover.Recover),
