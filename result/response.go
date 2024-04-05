@@ -18,10 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
-	"net/http"
-
-	"github.com/xgfone/go-apiserver/http/handler"
 )
 
 // Respond is the public function to send the response by responder.
@@ -113,8 +109,7 @@ func (r Response) StatusCode() int {
 // which will try to assert responder to the types as follows, and call it:
 //
 //	interface{ Respond(Response) }
-//	interface{ JSON(StatusCode int, Response interface{}) }
-//	http.ResponseWriter
+//	interface{ JSON(StatusCode int, Response any) }
 //
 // For other types, it will panic.
 func DefaultRespond(responder any, response Response) {
@@ -122,28 +117,14 @@ func DefaultRespond(responder any, response Response) {
 	case interface{ Respond(Response) }:
 		resp.Respond(response)
 
-	case interface{ JSON(int, interface{}) }:
+	case interface{ JSON(int, any) }:
 		if response.IsZero() {
 			resp.JSON(response.StatusCode(), nil)
 		} else {
 			resp.JSON(response.StatusCode(), response)
 		}
 
-	case http.ResponseWriter:
-		if response.IsZero() {
-			sendjson(resp, response.StatusCode(), nil)
-		} else {
-			sendjson(resp, response.StatusCode(), response)
-		}
-
 	default:
 		panic(fmt.Errorf("result.DefaultRespond: unknown responder type %T", responder))
-	}
-}
-
-func sendjson(w http.ResponseWriter, code int, data any) {
-	err := handler.JSON(w, code, data)
-	if err != nil {
-		slog.Error("fail to encode and send response to client", "err", err)
 	}
 }
