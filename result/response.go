@@ -24,9 +24,22 @@ import (
 	"github.com/xgfone/go-apiserver/http/handler"
 )
 
-// Respond is used to send the response by responder,
-// such as http.ResponseWriter.
-var Respond func(responder any, response Response)
+// Respond is the public function to send the response by responder.
+var Respond func(responder any, response Response) = DefaultRespond
+
+// Success is a convenient function, which is equal to
+//
+//	Respond(responder, Ok(data))
+func Success(responder, data any) {
+	Respond(responder, Ok(data))
+}
+
+// Failure is a convenient function, which is equal to
+//
+//	Respond(responder, Err(err))
+func Failure(responder any, err error) {
+	Respond(responder, Err(err))
+}
 
 // Response represents a response result.
 type Response struct {
@@ -72,37 +85,10 @@ func (r *Response) DecodeJSONBytes(data []byte) error {
 	return json.Unmarshal(data, r)
 }
 
-// Respond sends the response by the responder.
-//
-// If Respond is set, forward it with responder and response to handle.
-// If not set, it tries to assert responder to one of types as follow:
-//
-//	interface{ Respond(Response) }
-//	interface{ JSON(code int, value interface{}) }
-//	http.ResponseWriter
+// Respond sends the response by the responder,
+// which will forward the calling to Respond.
 func (r Response) Respond(responder any) {
-	if Respond != nil {
-		Respond(responder, r)
-		return
-	}
-
-	if r.Data == nil && r.Error == nil {
-		return
-	}
-
-	switch resp := responder.(type) {
-	case interface{ Respond(Response) }:
-		resp.Respond(r)
-
-	case interface{ JSON(int, interface{}) }:
-		resp.JSON(r.StatusCode(), r)
-
-	case http.ResponseWriter:
-		sendjson(resp, r)
-
-	default:
-		panic(fmt.Errorf("Response.Respond: unknown responder type %T", responder))
-	}
+	Respond(responder, r)
 }
 
 // StatusCode inspects and returns the status code by the error.
@@ -116,6 +102,36 @@ func (r Response) StatusCode() int {
 	}
 
 	return 500
+}
+
+// DefaultRespond is the default implemention to send the response by responder.
+//
+// If response is ZERO, it does nothing. Or, it will try to assert responder
+// to the types as follows:
+//
+//	interface{ Respond(Response) }
+//	interface{ JSON(StatusCode int, Response interface{}) }
+//	http.ResponseWriter
+//
+// For other types, it will panic.
+func DefaultRespond(responder any, response Response) {
+	if response == (Response{}) {
+		return
+	}
+
+	switch resp := responder.(type) {
+	case interface{ Respond(Response) }:
+		resp.Respond(response)
+
+	case interface{ JSON(int, interface{}) }:
+		resp.JSON(response.StatusCode(), response)
+
+	case http.ResponseWriter:
+		sendjson(resp, response)
+
+	default:
+		panic(fmt.Errorf("result.DefaultRespond: unknown responder type %T", responder))
+	}
 }
 
 func sendjson(w http.ResponseWriter, v Response) {
