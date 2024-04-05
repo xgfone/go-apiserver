@@ -57,10 +57,10 @@ func (f *Forwarder) Forward(w http.ResponseWriter, r *http.Request, host string)
 		req.URL.Scheme = f.Scheme
 	}
 
-	if host == "" {
-		req.URL.Host = f.Host
-	} else {
+	if host != "" {
 		req.URL.Host = host
+	} else if f.Host != "" {
+		req.URL.Host = f.Host
 	}
 
 	if f.Request != nil {
