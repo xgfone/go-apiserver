@@ -40,7 +40,7 @@ type Route struct {
 	Handler http.Handler `json:"-"`
 
 	// Extra is the extra data of the route.
-	Extra interface{} `json:"extra,omitempty" yaml:"extra,omitempty" xml:"extra,omitempty"`
+	Extra any `json:"extra,omitempty" yaml:"extra,omitempty" xml:"extra,omitempty"`
 
 	// Desc is the description of the route, which may be matcher string.
 	Desc string `json:"desc,omitempty" yaml:"desc,omitempty" xml:"desc,omitempty"`
@@ -51,6 +51,18 @@ type Route struct {
 // NewRoute returns a new Route.
 func NewRoute(priority int, matcher Matcher, handler http.Handler) Route {
 	return Route{Priority: priority, Matcher: matcher, Handler: handler}
+}
+
+// WithDesc returns a new Route with the desc.
+func (r Route) WithDesc(desc string) Route {
+	r.Desc = desc
+	return r
+}
+
+// WithExtra returns a new Route with the extra.
+func (r Route) WithExtra(extra any) Route {
+	r.Extra = extra
+	return r
 }
 
 // ServeHTTP implements the interface http.Handler.

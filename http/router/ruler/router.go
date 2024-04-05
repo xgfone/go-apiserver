@@ -69,7 +69,8 @@ func (r *Router) Routes() (routes []Route) { return r.routes }
 
 // Register registers the route.
 //
-// If exist, override it.
+// NOTICE: if both routes match a request, the handler of the higher priority
+// route will be executed, and that of the lower never be executed.
 func (r *Router) Register(route Route) {
 	r.checkRoute(&route)
 	r.routes = append(r.routes, route)
