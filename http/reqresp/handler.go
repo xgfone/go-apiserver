@@ -20,61 +20,12 @@ import (
 	"github.com/xgfone/go-apiserver/result"
 )
 
-func handleContextResult(c *Context) {
-	if c.ResponseWriter.WroteHeader() {
-		return
-	}
-
-	switch {
-	case result.Respond != nil:
-		result.Respond(c, result.Err(c.Err))
-
-	case c.Err == nil:
-		c.WriteHeader(200)
-
-	case !respondError(c, c.Err):
-		c.Text(500, c.Err.Error())
-	}
-}
-
-func respondError(c *Context, err error) (ok bool) {
-	switch e := err.(type) {
-	case http.Handler:
-		e.ServeHTTP(c.ResponseWriter, c.Request)
-		ok = true
-
-	case interface{ Unwrap() error }:
-		if err = e.Unwrap(); err != nil {
-			ok = respondError(c, err)
-		}
-
-	case interface{ Unwrap() []error }:
-		for _, err := range e.Unwrap() {
-			if ok = respondError(c, err); ok {
-				break
-			}
-		}
-	}
-	return
-}
-
 // Handler is a handler based on Context to handle the http request.
 type Handler func(c *Context)
 
 // ServeHTTP implements the interface http.Handler.
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	c := GetContext(r.Context())
-	if c == nil {
-		c = AcquireContext()
-		defer ReleaseContext(c)
-
-		c.Request = r.WithContext(SetContext(r.Context(), c))
-		c.ResponseWriter = AcquireResponseWriter(w)
-		defer ReleaseResponseWriter(c.ResponseWriter)
-	}
-
-	h(c)
-	handleContextResult(c)
+	runhandler(w, r, h)
 }
 
 // HandlerWithError is a handler to handle the http request with the error.
@@ -82,6 +33,10 @@ type HandlerWithError func(c *Context) error
 
 // ServeHTTP implements the interface http.Handler.
 func (h HandlerWithError) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	runhandler(w, r, func(c *Context) { c.AppendError(h(c)) })
+}
+
+func runhandler(w http.ResponseWriter, r *http.Request, f Handler) {
 	c := GetContext(r.Context())
 	if c == nil {
 		c = AcquireContext()
@@ -92,6 +47,7 @@ func (h HandlerWithError) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer ReleaseResponseWriter(c.ResponseWriter)
 	}
 
-	c.AppendError(h(c))
-	handleContextResult(c)
+	if f(c); !c.ResponseWriter.WroteHeader() {
+		result.Err(c.Err).Respond(c)
+	}
 }

@@ -98,15 +98,6 @@ func TestHandlerWithError(t *testing.T) {
 		t.Errorf("expect status code %d, but got %d", 400, rec.Code)
 	}
 
-	rec = httptest.NewRecorder()
-	resetContextResponse(rec)
-	reqresp.HandlerWithError(func(c *reqresp.Context) error {
-		return errors.Join(statuscode.ErrUnsupportedMediaType, statuscode.ErrBadRequest)
-	}).ServeHTTP(c.ResponseWriter, c.Request)
-	if rec.Code != 415 {
-		t.Errorf("expect status code %d, but got %d", 415, rec.Code)
-	}
-
 	_respond := result.Respond
 	defer func() { result.Respond = _respond }()
 	result.Respond = func(responder any, _ result.Response) {
