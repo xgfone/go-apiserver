@@ -58,6 +58,11 @@ func Ok(data interface{}) Response { return Response{Data: data} }
 // Err is equal to NewResponse(nil, err).
 func Err(err error) Response { return Response{Error: err} }
 
+// IsZero reports whether the response is ZERO.
+func (r Response) IsZero() bool {
+	return r == (Response{})
+}
+
 // WithData returns a new Response with the given data.
 func (r Response) WithData(data interface{}) Response {
 	r.Data = data
@@ -118,18 +123,26 @@ func DefaultRespond(responder any, response Response) {
 		resp.Respond(response)
 
 	case interface{ JSON(int, interface{}) }:
-		resp.JSON(response.StatusCode(), response)
+		if response.IsZero() {
+			resp.JSON(response.StatusCode(), nil)
+		} else {
+			resp.JSON(response.StatusCode(), response)
+		}
 
 	case http.ResponseWriter:
-		sendjson(resp, response)
+		if response.IsZero() {
+			sendjson(resp, response.StatusCode(), nil)
+		} else {
+			sendjson(resp, response.StatusCode(), response)
+		}
 
 	default:
 		panic(fmt.Errorf("result.DefaultRespond: unknown responder type %T", responder))
 	}
 }
 
-func sendjson(w http.ResponseWriter, v Response) {
-	err := handler.JSON(w, v.StatusCode(), v)
+func sendjson(w http.ResponseWriter, code int, data any) {
+	err := handler.JSON(w, code, data)
 	if err != nil {
 		slog.Error("fail to encode and send response to client", "err", err)
 	}
