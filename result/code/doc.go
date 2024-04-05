@@ -13,4 +13,6 @@
 // limitations under the License.
 
 // Package code provides an error based on the code and message.
+//
+// DEPRECATED!!
 package code

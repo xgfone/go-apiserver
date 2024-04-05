@@ -13,6 +13,8 @@
 // limitations under the License.
 
 // Package statuscode provides an error based on the status code.
+//
+// DEPRECATED!!!
 package statuscode
 
 import (
