@@ -20,8 +20,8 @@ import (
 	"testing"
 )
 
-func TestRequestID(t *testing.T) {
-	handler := RequestID(nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+func TestRequestId(t *testing.T) {
+	handler := RequestId()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
