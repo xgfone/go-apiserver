@@ -69,6 +69,11 @@ func (ms Middlewares) Clone() Middlewares {
 	return slices.Clone(ms)
 }
 
+// Sort sorts itself by the priority from high to low.
+func (ms Middlewares) Sort() {
+	Sort(ms)
+}
+
 // InsertFunc inserts a set of function middlewares into the front
 // and return a new middleware slice.
 func (ms Middlewares) InsertFunc(m ...MiddlewareFunc) Middlewares {
@@ -149,17 +154,25 @@ func (m *middleware) Name() string                           { return m.n }
 func (m *middleware) Priority() int                          { return m.p }
 func (m *middleware) Handler(next http.Handler) http.Handler { return m.f(next) }
 
-// Sort sorts a set of middlewares, which must have implemented
-//
-//	interface{ Priority() int }
+// Sort sorts a set of middlewares by the priority from high to low.
 func Sort(ms []Middleware) {
 	slices.SortStableFunc(ms, func(a, b Middleware) int {
-		return getPriority(a) - getPriority(b)
+		return GetPriority(a) - GetPriority(b)
 	})
 }
 
-func getPriority(m Middleware) int {
-	return m.(interface{ Priority() int }).Priority()
+// GetPriority returns the priority of the middleware if it has implemented
+//
+//	interface{ Priority() int }
+//
+// Or, return 0 instead.
+//
+// NOTICE: the smaller the value, the high the priority.
+func GetPriority(m Middleware) int {
+	if p, ok := m.(interface{ Priority() int }); ok {
+		return p.Priority()
+	}
+	return 0
 }
 
 func mergeMiddlewares(mws1, mws2 Middlewares) Middlewares {

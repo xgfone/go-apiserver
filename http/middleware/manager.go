@@ -28,7 +28,10 @@ func NewManager(handler http.Handler) *Manager {
 	return &Manager{origal: handler, handler: handler}
 }
 
-func (m *Manager) update() { m.handler = m.Handler(m.origal) }
+func (m *Manager) update() {
+	m.mdws.Sort()
+	m.handler = m.Handler(m.origal)
+}
 
 // Middlewares returns the added middlewares.
 func (m *Manager) Middlewares() Middlewares { return m.mdws }
@@ -42,7 +45,7 @@ func (m *Manager) Handler(handler http.Handler) http.Handler {
 // SetHandler resets the http handler.
 func (m *Manager) SetHandler(handler http.Handler) {
 	m.origal = handler
-	m.update()
+	m.handler = m.Handler(handler)
 }
 
 // InsertFunc inserts the new function middlewares to the front.
