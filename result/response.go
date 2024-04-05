@@ -104,10 +104,8 @@ func (r Response) StatusCode() int {
 	return 500
 }
 
-// DefaultRespond is the default implemention to send the response by responder.
-//
-// If response is ZERO, it does nothing. Or, it will try to assert responder
-// to the types as follows:
+// DefaultRespond is the default implemention to send the response by responder,
+// which will try to assert responder to the types as follows, and call it:
 //
 //	interface{ Respond(Response) }
 //	interface{ JSON(StatusCode int, Response interface{}) }
@@ -115,10 +113,6 @@ func (r Response) StatusCode() int {
 //
 // For other types, it will panic.
 func DefaultRespond(responder any, response Response) {
-	if response == (Response{}) {
-		return
-	}
-
 	switch resp := responder.(type) {
 	case interface{ Respond(Response) }:
 		resp.Respond(response)
