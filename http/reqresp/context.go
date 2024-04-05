@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-binder"
@@ -148,6 +149,8 @@ func (c *Context) Header() http.Header { return c.ResponseWriter.Header() }
 // Write implements the interface http.ResponseWriter#Write.
 func (c *Context) Write(p []byte) (int, error) { return c.ResponseWriter.Write(p) }
 
+var _ http.ResponseWriter = new(Context)
+
 // ---------------------------------------------------------------------------
 // Binder
 // ---------------------------------------------------------------------------
@@ -192,7 +195,12 @@ func (c *Context) LocalAddr() net.Addr {
 }
 
 // RequestID returns the request header "X-Request-Id".
+//
+// DEPRECATED!!! Please use the method RequestId.
 func (c *Context) RequestID() string { return c.Request.Header.Get(header.HeaderXRequestID) }
+
+// RequestId returns the request header "X-Request-Id".
+func (c *Context) RequestId() string { return c.Request.Header.Get(header.HeaderXRequestID) }
 
 // IsWebSocket reports whether the request is websocket.
 func (c *Context) IsWebSocket() bool { return header.IsWebSocket(c.Request) }
@@ -241,7 +249,7 @@ func (c *Context) getDataString(key string, required bool) string {
 		case string:
 			return v
 		case []byte:
-			return string(v)
+			return helper.String(v)
 		case time.Duration:
 			return v.String()
 		case time.Time:
@@ -512,7 +520,7 @@ func (c *Context) Attachment(filename, filepath string) {
 	if filepath == "" {
 		panic("Context.Attachment: filepath must not be empty")
 	}
-	c.sendfile(filename, filepath, "attachment")
+	c.sendfile(filename, filepath, header.Attachment)
 }
 
 // Inline sends a file as inline.
@@ -523,7 +531,7 @@ func (c *Context) Inline(filename, filepath string) {
 	if filepath == "" {
 		panic("Context.Inline: filepath must not be empty")
 	}
-	c.sendfile(filename, filepath, "inline")
+	c.sendfile(filename, filepath, header.Inline)
 }
 
 func (c *Context) sendfile(name, path, dtype string) {

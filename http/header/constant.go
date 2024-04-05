@@ -14,6 +14,12 @@
 
 package header
 
+// Content-Disposition type values
+const (
+	Inline     = "inline"
+	Attachment = "attachment"
+)
+
 // MIME types
 const (
 	MIMETextXML                = "text/xml"
