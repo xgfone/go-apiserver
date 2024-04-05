@@ -38,8 +38,7 @@ var (
 	Enabled func(*http.Request) bool
 )
 
-// Logger is used to wrap a http handler and return a new http handler,
-// which logs the http request.
+// Logger is a http middleware to log the http request.
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

@@ -24,7 +24,7 @@ import (
 	"github.com/xgfone/go-defaults"
 )
 
-// Recover returns a http handler middleware to recover the panic if occurring.
+// Recover is a http handler middleware to recover the panic if occurring.
 func Recover(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer wrappanic(w, r)

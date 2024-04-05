@@ -22,9 +22,8 @@ import (
 	"github.com/xgfone/go-apiserver/http/reqresp"
 )
 
-// Context is used to wrap a http handler and return a new http handler,
-// which will allocate a context and put it into the http request,
-// then release it after handling the http request.
+// Context is a http middleware to allocate a context and put it
+// into the http request, then release it after handling the http request.
 func Context(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if c := reqresp.GetContext(r.Context()); c == nil {

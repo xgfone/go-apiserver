@@ -20,7 +20,7 @@ import (
 	"strings"
 )
 
-// Repsond204 returns a middleware function to intercept the request
+// Repsond204 is a http middleware function to intercept the request
 // matching the given path and respond status code 204 to the client,
 // which is used to respond to the healthcheck in general.
 //
