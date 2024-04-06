@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+
+	"github.com/xgfone/go-apiserver/http/handler"
 )
 
 // Respond is the public function to send the response by responder.
@@ -105,19 +107,24 @@ func (r Response) StatusCode() int {
 	return 500
 }
 
+// Responder is the responder interface.
+type Responder interface {
+	Respond(Response)
+}
+
 // DefaultRespond is the default implemention to send the response by responder,
 // which will try to assert responder to the types as follows, and call it:
 //
-//	interface{ Respond(Response) }
-//	interface{ JSON(StatusCode int, Response any) }
+//	Responder
+//	handler.JSONResponder
 //
 // For other types, it will panic.
 func DefaultRespond(responder any, response Response) {
 	switch resp := responder.(type) {
-	case interface{ Respond(Response) }:
+	case Responder:
 		resp.Respond(response)
 
-	case interface{ JSON(int, any) }:
+	case handler.JSONResponder:
 		if response.IsZero() {
 			resp.JSON(response.StatusCode(), nil)
 		} else {

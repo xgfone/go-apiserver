@@ -24,6 +24,11 @@ import (
 	"github.com/xgfone/go-apiserver/http/header"
 )
 
+// JSONResponder is an interface to send the http response to client.
+type JSONResponder interface {
+	JSON(code int, value any)
+}
+
 // JSON sends the response by the json format to the client.
 func JSON(w http.ResponseWriter, code int, v interface{}) (err error) {
 	if v == nil {
