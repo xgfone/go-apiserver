@@ -40,12 +40,15 @@ var (
 // StatusCode returns the http statusc code.
 //
 // If e.Err has implemented the interface { StatusCode() int }, call it.
-// Or, return e.Code.
+// Or, return e.Code if it is in [100, 600). Or, return 500.
 func (e Error) StatusCode() int {
 	if err, ok := e.Err.(interface{ StatusCode() int }); ok {
 		return err.StatusCode()
 	}
-	return e.Code
+	if e.Code >= 100 && e.Code < 600 {
+		return e.Code
+	}
+	return 500
 }
 
 // ServeHTTP implements the interface http.Handler.
