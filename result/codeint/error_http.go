@@ -17,7 +17,7 @@ package codeint
 import (
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/http/reqresp"
+	"github.com/xgfone/go-apiserver/http/handler"
 )
 
 // Pre-define some errors with the status code.
@@ -53,8 +53,5 @@ func (e Error) StatusCode() int {
 
 // ServeHTTP implements the interface http.Handler.
 func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if c := reqresp.GetContext(r.Context()); c != nil {
-		w = c
-	}
-	e.Respond(w)
+	_ = handler.JSON(w, e.StatusCode(), e)
 }

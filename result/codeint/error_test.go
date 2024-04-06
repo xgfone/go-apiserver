@@ -16,64 +16,37 @@ package codeint
 
 import (
 	"errors"
-	"io"
-	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
-
-	"github.com/xgfone/go-apiserver/result"
 )
 
 func TestError(t *testing.T) {
-	result.Respond = func(responder any, response result.Response) {
-		e := response.Error.(Error)
-		w := responder.(http.ResponseWriter)
-		w.WriteHeader(e.Code)
-		_, _ = io.WriteString(w, e.Message)
-	}
-
 	err404 := NewError(404)
 	if msg := err404.Error(); msg != "404" {
-		t.Errorf("expect empty string, but got '%s'", msg)
+		t.Errorf("expect '%s', but got '%s'", "404", msg)
+	}
+	if msg := err404.String(); msg != "code=404, msg=" {
+		t.Errorf("expect '%s', but got '%s'", "code=404, msg=", msg)
+	}
+	if msg := err404.WithMessage("test").Error(); msg != "404: test" {
+		t.Errorf("expect '%s', but got '%s'", "404: test", msg)
 	}
 
 	if err := errors.Unwrap(err404); err != nil {
 		t.Errorf("expect an error nil, but got '%v'", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-
-	rec := httptest.NewRecorder()
-	err404.ServeHTTP(rec, req)
-	if rec.Code != 404 {
-		t.Errorf("expect status code %d, but got %d", 404, rec.Code)
-	} else if body := rec.Body.String(); body != "" {
-		t.Errorf("expect empty body, but got '%s'", body)
-	}
-
-	err := err404.WithMessage("test")
-	if msg := err.Error(); msg != "404: test" {
-		t.Errorf("expect error '%s', but got '%s'", "test", msg)
-	}
-
-	err = err404.WithMessage("%s", "test")
-	if msg := err.Error(); msg != "404: test" {
-		t.Errorf("expect error '%s', but got '%s'", "test", msg)
-	}
-
-	if errors.Unwrap(err) != nil {
-		t.Error("expect an error, but got nil")
-	}
-
-	if code := err.StatusCode(); code != 404 {
+	if code := err404.StatusCode(); code != 404 {
 		t.Errorf("expect status code %d, but got %d", 404, code)
 	}
 
-	rec = httptest.NewRecorder()
-	err.ServeHTTP(rec, req)
+	rec := httptest.NewRecorder()
+	expect := `{"Code":404,"Message":"test"}`
+	err404.WithMessage("%s", "test").ServeHTTP(rec, nil)
 	if rec.Code != 404 {
 		t.Errorf("expect status code %d, but got %d", 404, rec.Code)
-	} else if body := rec.Body.String(); body != "test" {
-		t.Errorf("expect body '%s', but got '%s'", "test", body)
+	} else if body := strings.TrimSpace(rec.Body.String()); body != expect {
+		t.Errorf("expect '%s', but got '%s'", expect, body)
 	}
 }
