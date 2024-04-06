@@ -36,6 +36,10 @@ func WroteHeader(w http.ResponseWriter) bool {
 	}
 }
 
+type StatusCoder interface {
+	StatusCode() int
+}
+
 // ResponseWriter is an extended http.ResponseWriter.
 type ResponseWriter interface {
 	http.ResponseWriter

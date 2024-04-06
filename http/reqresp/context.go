@@ -32,6 +32,7 @@ import (
 	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/header"
+	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-binder"
 	"github.com/xgfone/go-defaults"
 )
@@ -114,6 +115,11 @@ type Context struct {
 	//
 	// If nil, use binder.HeaderDecoder instead.
 	HeaderDecoder binder.Decoder
+
+	// Responder is the result responder used by the method Respond.
+	//
+	// If nil, use DefaultResponder instead.
+	Responder func(*Context, result.Response)
 
 	// Query and Cookies are used to cache the parsed request query and cookies.
 	Cookies []*http.Cookie
@@ -557,3 +563,15 @@ func (c *Context) sendfile(name, path, dtype string) {
 	c.SetContentDisposition(dtype, name)
 	http.ServeContent(c.ResponseWriter, c.Request, stat.Name(), stat.ModTime(), file)
 }
+
+// Respond implements the interface result.Responder.
+func (c *Context) Respond(response result.Response) {
+	if c.Responder != nil {
+		c.Responder(c, response)
+	} else {
+		DefaultResponder(c, response)
+	}
+}
+
+// DefaultResponder is default result responder.
+var DefaultResponder func(*Context, result.Response) = RespondResultResponse

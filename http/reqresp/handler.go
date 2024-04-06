@@ -15,9 +15,11 @@
 package reqresp
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/result"
+	"github.com/xgfone/go-apiserver/result/codeint"
 )
 
 // Handler is a handler based on Context to handle the http request.
@@ -49,5 +51,72 @@ func runhandler(w http.ResponseWriter, r *http.Request, f Handler) {
 
 	if f(c); !c.ResponseWriter.WroteHeader() {
 		result.Err(c.Err).Respond(c)
+	}
+}
+
+/// ----------------------------------------------------------------------- ///
+
+func RespondResultResponse(c *Context, response result.Response) {
+	xcode := c.Request.Header.Get("X-Response-Code")
+	if xcode == "" {
+		xcode = c.GetQuery("X-Response-Code")
+	}
+
+	switch xcode {
+	case "", "std":
+		respondstd(c, response)
+	case "200":
+		respond200(c, response)
+	case "500":
+		respond500(c, response)
+	default:
+		respondstd(c, response)
+	}
+}
+
+func getStatusCodeFromError(err error) int {
+	if e, ok := err.(StatusCoder); ok {
+		return e.StatusCode()
+	}
+	return 500
+}
+
+func respondstd(c *Context, r result.Response) {
+	switch r.Error.(type) {
+	case nil:
+		c.JSON(200, r.Data)
+
+	case json.Marshaler:
+		c.JSON(getStatusCodeFromError(r.Error), r.Error)
+
+	default:
+		r.Error = codeint.ErrInternalServerError.WithError(r.Error)
+		c.JSON(getStatusCodeFromError(r.Error), r.Error)
+	}
+}
+
+func respond200(c *Context, r result.Response) {
+	switch e := r.Error.(type) {
+	case nil:
+		c.JSON(200, r.Data)
+
+	case json.Marshaler:
+		c.JSON(200, e)
+
+	default:
+		c.JSON(200, codeint.ErrInternalServerError.WithError(e))
+	}
+}
+
+func respond500(c *Context, r result.Response) {
+	switch e := r.Error.(type) {
+	case nil:
+		c.JSON(200, r.Data)
+
+	case json.Marshaler:
+		c.JSON(500, e)
+
+	default:
+		c.JSON(500, codeint.ErrInternalServerError.WithError(e))
 	}
 }

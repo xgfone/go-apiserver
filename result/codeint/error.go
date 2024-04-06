@@ -105,6 +105,17 @@ func (e Error) Respond(responder any) {
 	result.Err(e).Respond(responder)
 }
 
+var _ json.Marshaler = Error{}
+
+func (e Error) MarshalJSON() ([]byte, error) {
+	type Error struct {
+		Code    int
+		Message string
+	}
+
+	return json.Marshal(Error{Code: e.Code, Message: e.Message})
+}
+
 // Decode uses the decode function to decode the result to the error.
 func (e *Error) Decode(decode func(interface{}) error) error {
 	return decode(e)
