@@ -39,17 +39,17 @@ func Failure(responder any, err error) {
 
 // Response represents a response result.
 type Response struct {
-	Error error       `json:"error,omitempty" yaml:"error,omitempty" xml:"error,omitempty"`
-	Data  interface{} `json:"data,omitempty" yaml:"data,omitempty" xml:"data,omitempty"`
+	Error error `json:",omitempty"`
+	Data  any   `json:",omitempty"`
 }
 
 // NewResponse returns a new response.
-func NewResponse(data interface{}, err error) Response {
+func NewResponse(data any, err error) Response {
 	return Response{Data: data, Error: err}
 }
 
 // Ok is equal to NewResponse(data, nil).
-func Ok(data interface{}) Response { return Response{Data: data} }
+func Ok(data any) Response { return Response{Data: data} }
 
 // Err is equal to NewResponse(nil, err).
 func Err(err error) Response { return Response{Error: err} }
@@ -60,7 +60,7 @@ func (r Response) IsZero() bool {
 }
 
 // WithData returns a new Response with the given data.
-func (r Response) WithData(data interface{}) Response {
+func (r Response) WithData(data any) Response {
 	r.Data = data
 	return r
 }
@@ -72,7 +72,7 @@ func (r Response) WithError(err error) Response {
 }
 
 // Decode uses the decode function to decode the result to the response.
-func (r *Response) Decode(decode func(interface{}) error) error {
+func (r *Response) Decode(decode func(any) error) error {
 	return decode(r)
 }
 

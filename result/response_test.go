@@ -29,7 +29,7 @@ func TestResponse(t *testing.T) {
 	resp.Respond(respondfunc(func(Response) {}))
 
 	resp = Response{}
-	err := resp.Decode(func(i interface{}) error {
+	err := resp.Decode(func(i any) error {
 		r := i.(*Response)
 		r.Data = 123
 		return nil
