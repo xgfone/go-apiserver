@@ -86,7 +86,7 @@ func respondstd(c *Context, r result.Response) {
 	case nil:
 		c.JSON(200, r.Data)
 
-	case json.Marshaler:
+	case codeint.Error, json.Marshaler:
 		c.JSON(getStatusCodeFromError(r.Error), r.Error)
 
 	default:
@@ -96,27 +96,27 @@ func respondstd(c *Context, r result.Response) {
 }
 
 func respond200(c *Context, r result.Response) {
-	switch e := r.Error.(type) {
+	switch r.Error.(type) {
 	case nil:
 		c.JSON(200, r.Data)
 
-	case json.Marshaler:
-		c.JSON(200, e)
+	case codeint.Error, json.Marshaler:
+		c.JSON(200, r.Error)
 
 	default:
-		c.JSON(200, codeint.ErrInternalServerError.WithError(e))
+		c.JSON(200, codeint.ErrInternalServerError.WithError(r.Error))
 	}
 }
 
 func respond500(c *Context, r result.Response) {
-	switch e := r.Error.(type) {
+	switch r.Error.(type) {
 	case nil:
 		c.JSON(200, r.Data)
 
-	case json.Marshaler:
-		c.JSON(500, e)
+	case codeint.Error, json.Marshaler:
+		c.JSON(500, r.Error)
 
 	default:
-		c.JSON(500, codeint.ErrInternalServerError.WithError(e))
+		c.JSON(500, codeint.ErrInternalServerError.WithError(r.Error))
 	}
 }
