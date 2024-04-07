@@ -82,12 +82,16 @@ func getStatusCodeFromError(err error) int {
 }
 
 func respondstd(c *Context, r result.Response) {
-	switch r.Error.(type) {
+	switch e := r.Error.(type) {
 	case nil:
 		c.JSON(200, r.Data)
 
 	case codeint.Error, json.Marshaler:
 		c.JSON(getStatusCodeFromError(r.Error), r.Error)
+
+	case StatusCoder:
+		r.Error = codeint.ErrInternalServerError.WithError(r.Error)
+		c.JSON(e.StatusCode(), r.Error)
 
 	default:
 		r.Error = codeint.ErrInternalServerError.WithError(r.Error)
