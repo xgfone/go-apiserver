@@ -39,12 +39,8 @@ var (
 
 // StatusCode returns the http statusc code.
 //
-// If e.Err has implemented the interface { StatusCode() int }, call it.
-// Or, return e.Code if it is in [100, 600). Or, return 500.
+// If Code is in [100, 599], return it. Or, return 500.
 func (e Error) StatusCode() int {
-	if err, ok := e.Err.(interface{ StatusCode() int }); ok {
-		return err.StatusCode()
-	}
 	if e.Code >= 100 && e.Code < 600 {
 		return e.Code
 	}
