@@ -77,19 +77,11 @@ func (e Error) WithData(data any) Error {
 	return e
 }
 
-// WithError returns a new Error.
+// WithError returns a new Error with the error.
 func (e Error) WithError(err error) Error {
-	switch _err := err.(type) {
-	case nil:
-		return Error{}
-
-	case Error:
-		return _err
-
-	default:
-		e.Err = err
-		return e
-	}
+	e.Message = err.Error()
+	e.Err = err
+	return e
 }
 
 // WithMessage returns a new Error with the message.
@@ -102,10 +94,19 @@ func (e Error) WithMessage(msg string, args ...interface{}) Error {
 	return e
 }
 
-// ToError is the same as WithError if err != nil. Or, return nil.
+// TryError tries to assert err to Error and return it.
+// Or, wrap it and return a new Error.
+func (e Error) TryError(err error) Error {
+	if _err, ok := err.(Error); ok {
+		return _err
+	}
+	return e.WithError(err)
+}
+
+// ToError is the same as TryError if err != nil. Or, return nil.
 func (e Error) ToError(err error) error {
 	if err != nil {
-		err = e.WithError(err)
+		err = e.TryError(err)
 	}
 	return err
 }
