@@ -28,6 +28,7 @@ var _ error = Error{}
 
 // Error is used to stand for an error based the integer code.
 type Error struct {
+	Data    any    `json:",omitempty"`
 	Code    int    `json:",omitempty"`
 	Message string `json:",omitempty"`
 
@@ -58,12 +59,21 @@ func (e Error) Error() string {
 
 // String implements the interface fmt.Stringer.
 func (e Error) String() string {
-	return fmt.Sprintf("code=%d, msg=%s", e.Code, e.Message)
+	if e.Data == nil {
+		return fmt.Sprintf("code=%d, msg=%s", e.Code, e.Message)
+	}
+	return fmt.Sprintf("code=%d, msg=%s, data=%v", e.Code, e.Message, e.Data)
 }
 
 // WithCtx returns a new Error with the context information.
 func (e Error) WithCtx(ctx any) Error {
 	e.Ctx = ctx
+	return e
+}
+
+// WithData returns a new Error with the data.
+func (e Error) WithData(data any) Error {
+	e.Data = data
 	return e
 }
 
