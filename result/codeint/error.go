@@ -34,6 +34,8 @@ type Error struct {
 
 	Err error `json:"-"`
 	Ctx any   `json:"-"`
+
+	Status int `json:"-"`
 }
 
 // NewError returns a new Error with the code.
@@ -91,6 +93,12 @@ func (e Error) WithMessage(msg string, args ...interface{}) Error {
 	} else {
 		e.Message = fmt.Sprintf(msg, args...)
 	}
+	return e
+}
+
+// WithStatus returns a new Error with the status.
+func (e Error) WithStatus(status int) Error {
+	e.Status = status
 	return e
 }
 

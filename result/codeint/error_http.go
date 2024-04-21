@@ -37,11 +37,16 @@ var (
 	ErrGatewayTimeout       = NewError(http.StatusGatewayTimeout)       // 504
 )
 
-// StatusCode returns the http statusc code.
+// StatusCode returns the http status code.
 //
-// If Code is in [100, 599], return it. Or, return 500.
+// If Status is not equal to 0, return it.
+// Or, return Code if it is in [100, 599].
+// Or, return 500.
 func (e Error) StatusCode() int {
-	if e.Code >= 100 && e.Code < 600 {
+	if e.Status != 0 {
+		return e.Status
+	}
+	if 100 <= e.Code && e.Code < 600 {
 		return e.Code
 	}
 	return 500
