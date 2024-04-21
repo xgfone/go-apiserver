@@ -39,7 +39,7 @@ type Error struct {
 }
 
 // NewError returns a new Error with the code.
-func NewError(code int) Error { return Error{Code: code} }
+func NewError(code int) Error { return Error{Code: code}.WithStatus(code) }
 
 // IsZero reports whether e is ZERO.
 func (e Error) IsZero() bool {
@@ -98,7 +98,11 @@ func (e Error) WithMessage(msg string, args ...interface{}) Error {
 
 // WithStatus returns a new Error with the status.
 func (e Error) WithStatus(status int) Error {
-	e.Status = status
+	if status < 600 {
+		e.Status = status
+	} else {
+		e.Status = 500
+	}
 	return e
 }
 
