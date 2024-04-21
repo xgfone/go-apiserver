@@ -73,6 +73,12 @@ func (e Error) WithCtx(ctx any) Error {
 	return e
 }
 
+// WithCode returns a new code with the status.
+func (e Error) WithCode(code int) Error {
+	e.Code = code
+	return e
+}
+
 // WithData returns a new Error with the data.
 func (e Error) WithData(data any) Error {
 	e.Data = data
