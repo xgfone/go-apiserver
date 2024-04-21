@@ -27,7 +27,7 @@ import (
 
 // ServeWithListener is used to start the http server with listener
 // until it is stopped.
-var ServeWithListener func(server *http.Server, ln net.Listener) = serveWithListener
+var ServeWithListener func(server *http.Server, ln net.Listener) = ServeWithListenerForDefault
 
 // New returns a new http server with the handler.
 func New(addr string, handler http.Handler) *http.Server {
@@ -53,7 +53,12 @@ func Serve(server *http.Server) {
 			"protocol", "tcp", "addr", server.Addr, "err", err)
 		return
 	}
-	ServeWithListener(server, ln)
+
+	if ServeWithListener != nil {
+		ServeWithListener(server, ln)
+	} else {
+		ServeWithListenerForDefault(server, ln)
+	}
 }
 
 // Start is a convenient function to start the http server with addr and handler.
@@ -66,9 +71,9 @@ func Stop(server *http.Server) {
 	_ = server.Shutdown(context.Background())
 }
 
-// ServeWithListener starts the http server with listener until it is stopped.
-func serveWithListener(server *http.Server, ln net.Listener) {
-	atexit.OnExit(func() { _ = server.Shutdown(context.Background()) })
+// ServeWithListenerForDefault is the default implementation to start the http server.
+func ServeWithListenerForDefault(server *http.Server, ln net.Listener) {
+	atexit.OnExit(func() { Stop(server) })
 	serve(server, ln)
 	atexit.Execute()
 	atexit.Wait()
