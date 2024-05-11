@@ -18,19 +18,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"strings"
 	"sync"
 )
-
-// DecodeJSONFromString decodes the json raw string s into dst.
-func DecodeJSONFromString(dst interface{}, s string) error {
-	return json.NewDecoder(strings.NewReader(s)).Decode(dst)
-}
-
-// DecodeJSONFromBytes decodes the json raw bytes s into dst.
-func DecodeJSONFromBytes(dst interface{}, b []byte) error {
-	return json.NewDecoder(bytes.NewReader(b)).Decode(dst)
-}
 
 // EncodeJSON encodes the value by json into w.
 //
