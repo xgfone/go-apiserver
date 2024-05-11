@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/handler"
 )
@@ -116,6 +117,7 @@ type Responder interface {
 // which will try to assert responder to the types as follows, and call it:
 //
 //	Responder
+//	http.ResponseWriter
 //	handler.JSONResponder
 //
 // For other types, it will panic.
@@ -129,6 +131,13 @@ func DefaultRespond(responder any, response Response) {
 			resp.JSON(response.StatusCode(), nil)
 		} else {
 			resp.JSON(response.StatusCode(), response)
+		}
+
+	case http.ResponseWriter:
+		if response.IsZero() {
+			_ = handler.JSON(resp, response.StatusCode(), nil)
+		} else {
+			_ = handler.JSON(resp, response.StatusCode(), response)
 		}
 
 	default:
