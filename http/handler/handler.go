@@ -1,4 +1,4 @@
-// Copyright 2021~2023 xgfone
+// Copyright 2021~2024 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
 // Package handler provides some http handler functions.
 package handler
 
-import (
-	"net/http"
-	"sync/atomic"
-)
+import "net/http"
 
 // Pre-define some http handlers.
 var (
@@ -51,39 +48,3 @@ var (
 		w.WriteHeader(500)
 	})
 )
-
-type handlerWrapper struct{ http.Handler }
-
-// SwitchHandler is a HTTP handler that is used to switch the real handler.
-type SwitchHandler struct {
-	handler atomic.Value
-}
-
-// NewSwitchHandler returns a new switch handler with the initial handler.
-func NewSwitchHandler(handler http.Handler) *SwitchHandler {
-	if handler == nil {
-		panic("SwitchHandler: the http handler is nil")
-	}
-	sh := new(SwitchHandler)
-	sh.Set(handler)
-	return sh
-}
-
-// Set sets the http handler to new.
-func (sh *SwitchHandler) Set(new http.Handler) { sh.handler.Store(handlerWrapper{new}) }
-
-// Get returns the current handler.
-func (sh *SwitchHandler) Get() http.Handler { return sh.handler.Load().(handlerWrapper).Handler }
-
-// Swap stores the new handler and returns the old.
-func (sh *SwitchHandler) Swap(new http.Handler) (old http.Handler) {
-	if new == nil {
-		panic("SwitchHandler.Swap: the new http handler is nil")
-	}
-	return sh.handler.Swap(handlerWrapper{new}).(handlerWrapper).Handler
-}
-
-// ServeHTTP implements the interface http.Handler.
-func (sh *SwitchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	sh.Get().ServeHTTP(w, r)
-}
