@@ -56,7 +56,7 @@ func runhandler(w http.ResponseWriter, r *http.Request, f Handler) {
 
 /// ----------------------------------------------------------------------- ///
 
-func RespondResultResponse(c *Context, response result.Response) {
+func RespondResultResponseWithContext(c *Context, response result.Response) {
 	xcode := c.Request.Header.Get("X-Response-Code")
 	if xcode == "" {
 		xcode = c.GetQuery("X-Response-Code")

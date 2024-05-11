@@ -1,4 +1,4 @@
-// Copyright 2023 xgfone
+// Copyright 2023~2024 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
+	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-apiserver/result/codeint"
 	"github.com/xgfone/go-defaults"
 )
@@ -52,7 +53,8 @@ func wrappanic(w http.ResponseWriter, r *http.Request) {
 	slog.Error("wrap a panic", slog.Any("panic", v), slog.Any("stacks", stacks))
 	if !reqresp.WroteHeader(w) {
 		w.Header().Set("X-Panic", "1")
-		codeint.ErrInternalServerError.WithMessage("panic").Respond(w)
+		err := codeint.ErrInternalServerError.WithMessage("panic")
+		reqresp.DefaultResponder(w, r, result.Err(err))
 	}
 }
 

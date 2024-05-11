@@ -296,7 +296,7 @@ func (c *Context) SetData(key string, value interface{}) {
 
 // ParseQuery parses the query parameters, caches and returns the parsed query.
 func (c *Context) ParseQuery() (query url.Values, err error) {
-	if c.Query == nil {
+	if c.Query == nil && c.Request.URL.RawQuery != "" {
 		c.Query, err = url.ParseQuery(c.Request.URL.RawQuery)
 	}
 	query = c.Query
@@ -571,12 +571,30 @@ func (c *Context) Respond(response result.Response) {
 	if c.Responder != nil {
 		c.Responder(c, response)
 	} else {
-		DefaultResponder(c, response)
+		DefaultContextResponder(c, response)
 	}
 }
 
-// DefaultResponder is default result responder.
-var DefaultResponder func(*Context, result.Response) = RespondResultResponse
+var (
+	// DefaultContextResponder is default result responder based on Context.
+	DefaultContextResponder func(*Context, result.Response) = RespondResultResponseWithContext
+
+	// DefaultResponder is the default result responder.
+	DefaultResponder func(http.ResponseWriter, *http.Request, result.Response) = RespondResultResponse
+)
+
+func RespondResultResponse(w http.ResponseWriter, r *http.Request, response result.Response) {
+	if c := GetContext(r.Context()); c != nil {
+		DefaultContextResponder(c, response)
+		return
+	}
+
+	rw, ok := w.(ResponseWriter)
+	if !ok {
+		rw = AcquireResponseWriter(w)
+	}
+	DefaultContextResponder(&Context{ResponseWriter: rw, Request: r}, response)
+}
 
 /// ----------------------------------------------------------------------- ///
 
