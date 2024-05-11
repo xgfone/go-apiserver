@@ -118,7 +118,7 @@ type Context struct {
 
 	// Responder is the result responder used by the method Respond.
 	//
-	// If nil, use DefaultResponder instead.
+	// If nil, use DefaultContextResponder instead.
 	Responder func(*Context, result.Response)
 
 	// Query and Cookies are used to cache the parsed request query and cookies.
