@@ -18,19 +18,19 @@ import "net/http"
 
 // Manager is used to manage a set of the middlewares.
 type Manager struct {
-	origal  http.Handler
 	handler http.Handler
+	orig    http.Handler
 	mdws    Middlewares
 }
 
 // NewManager returns a new middleware manager.
 func NewManager(handler http.Handler) *Manager {
-	return &Manager{origal: handler, handler: handler}
+	return &Manager{orig: handler, handler: handler}
 }
 
 func (m *Manager) update() {
 	m.mdws.Sort()
-	m.handler = m.Handler(m.origal)
+	m.handler = m.Handler(m.orig)
 }
 
 // Middlewares returns the added middlewares.
@@ -44,8 +44,8 @@ func (m *Manager) Handler(handler http.Handler) http.Handler {
 
 // SetHandler resets the http handler.
 func (m *Manager) SetHandler(handler http.Handler) {
-	m.origal = handler
 	m.handler = m.Handler(handler)
+	m.orig = handler
 }
 
 // InsertFunc inserts the new function middlewares to the front.
