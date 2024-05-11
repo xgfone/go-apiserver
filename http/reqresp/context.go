@@ -514,7 +514,9 @@ func (c *Context) XML(code int, v interface{}) {
 func (c *Context) Stream(code int, contentType string, r io.Reader) {
 	c.SetContentType(contentType)
 	c.WriteHeader(code)
-	_, err := io.CopyBuffer(c.ResponseWriter, r, make([]byte, 1024))
+	buf := getbytes()
+	_, err := io.CopyBuffer(c.ResponseWriter, r, buf.Buffer)
+	putbytes(buf)
 	c.AppendError(err)
 }
 
@@ -575,3 +577,16 @@ func (c *Context) Respond(response result.Response) {
 
 // DefaultResponder is default result responder.
 var DefaultResponder func(*Context, result.Response) = RespondResultResponse
+
+/// ----------------------------------------------------------------------- ///
+
+type byteswrappper struct {
+	Buffer []byte
+}
+
+var bytespool = sync.Pool{
+	New: func() any { return &byteswrappper{Buffer: make([]byte, 1024)} },
+}
+
+func getbytes() *byteswrappper  { return bytespool.Get().(*byteswrappper) }
+func putbytes(b *byteswrappper) { bytespool.Put(b) }
