@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
+	"github.com/xgfone/go-apiserver/result/codeint"
 	"github.com/xgfone/go-defaults"
 )
 
@@ -51,7 +52,7 @@ func wrappanic(w http.ResponseWriter, r *http.Request) {
 	slog.Error("wrap a panic", slog.Any("panic", v), slog.Any("stacks", stacks))
 	if !reqresp.WroteHeader(w) {
 		w.Header().Set("X-Panic", "1")
-		w.WriteHeader(500)
+		codeint.ErrInternalServerError.WithMessage("panic").Respond(w)
 	}
 }
 
