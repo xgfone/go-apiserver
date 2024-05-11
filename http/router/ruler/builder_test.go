@@ -1,4 +1,4 @@
-// Copyright 2023 xgfone
+// Copyright 2023~2024 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,18 +34,12 @@ func TestRouteBuilder(t *testing.T) {
 		if expect := "path"; !strings.Contains(desc, expect) {
 			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
 		}
-		if expect := "q1"; !strings.Contains(desc, expect) {
-			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
-		}
-		if expect := "K1"; !strings.Contains(desc, expect) {
-			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
-		}
 		if expect := "localhost"; !strings.Contains(desc, expect) {
 			t.Errorf("expect containing '%s', but got '%s'", expect, desc)
 		}
 	})
 
-	b = b.Group("/prefix").Clone().Path("/path").Host("localhost").Query("q1", "v1").Header("k1", "v1").
+	b = b.Group("/prefix").Clone().Path("/path").Host("localhost").
 		Use(middleware.MiddlewareFunc(func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				next.ServeHTTP(w, r)

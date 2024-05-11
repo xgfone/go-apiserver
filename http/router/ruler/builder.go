@@ -1,4 +1,4 @@
-// Copyright 2023 xgfone
+// Copyright 2023~2024 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,11 +61,10 @@ type RouteBuilder struct {
 	group string
 	route Route
 
-	host    matcher.Matcher
-	path    matcher.Matcher
-	method  matcher.Matcher
-	headers []matcher.Matcher
-	queries []matcher.Matcher
+	host   matcher.Matcher
+	path   matcher.Matcher
+	method matcher.Matcher
+	others []matcher.Matcher
 }
 
 // NewRouteBuilder returns a new route builder.
@@ -78,16 +77,6 @@ func (b RouteBuilder) WrapRegister(wrap func(register func(Route), route Route))
 	register := b.register
 	b.register = func(rooute Route) { wrap(register, rooute) }
 	return b
-}
-
-func appendMatcher(ms []matcher.Matcher, m matcher.Matcher) []matcher.Matcher {
-	if m != nil {
-		matchers := make([]matcher.Matcher, 0, len(ms)+1)
-		matchers = append(matchers, ms...)
-		matchers = append(matchers, m)
-		ms = matchers
-	}
-	return ms
 }
 
 // Prefix returns the group path prefix, which is not the path prefix matcher.
@@ -107,8 +96,7 @@ func (b RouteBuilder) UseFunc(middlewares ...middleware.MiddlewareFunc) RouteBui
 
 // Clone clones itself and returns a new route builder.
 func (b RouteBuilder) Clone() RouteBuilder {
-	b.headers = slices.Clone(b.headers)
-	b.queries = slices.Clone(b.queries)
+	b.others = slices.Clone(b.others)
 	b.mdws = b.mdws.Clone()
 	return b
 }
@@ -210,21 +198,15 @@ func (b RouteBuilder) Method(method string) RouteBuilder {
 	return b
 }
 
-// Query adds the query key-value match ruler.
-func (b RouteBuilder) Query(key, value string) RouteBuilder {
-	b.queries = appendMatcher(b.queries, matcher.Query(key, value))
-	return b
-}
-
-// Header adds the header key-value match ruler.
-func (b RouteBuilder) Header(key, value string) RouteBuilder {
-	b.headers = appendMatcher(b.headers, matcher.Header(key, value))
-	return b
-}
-
 // Host adds the host match ruler.
 func (b RouteBuilder) Host(host string) RouteBuilder {
 	b.host = matcher.Host(host)
+	return b
+}
+
+// Matchers adds other matchers.
+func (b RouteBuilder) Matchers(matchers ...matcher.Matcher) RouteBuilder {
+	b.others = append(b.others, matchers...)
 	return b
 }
 
@@ -245,20 +227,11 @@ func tryAppendMatcher(ms []matcher.Matcher, m matcher.Matcher) []matcher.Matcher
 }
 
 func (b RouteBuilder) newRoute(handler http.Handler) (route Route) {
-	var headers, queries matcher.Matcher
-	if len(b.headers) > 0 {
-		headers = matcher.And(b.headers...)
-	}
-	if len(b.queries) > 0 {
-		queries = matcher.And(b.queries...)
-	}
-
-	matchers := make([]matcher.Matcher, 0, 4)
+	matchers := make([]matcher.Matcher, 0, 3+len(b.others))
 	matchers = tryAppendMatcher(matchers, b.host)
 	matchers = tryAppendMatcher(matchers, b.path)
 	matchers = tryAppendMatcher(matchers, b.method)
-	matchers = tryAppendMatcher(matchers, headers)
-	matchers = tryAppendMatcher(matchers, queries)
+	matchers = append(matchers, b.others...)
 	matcher := matcher.And(matchers...)
 
 	route = b.route
