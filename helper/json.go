@@ -15,10 +15,8 @@
 package helper
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
-	"sync"
 )
 
 // EncodeJSON encodes the value by json into w.
@@ -29,39 +27,3 @@ func EncodeJSON(w io.Writer, value interface{}) error {
 	enc.SetEscapeHTML(false)
 	return enc.Encode(value)
 }
-
-// EncodeJSONBytes encodes the value by json to bytes.
-//
-// NOTICE: it does not escape the problematic HTML characters.
-func EncodeJSONBytes(value interface{}) (data []byte, err error) {
-	buf := bytes.NewBuffer(make([]byte, 0, 512))
-	if err = EncodeJSON(buf, value); err == nil {
-		data = buf.Bytes()
-		if _len := len(data); _len > 0 && data[_len-1] == '\n' {
-			data = data[:_len-1]
-		}
-	}
-	return
-}
-
-// EncodeJSONString encodes the value by json to string.
-//
-// NOTICE: it does not escape the problematic HTML characters.
-func EncodeJSONString(value interface{}) (data string, err error) {
-	buf := getbuffer()
-	if err = EncodeJSON(buf, value); err == nil {
-		data = buf.String()
-		if _len := len(data); _len > 0 && data[_len-1] == '\n' {
-			data = data[:_len-1]
-		}
-	}
-	putbuffer(buf)
-	return
-}
-
-var bufpool = &sync.Pool{New: func() any {
-	return bytes.NewBuffer(make([]byte, 0, 512))
-}}
-
-func getbuffer() *bytes.Buffer  { return bufpool.Get().(*bytes.Buffer) }
-func putbuffer(b *bytes.Buffer) { b.Reset(); bufpool.Put(b) }

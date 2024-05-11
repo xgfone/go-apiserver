@@ -33,3 +33,36 @@ func DecodeJSONFromString(dst interface{}, s string) error {
 func DecodeJSONFromBytes(dst interface{}, b []byte) error {
 	return json.NewDecoder(bytes.NewReader(b)).Decode(dst)
 }
+
+// EncodeJSONBytes encodes the value by json to bytes.
+//
+// NOTICE: it does not escape the problematic HTML characters.
+//
+// DEPRECATED!!!
+func EncodeJSONBytes(value interface{}) (data []byte, err error) {
+	buf := bytes.NewBuffer(make([]byte, 0, 512))
+	if err = EncodeJSON(buf, value); err == nil {
+		data = buf.Bytes()
+		if _len := len(data); _len > 0 && data[_len-1] == '\n' {
+			data = data[:_len-1]
+		}
+	}
+	return
+}
+
+// EncodeJSONString encodes the value by json to string.
+//
+// NOTICE: it does not escape the problematic HTML characters.
+//
+// DEPRECATED!!!
+func EncodeJSONString(value interface{}) (data string, err error) {
+	var buf strings.Builder
+	buf.Grow(512)
+	if err = EncodeJSON(&buf, value); err == nil {
+		data = buf.String()
+		if _len := len(data); _len > 0 && data[_len-1] == '\n' {
+			data = data[:_len-1]
+		}
+	}
+	return
+}
