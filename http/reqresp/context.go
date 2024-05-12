@@ -592,6 +592,7 @@ func RespondResultResponse(w http.ResponseWriter, r *http.Request, response resu
 	rw, ok := w.(ResponseWriter)
 	if !ok {
 		rw = AcquireResponseWriter(w)
+		defer ReleaseResponseWriter(rw)
 	}
 	DefaultContextResponder(&Context{ResponseWriter: rw, Request: r}, response)
 }
