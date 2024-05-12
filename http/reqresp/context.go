@@ -577,14 +577,14 @@ func (c *Context) Respond(response result.Response) {
 
 var (
 	// DefaultRespond is the default result responder.
-	DefaultRespond = defaultRespond
+	DefaultRespond func(http.ResponseWriter, *http.Request, result.Response) = defaultRespond
 
 	// DefaultContextRespond is the default result responder based on Context.
-	DefaultContextRespond = defaultContextRespond
+	DefaultContextRespond func(*Context, result.Response) = defaultContextRespond
 
 	// DefaultContextRespondByCode is the default result responder
 	// based on Context and ResponseCode.
-	DefaultContextRespondByCode = defaultContextRespondByCode
+	DefaultContextRespondByCode func(*Context, string, result.Response) = defaultContextRespondByCode
 )
 
 func defaultRespond(w http.ResponseWriter, r *http.Request, response result.Response) {
