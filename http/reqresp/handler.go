@@ -17,6 +17,7 @@ package reqresp
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-apiserver/result/codeint"
@@ -56,27 +57,76 @@ func runhandler(w http.ResponseWriter, r *http.Request, f Handler) {
 
 /// ----------------------------------------------------------------------- ///
 
-func RespondResultResponseWithContext(c *Context, response result.Response) {
-	if c.Request == nil {
-		respondstd(c, response)
-		return
-	}
-
-	xcode := c.Request.Header.Get("X-Response-Code")
-	if xcode == "" {
-		xcode = c.GetQuery("X-Response-Code")
-	}
-
+// RespondErrorWithContextByCode parses xcode as the status code, which supports
+//
+//   - ""
+//   - "std"
+//   - number
+//
+// If xcode is empty, it is equal to "std".
+// If xcode is a number and in [100, 599], parse it as status code.
+// For other numbers or characters, but, they are equal to "std".
+//
+// For "std", it will guess the status code from the error.
+func RespondErrorWithContextByCode(c *Context, xcode string, err error) {
 	switch xcode {
 	case "", "std":
-		respondstd(c, response)
+		RespondErrorWithContextAndStatusCode(c, 0, err)
+
 	case "200":
-		respond200(c, response)
+		RespondErrorWithContextAndStatusCode(c, 200, err)
+
+	case "400":
+		RespondErrorWithContextAndStatusCode(c, 400, err)
+
 	case "500":
-		respond500(c, response)
+		RespondErrorWithContextAndStatusCode(c, 500, err)
+
 	default:
-		respondstd(c, response)
+		code, _ := strconv.ParseInt(xcode, 10, 16)
+		if code >= 600 || code < 0 {
+			code = 0
+		}
+
+		RespondErrorWithContextAndStatusCode(c, int(code), err)
 	}
+}
+
+// If statuscode is equal to 0, guess it from the error.
+func RespondErrorWithContextAndStatusCode(c *Context, statuscode int, err error) {
+	if statuscode == 0 {
+		responderrorstd(c, err)
+	} else {
+		responderror(c, statuscode, err)
+	}
+}
+
+func responderror(c *Context, statuscode int, err error) {
+	switch err.(type) {
+	case codeint.Error, json.Marshaler:
+	default:
+		err = codeint.ErrInternalServerError.WithError(err)
+	}
+
+	c.JSON(statuscode, err)
+}
+
+func responderrorstd(c *Context, err error) {
+	var statuscode int
+	switch e := err.(type) {
+	case codeint.Error, json.Marshaler:
+		statuscode = getStatusCodeFromError(err)
+
+	case StatusCoder:
+		statuscode = e.StatusCode()
+		err = codeint.ErrInternalServerError.WithError(err)
+
+	default:
+		statuscode = getStatusCodeFromError(err)
+		err = codeint.ErrInternalServerError.WithError(err)
+	}
+
+	c.JSON(statuscode, err)
 }
 
 func getStatusCodeFromError(err error) int {
@@ -84,48 +134,4 @@ func getStatusCodeFromError(err error) int {
 		return e.StatusCode()
 	}
 	return 500
-}
-
-func respondstd(c *Context, r result.Response) {
-	switch e := r.Error.(type) {
-	case nil:
-		c.JSON(200, r.Data)
-
-	case codeint.Error, json.Marshaler:
-		c.JSON(getStatusCodeFromError(r.Error), r.Error)
-
-	case StatusCoder:
-		r.Error = codeint.ErrInternalServerError.WithError(r.Error)
-		c.JSON(e.StatusCode(), r.Error)
-
-	default:
-		r.Error = codeint.ErrInternalServerError.WithError(r.Error)
-		c.JSON(getStatusCodeFromError(r.Error), r.Error)
-	}
-}
-
-func respond200(c *Context, r result.Response) {
-	switch r.Error.(type) {
-	case nil:
-		c.JSON(200, r.Data)
-
-	case codeint.Error, json.Marshaler:
-		c.JSON(200, r.Error)
-
-	default:
-		c.JSON(200, codeint.ErrInternalServerError.WithError(r.Error))
-	}
-}
-
-func respond500(c *Context, r result.Response) {
-	switch r.Error.(type) {
-	case nil:
-		c.JSON(200, r.Data)
-
-	case codeint.Error, json.Marshaler:
-		c.JSON(500, r.Error)
-
-	default:
-		c.JSON(500, codeint.ErrInternalServerError.WithError(r.Error))
-	}
 }
