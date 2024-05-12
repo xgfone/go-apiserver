@@ -54,7 +54,7 @@ func wrappanic(w http.ResponseWriter, r *http.Request) {
 	if !reqresp.WroteHeader(w) {
 		w.Header().Set("X-Panic", "1")
 		err := codeint.ErrInternalServerError.WithMessage("panic")
-		reqresp.DefaultResponder(w, r, result.Err(err))
+		reqresp.DefaultRespond(w, r, result.Err(err))
 	}
 }
 

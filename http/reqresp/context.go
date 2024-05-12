@@ -118,7 +118,7 @@ type Context struct {
 
 	// Responder is the result responder used by the method Respond.
 	//
-	// If nil, use DefaultContextResponder instead.
+	// If nil, use DefaultContextRespond instead.
 	Responder func(*Context, result.Response)
 
 	// Query and Cookies are used to cache the parsed request query and cookies.
@@ -571,57 +571,25 @@ func (c *Context) Respond(response result.Response) {
 	if c.Responder != nil {
 		c.Responder(c, response)
 	} else {
-		DefaultContextResponder(c, response)
+		DefaultContextRespond(c, response)
 	}
 }
 
 var (
-	// DefaultResponder is the default result responder.
-	DefaultResponder = defaultResponder
+	// DefaultRespond is the default result responder.
+	DefaultRespond = defaultRespond
 
-	// DefaultContextResponder is the default result responder based on Context.
-	DefaultContextResponder = defaultContextResponder
+	// DefaultContextRespond is the default result responder based on Context.
+	DefaultContextRespond = defaultContextRespond
 
-	// DefaultContextResponderForCode is the default result responder
-	// based on Context and StatusCode.
-	DefaultContextResponderForStatusCode = defaultContextResponderForStatusCode
+	// DefaultContextRespondByCode is the default result responder
+	// based on Context and ResponseCode.
+	DefaultContextRespondByCode = defaultContextRespondByCode
 )
 
-// XResponseStatusCode is used to save the response status code
-// in the request header or query.
-var XResponseStatusCode = "X-Response-Status-Code"
-
-func getXStatusCode(c *Context, key string) (xcode string) {
-	xcode = c.Request.Header.Get(key)
-	if xcode == "" {
-		xcode = c.GetQuery(key)
-	}
-	return
-}
-
-func defaultContextResponder(c *Context, response result.Response) {
-	var xcode string
-	if c.Request != nil {
-		xcode = getXStatusCode(c, XResponseStatusCode)
-		if xcode == "" && XResponseStatusCode != "X-Response-Code" {
-			// Compatible with the old
-			xcode = getXStatusCode(c, "X-Response-Code")
-		}
-	}
-	DefaultContextResponderForStatusCode(c, xcode, response)
-}
-
-func defaultContextResponderForStatusCode(c *Context, xcode string, response result.Response) {
-	if response.Error == nil {
-		c.JSON(200, response.Data)
-	} else {
-		RespondErrorWithContextByCode(c, xcode, response.Error)
-	}
-}
-
-func defaultResponder(w http.ResponseWriter, r *http.Request, response result.Response) {
+func defaultRespond(w http.ResponseWriter, r *http.Request, response result.Response) {
 	if c := GetContext(r.Context()); c != nil {
-		DefaultContextResponder(c, response)
+		DefaultContextRespond(c, response)
 		return
 	}
 
@@ -630,7 +598,27 @@ func defaultResponder(w http.ResponseWriter, r *http.Request, response result.Re
 		rw = AcquireResponseWriter(w)
 		defer ReleaseResponseWriter(rw)
 	}
-	DefaultContextResponder(&Context{ResponseWriter: rw, Request: r}, response)
+	DefaultContextRespond(&Context{ResponseWriter: rw, Request: r}, response)
+}
+
+func defaultContextRespond(c *Context, response result.Response) {
+	var xcode string
+	if c.Request != nil {
+		const XResponseCode = "X-Response-Code"
+		xcode = c.Request.Header.Get(XResponseCode)
+		if xcode == "" {
+			xcode = c.GetQuery(XResponseCode)
+		}
+	}
+	DefaultContextRespondByCode(c, xcode, response)
+}
+
+func defaultContextRespondByCode(c *Context, xcode string, response result.Response) {
+	if response.Error == nil {
+		c.JSON(200, response.Data)
+	} else {
+		RespondErrorWithContextByCode(c, xcode, response.Error)
+	}
 }
 
 /// ----------------------------------------------------------------------- ///
