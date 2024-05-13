@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/xgfone/go-atexit"
+	"github.com/xgfone/go-defaults"
 )
 
 // ServeWithListener is used to start the http server with listener
@@ -73,10 +73,9 @@ func Stop(server *http.Server) {
 
 // DefaultServeWithListener is the default implementation to start the http server.
 func DefaultServeWithListener(server *http.Server, ln net.Listener) {
-	atexit.OnExit(func() { Stop(server) })
+	defaults.OnExit(func() { Stop(server) })
 	serve(server, ln)
-	atexit.Execute()
-	atexit.Wait()
+	defaults.Exit(0)
 }
 
 func serve(server *http.Server, ln net.Listener) {
