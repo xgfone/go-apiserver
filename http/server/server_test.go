@@ -19,9 +19,13 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/xgfone/go-defaults"
 )
 
 func TestStartServer(t *testing.T) {
+	defaults.ExitFunc.Set(func(int) {})
+
 	func() {
 		start := time.Now()
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
