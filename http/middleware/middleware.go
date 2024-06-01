@@ -21,6 +21,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/middleware/context"
 	"github.com/xgfone/go-apiserver/http/middleware/logger"
+	"github.com/xgfone/go-apiserver/http/middleware/path"
 	"github.com/xgfone/go-apiserver/http/middleware/recover"
 	"github.com/xgfone/go-apiserver/http/middleware/requestid"
 )
@@ -32,6 +33,7 @@ var (
 
 // DefaultMiddlewares is a set of the default middlewares.
 var DefaultMiddlewares = Middlewares{
+	New("rootpath", 0, path.Repsond204("/")),
 	New("requestid", 10, requestid.RequestId),
 	New("context", 20, context.Context),
 	New("logger", 30, logger.Logger),
