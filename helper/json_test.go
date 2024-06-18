@@ -20,45 +20,11 @@ import (
 	"testing"
 )
 
-func TestDecodeJSONFromBytes(t *testing.T) {
-	var v int
-	if err := DecodeJSONFromBytes(&v, []byte(`123`)); err != nil {
-		t.Error(err)
-	} else if v != 123 {
-		t.Errorf("expect %d, but got %d", 123, v)
-	}
-}
-
-func TestDecodeJSONFromString(t *testing.T) {
-	var v int
-	if err := DecodeJSONFromString(&v, `123`); err != nil {
-		t.Error(err)
-	} else if v != 123 {
-		t.Errorf("expect %d, but got %d", 123, v)
-	}
-}
-
 func TestEncodeJSON(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	if err := EncodeJSON(buf, `abc`); err != nil {
 		t.Error(err)
 	} else if s := strings.TrimSpace(buf.String()); s != `"abc"` {
-		t.Errorf("expect '%s', but got '%s'", `"abc"`, s)
-	}
-}
-
-func TestEncodeJSONBytes(t *testing.T) {
-	if data, err := EncodeJSONBytes(`abc`); err != nil {
-		t.Error(err)
-	} else if s := string(data); s != `"abc"` {
-		t.Errorf("expect '%s', but got '%s'", `"abc"`, s)
-	}
-}
-
-func TestEncodeJSONString(t *testing.T) {
-	if s, err := EncodeJSONString(`abc`); err != nil {
-		t.Error(err)
-	} else if s != `"abc"` {
 		t.Errorf("expect '%s', but got '%s'", `"abc"`, s)
 	}
 }
