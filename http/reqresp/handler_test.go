@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/http/statuscode"
 	"github.com/xgfone/go-apiserver/result"
+	"github.com/xgfone/go-apiserver/result/codeint"
 )
 
 func TestHandlerWithError(t *testing.T) {
@@ -54,7 +54,7 @@ func TestHandlerWithError(t *testing.T) {
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)
 	reqresp.Handler(func(c *reqresp.Context) {
-		c.Err = statuscode.ErrBadRequest
+		c.Err = codeint.ErrBadRequest
 	}).ServeHTTP(c.ResponseWriter, c.Request)
 	if rec.Code != 400 {
 		t.Errorf("expect status code %d, but got %d", 400, rec.Code)
@@ -92,7 +92,7 @@ func TestHandlerWithError(t *testing.T) {
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)
 	reqresp.HandlerWithError(func(c *reqresp.Context) error {
-		return statuscode.ErrBadRequest
+		return codeint.ErrBadRequest
 	}).ServeHTTP(c.ResponseWriter, c.Request)
 	if rec.Code != 400 {
 		t.Errorf("expect status code %d, but got %d", 400, rec.Code)
@@ -107,7 +107,7 @@ func TestHandlerWithError(t *testing.T) {
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)
 	reqresp.HandlerWithError(func(c *reqresp.Context) error {
-		return statuscode.ErrBadRequest
+		return codeint.ErrBadRequest
 	}).ServeHTTP(c.ResponseWriter, c.Request)
 	if rec.Code != 204 {
 		t.Errorf("expect status code %d, but got %d", 204, rec.Code)
