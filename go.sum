@@ -2,6 +2,8 @@ github.com/xgfone/go-binder v0.8.0 h1:0WjM/8cvP2vt4o9Q8PRh/QloDiRCKa52nhE0Z6Yssw
 github.com/xgfone/go-binder v0.8.0/go.mod h1:oqpqXpEBWsXnMXLOcNtkqoEFhew3KVseK7+ChDJXcSY=
 github.com/xgfone/go-defaults v0.17.0 h1:mg3bpIIwbAI3qgaarBVQkygDYhBaTkX8dNV1s71dXuA=
 github.com/xgfone/go-defaults v0.17.0/go.mod h1:RjyN5TK6hyaROkw2nyfchvCSCOch8rJ/zPO9nO4Y+EQ=
+github.com/xgfone/go-defaults v0.18.0 h1:jdxUx6x1qvTn/+Tzpmp/0C4Nf2bAvf2tUiCxDwEWCUc=
+github.com/xgfone/go-defaults v0.18.0/go.mod h1:RjyN5TK6hyaROkw2nyfchvCSCOch8rJ/zPO9nO4Y+EQ=
 github.com/xgfone/go-http-matcher v0.1.1 h1:nZ3ksKW/ZJw0HSaAszPgEi0faaM82Q2Qg2V8cwhmGeM=
 github.com/xgfone/go-http-matcher v0.1.1/go.mod h1:fPetvyIHNJiyAxt6MwVz8pFfHFpm+34KhlpdvZU9/HQ=
 github.com/xgfone/go-structs v0.3.0 h1:hkenbzCJTlgxjG8EUC/7VCunVWlr6+B0aq+MI9e60WU=
