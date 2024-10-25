@@ -237,7 +237,13 @@ func (b RouteBuilder) newRoute(handler http.Handler) (route Route) {
 	route = b.route
 	route.Matcher = matcher
 	route.Handler = handler
-	route.Use(b.mdws)
+
+	mdws := make(middleware.Middlewares, 0, len(b.mdws)+1)
+	mdws = append(mdws, b.mdws...)
+	if len(mdws) > 0 {
+		mdws.Sort()
+		route.Use(mdws...)
+	}
 
 	if route.Priority == 0 {
 		route.Priority = matcher.Priority()
