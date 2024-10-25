@@ -57,6 +57,7 @@ func (r *Router) RouteBuilder() RouteBuilder {
 type RouteBuilder struct {
 	register func(Route)
 
+	auth  middleware.Middleware
 	mdws  middleware.Middlewares
 	group string
 	route Route
@@ -91,6 +92,12 @@ func (b RouteBuilder) Use(middlewares ...middleware.Middleware) RouteBuilder {
 // UseFunc appends the http handler function middlewares that act on the later handler.
 func (b RouteBuilder) UseFunc(middlewares ...middleware.MiddlewareFunc) RouteBuilder {
 	b.mdws = b.mdws.AppendFunc(middlewares...)
+	return b
+}
+
+// Auth resets the auth middleware and return the a new route builder.
+func (b RouteBuilder) Auth(auth middleware.Middleware) RouteBuilder {
+	b.auth = auth
 	return b
 }
 
@@ -240,6 +247,9 @@ func (b RouteBuilder) newRoute(handler http.Handler) (route Route) {
 
 	mdws := make(middleware.Middlewares, 0, len(b.mdws)+1)
 	mdws = append(mdws, b.mdws...)
+	if b.auth != nil {
+		mdws = append(mdws, b.auth)
+	}
 	if len(mdws) > 0 {
 		mdws.Sort()
 		route.Use(mdws...)
