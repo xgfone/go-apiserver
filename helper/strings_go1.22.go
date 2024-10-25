@@ -19,4 +19,4 @@ package helper
 
 import "math/rand/v2"
 
-func init() { IntN = rand.IntN }
+func init() { intn = rand.IntN }
