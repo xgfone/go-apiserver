@@ -84,7 +84,7 @@ func RespondErrorWithContextByCode(c *Context, xcode string, err error) {
 
 	default:
 		code, _ := strconv.ParseInt(xcode, 10, 16)
-		if code >= 600 || code < 0 {
+		if code >= 600 || code < 200 {
 			code = 0
 		}
 

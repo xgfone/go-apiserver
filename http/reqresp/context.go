@@ -458,7 +458,7 @@ func (c *Context) Error(err error) {
 		e.ServeHTTP(c.ResponseWriter, c.Request)
 
 	default:
-		c.Text(500, err.Error())
+		c.Text(500, err.Error()) //nolint:govet
 	}
 }
 
