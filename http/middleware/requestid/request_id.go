@@ -19,8 +19,8 @@ package requestid
 import (
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/header"
+	"github.com/xgfone/go-toolkit/random"
 )
 
 // Generate is used to generate a request id for the http request.
@@ -29,7 +29,7 @@ import (
 var Generate func(*http.Request) string = generate
 
 func generate(*http.Request) string {
-	return helper.RandomString(24, helper.AlphaNumCharset)
+	return random.String(24, random.AlphaNumCharset)
 }
 
 // RequestId is a http middleware to set the request header "X-Request-Id"

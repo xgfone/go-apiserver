@@ -20,8 +20,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/header"
+	"github.com/xgfone/go-toolkit/jsonx"
 )
 
 // JSONResponder is an interface to send the http response to client.
@@ -37,7 +37,7 @@ func JSON(w http.ResponseWriter, code int, v interface{}) (err error) {
 	}
 
 	buf := getBuilder()
-	if err = helper.EncodeJSON(buf, v); err == nil {
+	if err = jsonx.EncodeJSON(buf, v); err == nil {
 		header.SetContentType(w.Header(), header.MIMEApplicationJSONCharsetUTF8)
 		w.WriteHeader(code)
 		_, err = buf.WriteTo(w)

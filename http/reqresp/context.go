@@ -29,12 +29,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xgfone/go-apiserver/helper"
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-binder"
 	"github.com/xgfone/go-defaults"
+	"github.com/xgfone/go-toolkit/unsafex"
 )
 
 func init() {
@@ -255,7 +255,7 @@ func (c *Context) getDataString(key string, required bool) string {
 		case string:
 			return v
 		case []byte:
-			return helper.String(v)
+			return unsafex.String(v)
 		case time.Duration:
 			return v.String()
 		case time.Time:
