@@ -40,7 +40,7 @@ func wrappanic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stacks := runtimex.Stacks(0)
+	stacks := runtimex.Stacks(2)
 	if c := reqresp.GetContext(r.Context()); c != nil {
 		c.AppendError(panicerror{stacks: stacks, panicv: v})
 		if !c.ResponseWriter.WroteHeader() {
