@@ -1,11 +1,13 @@
 github.com/xgfone/go-binder v0.8.1 h1:te6dQp5e8eZ48o+luVoGpwvPQcU36pRUtic1Xi/pM5E=
 github.com/xgfone/go-binder v0.8.1/go.mod h1:8JbIIwEqosc/ZV4Pj3o3puBuEIXtxM1UGFV2xuPbFDo=
-github.com/xgfone/go-defaults v0.19.0 h1:sHy3kTdI8Fu8c0EsT0jmzq7mVsm9fmudIaAj4vh8/mc=
-github.com/xgfone/go-defaults v0.19.0/go.mod h1:RjyN5TK6hyaROkw2nyfchvCSCOch8rJ/zPO9nO4Y+EQ=
+github.com/xgfone/go-defaults v0.20.0 h1:G6ZrkjzscFHk//tQy/qKbuqmNdZKsKUj6F2gyMaLi/Q=
+github.com/xgfone/go-defaults v0.20.0/go.mod h1:QWsE+DOYKSWMYFhFnIfJO/FLBGKrXTTM4aDMP/2l5TE=
 github.com/xgfone/go-http-matcher v0.1.1 h1:nZ3ksKW/ZJw0HSaAszPgEi0faaM82Q2Qg2V8cwhmGeM=
 github.com/xgfone/go-http-matcher v0.1.1/go.mod h1:fPetvyIHNJiyAxt6MwVz8pFfHFpm+34KhlpdvZU9/HQ=
 github.com/xgfone/go-structs v0.3.0 h1:hkenbzCJTlgxjG8EUC/7VCunVWlr6+B0aq+MI9e60WU=
 github.com/xgfone/go-structs v0.3.0/go.mod h1:s/KzD4aJiG9NaBdLRUYI7r6bfyuUgpDOM7Sscsqpce4=
+github.com/xgfone/go-toolkit v0.1.1 h1:eYBIgrIhfYHq6unbG0Yx0CM+aX/dvolPrJ5vbDk4bWM=
+github.com/xgfone/go-toolkit v0.1.1/go.mod h1:eOWnIK/acAJOoqEOtWnvuY0Pbn6cZ0DP/Oeoyn17QHw=
 github.com/xgfone/go-validation v0.3.0 h1:GJFZDX/zEq9tmLzjN6x2mpDWhMugwjhruNbpOyo9qfc=
 github.com/xgfone/go-validation v0.3.0/go.mod h1:oK9zWEMZ1F/miU9uhCW4TEvszTvc0IUxQT9MKHp0paA=
 github.com/xgfone/predicate v1.3.3 h1:eAlnN34a1Yw5u3aT427YmAj0ucpLfprx1Nnq+gKwLZ8=

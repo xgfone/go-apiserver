@@ -23,7 +23,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-apiserver/result/codeint"
-	"github.com/xgfone/go-defaults"
+	"github.com/xgfone/go-toolkit/runtimex"
 )
 
 // Recover is a http handler middleware to recover the panic if occurring.
@@ -40,7 +40,7 @@ func wrappanic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stacks := defaults.GetStacks(0)
+	stacks := runtimex.Stacks(0)
 	if c := reqresp.GetContext(r.Context()); c != nil {
 		c.AppendError(panicerror{stacks: stacks, panicv: v})
 		if !c.ResponseWriter.WroteHeader() {
@@ -59,9 +59,9 @@ func wrappanic(w http.ResponseWriter, r *http.Request) {
 }
 
 type panicerror struct {
-	stacks []string
+	stacks []runtimex.Frame
 	panicv any
 }
 
-func (e panicerror) Error() string    { return fmt.Sprintf("panic: %v", e.panicv) }
-func (e panicerror) Stacks() []string { return e.stacks }
+func (e panicerror) Error() string            { return fmt.Sprintf("panic: %v", e.panicv) }
+func (e panicerror) Stacks() []runtimex.Frame { return e.stacks }

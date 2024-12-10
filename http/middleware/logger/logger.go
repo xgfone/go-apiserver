@@ -24,6 +24,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-defaults"
+	"github.com/xgfone/go-toolkit/runtimex"
 )
 
 var (
@@ -99,16 +100,37 @@ func Logger(next http.Handler) http.Handler {
 	})
 }
 
-func getStacks(err error) []string {
-	type stack interface {
-		Stacks() []string
-	}
+func getStacks(err error) any {
+	type (
+		stringstack interface {
+			Stacks() []string
+		}
 
-	var s stack
-	if errors.As(err, &s) {
-		return s.Stacks()
+		framestack interface {
+			Stacks() []runtimex.Frame
+		}
+	)
+
+	switch e := err.(type) {
+	case framestack:
+		return e.Stacks()
+
+	case stringstack:
+		return e.Stacks()
+
+	default:
+		var fstack framestack
+		if errors.As(err, &fstack) {
+			return fstack.Stacks()
+		}
+
+		var sstack stringstack
+		if errors.As(err, &sstack) {
+			return sstack.Stacks()
+		}
+
+		return nil
 	}
-	return nil
 }
 
 type attrswrapper struct{ Attrs []slog.Attr }
