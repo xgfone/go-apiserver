@@ -28,9 +28,19 @@ func (b RouteBuilder) DebugVars() RouteBuilder {
 }
 
 // DebugRuleRoutes registers the rule-routes route with the path "/debug/router/rule/routes".
+//
+// If router is nil, use DefaultRouter instead.
 func (b RouteBuilder) DebugRuleRoutes(router *Router) RouteBuilder {
 	return b.Path("/debug/router/rule/routes").GETContext(func(c *reqresp.Context) {
-		c.JSON(200, map[string]interface{}{"routes": router.Routes()})
+		var response struct {
+			Routes []Route `json:"routes"`
+		}
+		if router == nil {
+			response.Routes = DefaultRouter.Routes()
+		} else {
+			response.Routes = router.Routes()
+		}
+		c.JSON(200, response)
 	})
 }
 
