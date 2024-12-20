@@ -93,7 +93,7 @@ func (e Error) WithError(err error) Error {
 }
 
 // WithMessage returns a new Error with the message.
-func (e Error) WithMessage(msg string, args ...interface{}) Error {
+func (e Error) WithMessage(msg string, args ...any) Error {
 	if len(args) == 0 {
 		e.Message = msg
 	} else {
@@ -135,7 +135,7 @@ func (e Error) Respond(responder any) {
 }
 
 // Decode uses the decode function to decode the result to the error.
-func (e *Error) Decode(decode func(interface{}) error) error {
+func (e *Error) Decode(decode func(any) error) error {
 	return decode(e)
 }
 

@@ -38,7 +38,7 @@ import (
 )
 
 func init() {
-	binder.QueryDecoder = binder.DecoderFunc(func(dst, src interface{}) error {
+	binder.QueryDecoder = binder.DecoderFunc(func(dst, src any) error {
 		if req, ok := src.(*http.Request); ok {
 			var queries url.Values
 			if c := GetContext(req.Context()); c != nil {
@@ -89,11 +89,11 @@ type Context struct {
 	*http.Request
 
 	// As a general rule, the data keys starting with "_" are private.
-	Data map[string]interface{} // A set of any key-value pairs
-	Reg1 interface{}            // The register to save the temporary context value.
-	Reg2 interface{}            // The register to save the temporary context value.
-	Reg3 interface{}            // The register to save the temporary context value.
-	Err  error                  // Used to save the context error.
+	Data map[string]any // A set of any key-value pairs
+	Reg1 any            // The register to save the temporary context value.
+	Reg2 any            // The register to save the temporary context value.
+	Reg3 any            // The register to save the temporary context value.
+	Err  error          // Used to save the context error.
 
 	// The extra context information, which may be used by other service,
 	// such as the action router.
@@ -128,7 +128,7 @@ type Context struct {
 
 // NewContext returns a new Context.
 func NewContext(dataCapSize int) *Context {
-	return &Context{Data: make(map[string]interface{}, dataCapSize)}
+	return &Context{Data: make(map[string]any, dataCapSize)}
 }
 
 // Reset resets the context itself.
@@ -162,7 +162,7 @@ var _ http.ResponseWriter = new(Context)
 // ---------------------------------------------------------------------------
 
 // BindBody extracts the data from the request body and assigns it to v.
-func (c *Context) BindBody(v interface{}) (err error) {
+func (c *Context) BindBody(v any) (err error) {
 	if c.BodyDecoder == nil {
 		err = binder.BodyDecoder.Decode(v, c.Request)
 	} else {
@@ -172,7 +172,7 @@ func (c *Context) BindBody(v interface{}) (err error) {
 }
 
 // BindQuery extracts the data from the request query and assigns it to v.
-func (c *Context) BindQuery(v interface{}) (err error) {
+func (c *Context) BindQuery(v any) (err error) {
 	if c.QueryDecoder == nil {
 		err = binder.QueryDecoder.Decode(v, c.Request)
 	} else {
@@ -182,7 +182,7 @@ func (c *Context) BindQuery(v interface{}) (err error) {
 }
 
 // BindHeader extracts the data from the request header and assigns it to v.
-func (c *Context) BindHeader(v interface{}) (err error) {
+func (c *Context) BindHeader(v any) (err error) {
 	if c.HeaderDecoder == nil {
 		err = binder.HeaderDecoder.Decode(v, c.Request)
 	} else {
@@ -275,14 +275,14 @@ func (c *Context) getDataString(key string, required bool) string {
 // GetData returns the value by the key from the field Data.
 //
 // If the key does not exist, return nil.
-func (c *Context) GetData(key string) interface{} {
+func (c *Context) GetData(key string) any {
 	return c.Data[key]
 }
 
 // SetData sets the value with the key into the field Data.
 //
 // If value is nil, delete the key from the field Data.
-func (c *Context) SetData(key string, value interface{}) {
+func (c *Context) SetData(key string, value any) {
 	if value == nil {
 		delete(c.Data, key)
 	} else {
@@ -499,7 +499,7 @@ func (c *Context) Blob(code int, contentType string, data []byte) {
 }
 
 // BlobText sends a string blob response with the status code and the content type.
-func (c *Context) BlobText(code int, contentType string, format string, args ...interface{}) {
+func (c *Context) BlobText(code int, contentType string, format string, args ...any) {
 	c.SetContentType(contentType)
 	c.WriteHeader(code)
 
@@ -515,22 +515,22 @@ func (c *Context) BlobText(code int, contentType string, format string, args ...
 }
 
 // Text sends a string response with the status code.
-func (c *Context) Text(code int, format string, args ...interface{}) {
+func (c *Context) Text(code int, format string, args ...any) {
 	c.BlobText(code, header.MIMETextPlainCharsetUTF8, format, args...)
 }
 
 // HTML sends a HTML response with the status code.
-func (c *Context) HTML(code int, format string, args ...interface{}) {
+func (c *Context) HTML(code int, format string, args ...any) {
 	c.BlobText(code, header.MIMETextHTMLCharsetUTF8, format, args...)
 }
 
 // JSON sends a JSON response with the status code.
-func (c *Context) JSON(code int, v interface{}) {
+func (c *Context) JSON(code int, v any) {
 	c.AppendError(handler.JSON(c.ResponseWriter, code, v))
 }
 
 // XML sends a XML response with the status code.
-func (c *Context) XML(code int, v interface{}) {
+func (c *Context) XML(code int, v any) {
 	c.AppendError(handler.XML(c.ResponseWriter, code, v))
 }
 

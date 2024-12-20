@@ -30,7 +30,7 @@ type JSONResponder interface {
 }
 
 // JSON sends the response by the json format to the client.
-func JSON(w http.ResponseWriter, code int, v interface{}) (err error) {
+func JSON(w http.ResponseWriter, code int, v any) (err error) {
 	if v == nil {
 		w.WriteHeader(code)
 		return
@@ -48,7 +48,7 @@ func JSON(w http.ResponseWriter, code int, v interface{}) (err error) {
 }
 
 // XML sends the response by the xml format to the client.
-func XML(w http.ResponseWriter, code int, v interface{}) (err error) {
+func XML(w http.ResponseWriter, code int, v any) (err error) {
 	if v == nil {
 		w.WriteHeader(code)
 		return
@@ -88,7 +88,7 @@ func (b *builder) WriteString(s string) (int, error) {
 	return len(s), nil
 }
 
-var bpool = sync.Pool{New: func() interface{} {
+var bpool = sync.Pool{New: func() any {
 	return &builder{make([]byte, 0, 1024)}
 }}
 

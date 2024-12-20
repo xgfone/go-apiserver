@@ -109,7 +109,7 @@ func (b RouteBuilder) Clone() RouteBuilder {
 }
 
 // Extra sets the extra data of the route.
-func (b RouteBuilder) Extra(extra interface{}) RouteBuilder {
+func (b RouteBuilder) Extra(extra any) RouteBuilder {
 	b.route.Extra = extra
 	return b
 }

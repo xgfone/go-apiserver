@@ -24,7 +24,7 @@ import (
 	matcher "github.com/xgfone/go-http-matcher"
 )
 
-var kvpool = sync.Pool{New: func() interface{} { return &kvswrapper{kvs: make([]kv, 0, 4)} }}
+var kvpool = sync.Pool{New: func() any { return &kvswrapper{kvs: make([]kv, 0, 4)} }}
 
 type kvswrapper struct{ kvs []kv }
 

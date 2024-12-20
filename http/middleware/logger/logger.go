@@ -138,7 +138,7 @@ type attrswrapper struct{ Attrs []slog.Attr }
 func (w *attrswrapper) Reset()                { ; clear(w.Attrs); w.Attrs = w.Attrs[:0] }
 func (w *attrswrapper) Append(a ...slog.Attr) { w.Attrs = append(w.Attrs, a...) }
 
-var attrspool = &sync.Pool{New: func() interface{} {
+var attrspool = &sync.Pool{New: func() any {
 	return &attrswrapper{Attrs: make([]slog.Attr, 0, 36)}
 }}
 
