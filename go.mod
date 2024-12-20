@@ -2,9 +2,9 @@ module github.com/xgfone/go-apiserver
 
 require (
 	github.com/xgfone/go-binder v0.8.2
-	github.com/xgfone/go-defaults v0.20.0
+	github.com/xgfone/go-defaults v0.20.1
 	github.com/xgfone/go-http-matcher v0.2.0
-	github.com/xgfone/go-toolkit v0.2.0
+	github.com/xgfone/go-toolkit v0.3.0
 )
 
 require (
