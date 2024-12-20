@@ -352,6 +352,32 @@ func (c *Context) GetQueryUint64(key string, required bool) (value uint64, err e
 }
 
 // ---------------------------------------------------------------------------
+// Request Path
+// ---------------------------------------------------------------------------
+
+// GetPathInt64 returns the path value as int64 by the path argument key.
+//
+// If the key does not exist, it will panic.
+func (c *Context) GetPathInt64(key string) (value int64, err error) {
+	value, err = strconv.ParseInt(c.MustGetDataString(key), 10, 64)
+	if err != nil {
+		err = fmt.Errorf("invalid path '%s': %s", key, err)
+	}
+	return
+}
+
+// GetPathUint64 returns the path value as uint64 by the path argument key.
+//
+// If the key does not exist, it will panic.
+func (c *Context) GetPathUint64(key string) (value uint64, err error) {
+	value, err = strconv.ParseUint(c.MustGetDataString(key), 10, 64)
+	if err != nil {
+		err = fmt.Errorf("invalid path '%s': %s", key, err)
+	}
+	return
+}
+
+// ---------------------------------------------------------------------------
 // Request Cookie
 // ---------------------------------------------------------------------------
 
