@@ -566,6 +566,11 @@ func (c *Context) sendfile(name, path, dtype string) {
 	http.ServeContent(c.ResponseWriter, c.Request, stat.Name(), stat.ModTime(), file)
 }
 
+// Success sends the success response with data.
+func (c *Context) Success(data any) {
+	result.Success(c, data)
+}
+
 // Respond implements the interface result.Responder.
 func (c *Context) Respond(response result.Response) {
 	if c.Responder != nil {
