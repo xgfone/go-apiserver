@@ -93,13 +93,14 @@ func (e Error) WithError(err error) Error {
 }
 
 // WithMessage returns a new Error with the message.
-func (e Error) WithMessage(msg string, args ...any) Error {
-	if len(args) == 0 {
-		e.Message = msg
-	} else {
-		e.Message = fmt.Sprintf(msg, args...)
-	}
+func (e Error) WithMessage(msg string) Error {
+	e.Message = msg
 	return e
+}
+
+// WithMessagef returns a new Error with the message formatted by fmt.Sprintf(msg, args...).
+func (e Error) WithMessagef(msg string, args ...any) Error {
+	return e.WithMessage(fmt.Sprintf(msg, args...))
 }
 
 // WithStatus returns a new Error with the status.

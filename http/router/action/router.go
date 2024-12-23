@@ -108,7 +108,7 @@ func notFoundHandler(resp http.ResponseWriter, req *http.Request) {
 	if len(c.Action) == 0 {
 		codeint.ErrBadRequest.WithMessage("missing the action").Respond(c)
 	} else {
-		codeint.ErrBadRequest.WithMessage("action '%s' is unsupported", c.Action).Respond(c)
+		codeint.ErrBadRequest.WithMessagef("action '%s' is unsupported", c.Action).Respond(c)
 	}
 }
 

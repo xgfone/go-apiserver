@@ -29,7 +29,7 @@ func TestError(t *testing.T) {
 	if msg := err404.String(); msg != "code=404, msg=" {
 		t.Errorf("expect '%s', but got '%s'", "code=404, msg=", msg)
 	}
-	if msg := err404.WithMessage("test").Error(); msg != "404: test" {
+	if msg := err404.WithMessagef("test").Error(); msg != "404: test" {
 		t.Errorf("expect '%s', but got '%s'", "404: test", msg)
 	}
 
@@ -43,7 +43,7 @@ func TestError(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	expect := `{"Code":404,"Message":"test"}`
-	err404.WithMessage("%s", "test").ServeHTTP(rec, nil)
+	err404.WithMessagef("%s", "test").ServeHTTP(rec, nil)
 	if rec.Code != 404 {
 		t.Errorf("expect status code %d, but got %d", 404, rec.Code)
 	} else if body := strings.TrimSpace(rec.Body.String()); body != expect {
