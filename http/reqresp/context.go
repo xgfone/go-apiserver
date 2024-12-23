@@ -499,29 +499,24 @@ func (c *Context) Blob(code int, contentType string, data []byte) {
 }
 
 // BlobText sends a string blob response with the status code and the content type.
-func (c *Context) BlobText(code int, contentType string, format string, args ...any) {
+func (c *Context) BlobText(code int, contentType string, text string) {
 	c.SetContentType(contentType)
 	c.WriteHeader(code)
 
-	if len(format) > 0 {
-		var err error
-		if len(args) > 0 {
-			_, err = fmt.Fprintf(c.ResponseWriter, format, args...)
-		} else {
-			_, err = io.WriteString(c.ResponseWriter, format)
-		}
+	if len(text) > 0 {
+		_, err := io.WriteString(c.ResponseWriter, text)
 		c.AppendError(err)
 	}
 }
 
 // Text sends a string response with the status code.
-func (c *Context) Text(code int, format string, args ...any) {
-	c.BlobText(code, header.MIMETextPlainCharsetUTF8, format, args...)
+func (c *Context) Text(code int, text string) {
+	c.BlobText(code, header.MIMETextPlainCharsetUTF8, text)
 }
 
 // HTML sends a HTML response with the status code.
-func (c *Context) HTML(code int, format string, args ...any) {
-	c.BlobText(code, header.MIMETextHTMLCharsetUTF8, format, args...)
+func (c *Context) HTML(code int, text string) {
+	c.BlobText(code, header.MIMETextHTMLCharsetUTF8, text)
 }
 
 // JSON sends a JSON response with the status code.
