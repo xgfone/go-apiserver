@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/xgfone/go-apiserver/http/router"
 	"github.com/xgfone/go-defaults"
 )
 
@@ -30,7 +31,13 @@ import (
 var ServeWithListener func(server *http.Server, ln net.Listener)
 
 // New returns a new http server with the handler.
+//
+// If handler is nil, use router.DefaultRouter instead.
 func New(addr string, handler http.Handler) *http.Server {
+	if handler == nil {
+		handler = router.DefaultRouter
+	}
+
 	return &http.Server{
 		Addr:    addr,
 		Handler: handler,
