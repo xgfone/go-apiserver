@@ -37,7 +37,7 @@ func JSON(w http.ResponseWriter, code int, v any) (err error) {
 	}
 
 	buf := getBuilder()
-	if err = jsonx.EncodeJSON(buf, v); err == nil {
+	if err = jsonx.Marshal(buf, v); err == nil {
 		header.SetContentType(w.Header(), header.MIMEApplicationJSONCharsetUTF8)
 		w.WriteHeader(code)
 		_, err = buf.WriteTo(w)
