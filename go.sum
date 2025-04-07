@@ -6,8 +6,8 @@ github.com/xgfone/go-http-matcher v0.2.0 h1:PJ0MKKfwJyX0WzrgVL6n3OrErZcNIIX2a9A1
 github.com/xgfone/go-http-matcher v0.2.0/go.mod h1:fyihMHUrUF1Oq+FVktlF0k+CQo0FtitsmE7aGtpuyCM=
 github.com/xgfone/go-structs v0.3.1 h1:kp9jTvxkncvEa4cZwb/HNcrp/0b/6oD/IV3RHe7nBgE=
 github.com/xgfone/go-structs v0.3.1/go.mod h1:NZ6sUp5b31F5gehN2qtFOxuol3BItCKSCbpo0GYnuSQ=
-github.com/xgfone/go-toolkit v0.6.0 h1:cGfgAVwYqKPLB+SmZ2Q7bo9YtXhXwfNlW+KKNNbE6Kg=
-github.com/xgfone/go-toolkit v0.6.0/go.mod h1:eOWnIK/acAJOoqEOtWnvuY0Pbn6cZ0DP/Oeoyn17QHw=
+github.com/xgfone/go-toolkit v0.7.0 h1:Qx7Ok/XeFsYhxBJcbz4brQ4+hOW8r9HbwO7wpxBQYBA=
+github.com/xgfone/go-toolkit v0.7.0/go.mod h1:eOWnIK/acAJOoqEOtWnvuY0Pbn6cZ0DP/Oeoyn17QHw=
 github.com/xgfone/go-validation v0.3.0 h1:GJFZDX/zEq9tmLzjN6x2mpDWhMugwjhruNbpOyo9qfc=
 github.com/xgfone/go-validation v0.3.0/go.mod h1:oK9zWEMZ1F/miU9uhCW4TEvszTvc0IUxQT9MKHp0paA=
 github.com/xgfone/predicate v1.3.3 h1:eAlnN34a1Yw5u3aT427YmAj0ucpLfprx1Nnq+gKwLZ8=
