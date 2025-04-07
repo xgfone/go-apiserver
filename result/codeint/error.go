@@ -1,4 +1,4 @@
-// Copyright 2024 xgfone
+// Copyright 2024~2025 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strconv"
+	"net/http"
 
+	"github.com/xgfone/go-apiserver/internal/pools"
 	"github.com/xgfone/go-apiserver/result"
 )
 
@@ -30,6 +31,7 @@ var _ error = Error{}
 type Error struct {
 	Data    any    `json:",omitempty"`
 	Code    int    `json:",omitempty"`
+	Reason  string `json:",omitempty"`
 	Message string `json:",omitempty"`
 
 	Err error `json:"-"`
@@ -53,18 +55,27 @@ func (e Error) Unwrap() error {
 
 // Error implements the interface error.
 func (e Error) Error() string {
-	if e.Message == "" {
-		return strconv.FormatInt(int64(e.Code), 10)
-	}
-	return fmt.Sprintf("%d: %s", e.Code, e.Message)
+	return e.String()
 }
 
 // String implements the interface fmt.Stringer.
 func (e Error) String() string {
-	if e.Data == nil {
-		return fmt.Sprintf("code=%d, msg=%s", e.Code, e.Message)
+	pool, buf := pools.GetBuilder(256)
+	defer pools.PutBuilder(pool, buf)
+
+	_, _ = fmt.Fprintf(buf, "code=%d", e.Code)
+
+	if e.Message != "" {
+		_, _ = fmt.Fprintf(buf, ", msg=%s", e.Message)
 	}
-	return fmt.Sprintf("code=%d, msg=%s, data=%v", e.Code, e.Message, e.Data)
+	if e.Reason != "" {
+		_, _ = fmt.Fprintf(buf, ", reason=%s", e.Reason)
+	}
+	if e.Data != nil {
+		_, _ = fmt.Fprintf(buf, ", data=%v", e.Data)
+	}
+
+	return buf.String()
 }
 
 // WithCtx returns a new Error with the context information.
@@ -87,9 +98,20 @@ func (e Error) WithData(data any) Error {
 
 // WithError returns a new Error with the error.
 func (e Error) WithError(err error) Error {
-	e.Message = err.Error()
+	e.Reason = err.Error()
 	e.Err = err
 	return e
+}
+
+// WithReason returns a new Error with the reason.
+func (e Error) WithReason(reason string) Error {
+	e.Reason = reason
+	return e
+}
+
+// WithReasonf returns a new Error with the reason formatted by fmt.Sprintf(reason, args...).
+func (e Error) WithReasonf(format string, args ...any) Error {
+	return e.WithReason(fmt.Sprintf(format, args...))
 }
 
 // WithMessage returns a new Error with the message.
@@ -110,6 +132,11 @@ func (e Error) WithStatus(status int) Error {
 	} else {
 		e.Status = 500
 	}
+
+	if e.Message == "" {
+		e.Message = http.StatusText(status)
+	}
+
 	return e
 }
 
