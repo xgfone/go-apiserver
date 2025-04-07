@@ -60,8 +60,8 @@ func (e Error) Error() string {
 
 // String implements the interface fmt.Stringer.
 func (e Error) String() string {
-	pool, buf := pools.GetBuilder(256)
-	defer pools.PutBuilder(pool, buf)
+	pool, buf := pools.GetBuffer(256)
+	defer pools.PutBuffer(pool, buf)
 
 	_, _ = fmt.Fprintf(buf, "code=%d", e.Code)
 

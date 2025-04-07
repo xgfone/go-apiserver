@@ -15,34 +15,38 @@
 package pools
 
 import (
+	"bytes"
 	"fmt"
-	"strings"
 	"sync"
 )
 
-func newBuilder(cap int) *strings.Builder {
-	b := new(strings.Builder)
-	b.Grow(cap)
-	return b
+func newBuffer(cap int) *bytes.Buffer {
+	return bytes.NewBuffer(make([]byte, 0, cap))
 }
 
-var buildpool256 = sync.Pool{New: func() any { return newBuilder(256) }}
+var (
+	bufpool256  = sync.Pool{New: func() any { return newBuffer(256) }}
+	bufpool64KB = sync.Pool{New: func() any { return newBuffer(64 * 1024) }}
+)
 
-func GetBuilder(cap int) (pool *sync.Pool, builder *strings.Builder) {
+func GetBuffer(cap int) (pool *sync.Pool, buf *bytes.Buffer) {
 	switch cap {
 	case 256:
-		pool = &buildpool256
+		pool = &bufpool256
+
+	case 64 * 1024: //64KB
+		pool = &bufpool64KB
 
 	default:
-		panic(fmt.Errorf("GetBuilder: unsupported cap %d", cap))
+		panic(fmt.Errorf("GetBuffer: unsupported cap %d", cap))
 	}
 
-	builder = buildpool256.Get().(*strings.Builder)
-	builder.Reset()
+	buf = pool.Get().(*bytes.Buffer)
+	buf.Reset()
 	return
 }
 
-func PutBuilder(pool *sync.Pool, builder *strings.Builder) {
-	builder.Reset()
-	pool.Put(builder)
+func PutBuffer(pool *sync.Pool, buf *bytes.Buffer) {
+	buf.Reset()
+	pool.Put(buf)
 }
