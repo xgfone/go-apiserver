@@ -23,13 +23,10 @@ import (
 
 func TestError(t *testing.T) {
 	err404 := NewError(404)
-	if msg := err404.Error(); msg != "404" {
-		t.Errorf("expect '%s', but got '%s'", "404", msg)
+	if msg := err404.Error(); msg != "code=404, msg=Not Found" {
+		t.Errorf("expect '%s', but got '%s'", "code=404, msg=Not Found", msg)
 	}
-	if msg := err404.String(); msg != "code=404, msg=" {
-		t.Errorf("expect '%s', but got '%s'", "code=404, msg=", msg)
-	}
-	if msg := err404.WithMessagef("test").Error(); msg != "404: test" {
+	if msg := err404.WithMessagef("test").Error(); msg != "code=404, msg=test" {
 		t.Errorf("expect '%s', but got '%s'", "404: test", msg)
 	}
 
