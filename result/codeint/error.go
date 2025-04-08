@@ -16,13 +16,14 @@
 package codeint
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/xgfone/go-apiserver/internal/pools"
 	"github.com/xgfone/go-apiserver/result"
+	"github.com/xgfone/go-toolkit/jsonx"
 )
 
 var _ error = Error{}
@@ -169,10 +170,10 @@ func (e *Error) Decode(decode func(any) error) error {
 
 // DecodeJSON uses json decoder to decode from the reader into the error.
 func (e *Error) DecodeJSON(reader io.Reader) error {
-	return json.NewDecoder(reader).Decode(e)
+	return jsonx.Unmarshal(e, reader)
 }
 
 // DecodeJSONBytes uses json decoder to decode the []byte data into the error.
 func (e *Error) DecodeJSONBytes(data []byte) error {
-	return json.Unmarshal(data, e)
+	return jsonx.Unmarshal(e, bytes.NewReader(data))
 }

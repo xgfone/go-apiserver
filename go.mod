@@ -9,7 +9,7 @@ require (
 
 require (
 	github.com/xgfone/go-structs v0.3.1 // indirect
-	github.com/xgfone/go-validation v0.3.0 // indirect
+	github.com/xgfone/go-validation v0.4.0 // indirect
 	github.com/xgfone/predicate v1.3.3 // indirect
 )
 

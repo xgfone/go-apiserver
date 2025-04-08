@@ -15,11 +15,12 @@
 package result
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
 	"io"
 
 	"github.com/xgfone/go-apiserver/http/handler"
+	"github.com/xgfone/go-toolkit/jsonx"
 )
 
 // Respond is the public function to send the response by responder.
@@ -80,12 +81,12 @@ func (r *Response) Decode(decode func(any) error) error {
 
 // DecodeJSON uses json decoder to decode from the reader into the response.
 func (r *Response) DecodeJSON(reader io.Reader) error {
-	return json.NewDecoder(reader).Decode(r)
+	return jsonx.Unmarshal(r, reader)
 }
 
 // DecodeJSONBytes uses json decoder to decode the []byte data into the response.
 func (r *Response) DecodeJSONBytes(data []byte) error {
-	return json.Unmarshal(data, r)
+	return jsonx.Unmarshal(r, bytes.NewReader(data))
 }
 
 // Respond sends the response by the responder,

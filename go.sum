@@ -8,7 +8,7 @@ github.com/xgfone/go-structs v0.3.1 h1:kp9jTvxkncvEa4cZwb/HNcrp/0b/6oD/IV3RHe7nB
 github.com/xgfone/go-structs v0.3.1/go.mod h1:NZ6sUp5b31F5gehN2qtFOxuol3BItCKSCbpo0GYnuSQ=
 github.com/xgfone/go-toolkit v0.7.0 h1:Qx7Ok/XeFsYhxBJcbz4brQ4+hOW8r9HbwO7wpxBQYBA=
 github.com/xgfone/go-toolkit v0.7.0/go.mod h1:eOWnIK/acAJOoqEOtWnvuY0Pbn6cZ0DP/Oeoyn17QHw=
-github.com/xgfone/go-validation v0.3.0 h1:GJFZDX/zEq9tmLzjN6x2mpDWhMugwjhruNbpOyo9qfc=
-github.com/xgfone/go-validation v0.3.0/go.mod h1:oK9zWEMZ1F/miU9uhCW4TEvszTvc0IUxQT9MKHp0paA=
+github.com/xgfone/go-validation v0.4.0 h1:clO2t7y9OsHugyZiczab23M9H10LAt0pxmIY0isV4mo=
+github.com/xgfone/go-validation v0.4.0/go.mod h1:uKIYujPenkzcq/+shP6eCU+RA7EZpTmWok0TGGcsE/Q=
 github.com/xgfone/predicate v1.3.3 h1:eAlnN34a1Yw5u3aT427YmAj0ucpLfprx1Nnq+gKwLZ8=
 github.com/xgfone/predicate v1.3.3/go.mod h1:YWL+KK1KRUpxFkQybVQlyONTkYdNI6IpBYOmx/kF4l0=
