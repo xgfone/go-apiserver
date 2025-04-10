@@ -98,9 +98,16 @@ func (e Error) WithData(data any) Error {
 }
 
 // WithError returns a new Error with the error.
+//
+// If err is nil, it will clear Reason and Err to ZERO.
 func (e Error) WithError(err error) Error {
-	e.Reason = err.Error()
-	e.Err = err
+	if err == nil {
+		e.Reason = ""
+		e.Err = nil
+	} else {
+		e.Reason = err.Error()
+		e.Err = err
+	}
 	return e
 }
 
