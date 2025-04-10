@@ -421,12 +421,12 @@ func (c *Context) T(tmplorid string, args ...any) string {
 
 // Translate translates the template tmpl with the arguments args.
 //
-// If c.Translator is nil, use the global function Translate instead.
+// If c.Translator is nil, use DefaultTranslate instead.
 func (c *Context) Translate(tmplorid string, args ...any) string {
 	if c.Translator != nil {
 		return c.Translator(c.Accept(), tmplorid, args...)
 	}
-	return Translate(c.Accept(), tmplorid, args...)
+	return DefaultTranslate(c.Accept(), tmplorid, args...)
 }
 
 // AppendError appends the error err into c.Err.
@@ -635,10 +635,10 @@ var (
 	// based on Context and ResponseCode.
 	DefaultContextRespondByCode func(*Context, string, result.Response) = defaultContextRespondByCode
 
-	// Translate is the default translation function.
+	// DefaultTranslate is the default translation function.
 	//
 	// For the default implementation, it uses fmt.Sprintf to format the template.
-	Translate func(accepts []string, tmplorid string, args ...any) string = defaultTranslate
+	DefaultTranslate func(accepts []string, tmplorid string, args ...any) string = defaultTranslate
 )
 
 func defaultRespond(w http.ResponseWriter, r *http.Request, response result.Response) {
