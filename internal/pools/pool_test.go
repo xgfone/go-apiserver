@@ -49,3 +49,26 @@ func TestGetBuffer(t *testing.T) {
 		PutBuffer(p, b)
 	}()
 }
+
+func TestGetBytes(t *testing.T) {
+	buf := GetBytes(1024)
+	if buf == nil {
+		t.Errorf("failed to get the Bytes")
+	} else if cap(buf.Buffer) != 1024 {
+		t.Errorf("expect cap %d, but got %d", 1024, cap(buf.Buffer))
+	} else if len(buf.Buffer) != 1024 {
+		t.Errorf("expect len %d, but got %d", 1024, len(buf.Buffer))
+	}
+	PutBytes(buf)
+
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("exepct an error, but got nil")
+			}
+		}()
+
+		buf := GetBytes(1)
+		PutBytes(buf)
+	}()
+}

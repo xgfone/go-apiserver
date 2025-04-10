@@ -31,6 +31,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/header"
+	"github.com/xgfone/go-apiserver/internal/pools"
 	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-binder"
 	"github.com/xgfone/go-defaults"
@@ -552,9 +553,9 @@ func (c *Context) XML(code int, v any) {
 func (c *Context) Stream(code int, contentType string, r io.Reader) {
 	c.SetContentType(contentType)
 	c.WriteHeader(code)
-	buf := getbytes()
+	buf := pools.GetBytes(1024)
 	_, err := io.CopyBuffer(c.ResponseWriter, r, buf.Buffer)
-	putbytes(buf)
+	pools.PutBytes(buf)
 	c.AppendError(err)
 }
 
@@ -672,16 +673,3 @@ func defaultContextRespondByCode(c *Context, xcode string, response result.Respo
 func defaultTranslate(_ *Context, tmpl string, args ...any) string {
 	return fmt.Sprintf(tmpl, args...)
 }
-
-/// ----------------------------------------------------------------------- ///
-
-type byteswrappper struct {
-	Buffer []byte
-}
-
-var bytespool = sync.Pool{
-	New: func() any { return &byteswrappper{Buffer: make([]byte, 1024)} },
-}
-
-func getbytes() *byteswrappper  { return bytespool.Get().(*byteswrappper) }
-func putbytes(b *byteswrappper) { bytespool.Put(b) }

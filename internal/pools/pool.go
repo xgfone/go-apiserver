@@ -50,3 +50,35 @@ func PutBuffer(pool *sync.Pool, buf *bytes.Buffer) {
 	buf.Reset()
 	pool.Put(buf)
 }
+
+/// ----------------------------------------------------------------------- ///
+
+type Bytes struct {
+	Buffer []byte
+	pool   *sync.Pool
+}
+
+var bytespool1k = &sync.Pool{New: func() any { return newBytes(1024) }}
+
+func newBytes(cap int) *Bytes {
+	return &Bytes{Buffer: make([]byte, cap)}
+}
+
+func GetBytes(len int) (buf *Bytes) {
+	switch {
+	case len == 1024:
+		buf = bytespool1k.Get().(*Bytes)
+		buf.pool = bytespool1k
+
+	default:
+		panic(fmt.Errorf("GetBytes: unsupported len %d", len))
+	}
+
+	return
+}
+
+func PutBytes(buf *Bytes) {
+	if buf.pool != nil {
+		buf.pool.Put(buf)
+	}
+}

@@ -19,6 +19,8 @@ package forwarder
 import (
 	"io"
 	"net/http"
+
+	"github.com/xgfone/go-apiserver/internal/pools"
 )
 
 // DefaultForwarder is the default request forwarder.
@@ -116,6 +118,8 @@ func CopyResponseHeader(w http.ResponseWriter, resp *http.Response, filter func(
 func CopyResponse(w http.ResponseWriter, resp *http.Response) (err error) {
 	CopyResponseHeader(w, resp, nil)
 	w.WriteHeader(resp.StatusCode)
-	_, err = io.CopyBuffer(w, resp.Body, make([]byte, 1024))
+	buf := pools.GetBytes(1024)
+	_, err = io.CopyBuffer(w, resp.Body, buf.Buffer)
+	pools.PutBytes(buf)
 	return
 }
