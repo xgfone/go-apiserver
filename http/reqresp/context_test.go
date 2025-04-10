@@ -76,12 +76,12 @@ func TestContextGetQueryInt64(t *testing.T) {
 }
 
 func TestContextTranslate(t *testing.T) {
-	c := Context{}
+	c := Context{Request: &http.Request{}}
 	if s := c.Translate("hello %s", "xgfone"); s != "hello xgfone" {
 		t.Errorf("expect '%s', but got '%s'", "hello xgfone", s)
 	}
 
-	c.Translator = Translate
+	c.Translator = DefaultTranslate
 	if s := c.Translate("hello %s", "xgfone"); s != "hello xgfone" {
 		t.Errorf("expect '%s', but got '%s'", "hello xgfone", s)
 	}
