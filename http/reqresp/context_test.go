@@ -1,4 +1,4 @@
-// Copyright 2023 xgfone
+// Copyright 2023~2025 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -72,5 +72,17 @@ func TestContextGetQueryInt64(t *testing.T) {
 		t.Errorf("expect an error, but got nil")
 	} else if s := err.Error(); s != "missing abc" {
 		t.Errorf("expect error '%s', but got '%s'", "missing abc", s)
+	}
+}
+
+func TestContextTranslate(t *testing.T) {
+	c := Context{}
+	if s := c.Translate("hello %s", "xgfone"); s != "hello xgfone" {
+		t.Errorf("expect '%s', but got '%s'", "hello xgfone", s)
+	}
+
+	c.Translator = Translate
+	if s := c.Translate("hello %s", "xgfone"); s != "hello xgfone" {
+		t.Errorf("expect '%s', but got '%s'", "hello xgfone", s)
 	}
 }

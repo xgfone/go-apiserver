@@ -1,4 +1,4 @@
-// Copyright 2021~2024 xgfone
+// Copyright 2021~2025 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -121,6 +121,11 @@ type Context struct {
 	// If nil, use DefaultContextRespond instead.
 	Responder func(*Context, result.Response)
 
+	// Translator is used to translate the template string by the Accept languages.
+	//
+	// Default: nil
+	Translator func(c *Context, tmpl string, args ...any) string
+
 	// Query and Cookies are used to cache the parsed request query and cookies.
 	Cookies []*http.Cookie
 	Query   url.Values
@@ -140,6 +145,8 @@ func (c *Context) Reset() {
 		BodyDecoder:   c.BodyDecoder,
 		QueryDecoder:  c.QueryDecoder,
 		HeaderDecoder: c.HeaderDecoder,
+		Translator:    c.Translator,
+		Responder:     c.Responder,
 	}
 }
 
@@ -406,6 +413,16 @@ func (c *Context) GetCookie(name string) *http.Cookie {
 // Response
 // ---------------------------------------------------------------------------
 
+// Translate translates the template tmpl with the arguments args.
+//
+// If c.Translator is nil, use the global function Translate instead.
+func (c *Context) Translate(tmpl string, args ...any) string {
+	if c.Translator != nil {
+		return c.Translator(c, tmpl, args...)
+	}
+	return Translate(c, tmpl, args...)
+}
+
 // AppendError appends the error err into c.Err.
 func (c *Context) AppendError(err error) {
 	if err != nil {
@@ -611,6 +628,11 @@ var (
 	// DefaultContextRespondByCode is the default result responder
 	// based on Context and ResponseCode.
 	DefaultContextRespondByCode func(*Context, string, result.Response) = defaultContextRespondByCode
+
+	// Translate is the default translation function.
+	//
+	// For the default implementation, it uses fmt.Sprintf to format the template.
+	Translate func(c *Context, tmpl string, args ...any) string = defaultTranslate
 )
 
 func defaultRespond(w http.ResponseWriter, r *http.Request, response result.Response) {
@@ -645,6 +667,10 @@ func defaultContextRespondByCode(c *Context, xcode string, response result.Respo
 	} else {
 		RespondErrorWithContextByCode(c, xcode, response.Error)
 	}
+}
+
+func defaultTranslate(_ *Context, tmpl string, args ...any) string {
+	return fmt.Sprintf(tmpl, args...)
 }
 
 /// ----------------------------------------------------------------------- ///
