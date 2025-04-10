@@ -416,7 +416,7 @@ func (c *Context) GetCookie(name string) *http.Cookie {
 
 // T is the alias of Translate.
 func (c *Context) T(tmplorid string, args ...any) string {
-	return c.T(tmplorid, args...)
+	return c.Translate(tmplorid, args...)
 }
 
 // Translate translates the template tmpl with the arguments args.
