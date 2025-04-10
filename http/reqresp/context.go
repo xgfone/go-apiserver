@@ -125,7 +125,7 @@ type Context struct {
 	// Translator is used to translate the template string by the Accept languages.
 	//
 	// Default: nil
-	Translator func(c *Context, tmpl string, args ...any) string
+	Translator func(accepts []string, tmplorid string, args ...any) string
 
 	// Query and Cookies are used to cache the parsed request query and cookies.
 	Cookies []*http.Cookie
@@ -414,14 +414,19 @@ func (c *Context) GetCookie(name string) *http.Cookie {
 // Response
 // ---------------------------------------------------------------------------
 
+// T is the alias of Translate.
+func (c *Context) T(tmplorid string, args ...any) string {
+	return c.T(tmplorid, args...)
+}
+
 // Translate translates the template tmpl with the arguments args.
 //
 // If c.Translator is nil, use the global function Translate instead.
-func (c *Context) Translate(tmpl string, args ...any) string {
+func (c *Context) Translate(tmplorid string, args ...any) string {
 	if c.Translator != nil {
-		return c.Translator(c, tmpl, args...)
+		return c.Translator(c.Accept(), tmplorid, args...)
 	}
-	return Translate(c, tmpl, args...)
+	return Translate(c.Accept(), tmplorid, args...)
 }
 
 // AppendError appends the error err into c.Err.
@@ -633,7 +638,7 @@ var (
 	// Translate is the default translation function.
 	//
 	// For the default implementation, it uses fmt.Sprintf to format the template.
-	Translate func(c *Context, tmpl string, args ...any) string = defaultTranslate
+	Translate func(accepts []string, tmplorid string, args ...any) string = defaultTranslate
 )
 
 func defaultRespond(w http.ResponseWriter, r *http.Request, response result.Response) {
@@ -670,6 +675,6 @@ func defaultContextRespondByCode(c *Context, xcode string, response result.Respo
 	}
 }
 
-func defaultTranslate(_ *Context, tmpl string, args ...any) string {
-	return fmt.Sprintf(tmpl, args...)
+func defaultTranslate(_ []string, tmplorid string, args ...any) string {
+	return fmt.Sprintf(tmplorid, args...)
 }
