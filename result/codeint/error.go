@@ -56,7 +56,22 @@ func (e Error) Unwrap() error {
 
 // Error implements the interface error.
 func (e Error) Error() string {
-	return e.String()
+	switch {
+	case e.Err != nil:
+		return e.Err.Error()
+
+	case e.Reason != "":
+		return e.Reason
+
+	case e.Message != "":
+		return e.Message
+
+	default:
+		if e.Status > 0 {
+			return fmt.Sprintf("status=%d, code=%d", e.Status, e.Code)
+		}
+		return fmt.Sprintf("code=%d", e.Code)
+	}
 }
 
 // String implements the interface fmt.Stringer.
@@ -109,26 +124,6 @@ func (e Error) WithError(err error) Error {
 		e.Err = err
 	}
 	return e
-}
-
-// GetReason tries to return the error reason.
-func (e Error) GetReason() string {
-	switch {
-	case e.Reason != "":
-		return e.Reason
-
-	case e.Err != nil:
-		return e.Err.Error()
-
-	case e.Message != "":
-		return e.Message
-
-	default:
-		if e.Status > 0 {
-			return fmt.Sprintf("status=%d, code=%d", e.Status, e.Code)
-		}
-		return fmt.Sprintf("code=%d", e.Code)
-	}
 }
 
 // WithReason returns a new Error with the reason.

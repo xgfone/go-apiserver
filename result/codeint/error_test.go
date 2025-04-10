@@ -23,11 +23,11 @@ import (
 
 func TestError(t *testing.T) {
 	err404 := NewError(404)
-	if msg := err404.Error(); msg != "code=404, msg=Not Found" {
-		t.Errorf("expect '%s', but got '%s'", "code=404, msg=Not Found", msg)
+	if msg := err404.Error(); msg != "Not Found" {
+		t.Errorf("expect '%s', but got '%s'", "Not Found", msg)
 	}
-	if msg := err404.WithMessagef("test").Error(); msg != "code=404, msg=test" {
-		t.Errorf("expect '%s', but got '%s'", "404: test", msg)
+	if msg := err404.WithMessagef("test").Error(); msg != "test" {
+		t.Errorf("expect '%s', but got '%s'", "test", msg)
 	}
 
 	if err := errors.Unwrap(err404); err != nil {
@@ -45,9 +45,5 @@ func TestError(t *testing.T) {
 		t.Errorf("expect status code %d, but got %d", 404, rec.Code)
 	} else if body := strings.TrimSpace(rec.Body.String()); body != expect {
 		t.Errorf("expect '%s', but got '%s'", expect, body)
-	}
-
-	if reason := err404.GetReason(); reason != `Not Found` {
-		t.Errorf("expect reason '%s', but got '%s'", `Not Found`, reason)
 	}
 }
