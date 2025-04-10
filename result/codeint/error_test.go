@@ -46,4 +46,8 @@ func TestError(t *testing.T) {
 	} else if body := strings.TrimSpace(rec.Body.String()); body != expect {
 		t.Errorf("expect '%s', but got '%s'", expect, body)
 	}
+
+	if reason := err404.GetReason(); reason != `Not Found` {
+		t.Errorf("expect reason '%s', but got '%s'", `Not Found`, reason)
+	}
 }

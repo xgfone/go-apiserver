@@ -104,6 +104,26 @@ func (e Error) WithError(err error) Error {
 	return e
 }
 
+// GetReason tries to return the error reason.
+func (e Error) GetReason() string {
+	switch {
+	case e.Reason != "":
+		return e.Reason
+
+	case e.Err != nil:
+		return e.Err.Error()
+
+	case e.Message != "":
+		return e.Message
+
+	default:
+		if e.Status > 0 {
+			return fmt.Sprintf("status=%d, code=%d", e.Status, e.Code)
+		}
+		return fmt.Sprintf("code=%d", e.Code)
+	}
+}
+
 // WithReason returns a new Error with the reason.
 func (e Error) WithReason(reason string) Error {
 	e.Reason = reason
