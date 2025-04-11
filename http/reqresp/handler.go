@@ -102,10 +102,20 @@ func RespondErrorWithContextAndStatusCode(c *Context, statuscode int, err error)
 }
 
 func responderror(c *Context, statuscode int, err error) {
-	switch err.(type) {
-	case codeint.Error, json.Marshaler:
+	switch e := err.(type) {
+	case codeint.Error:
+		if e.StatusCode() >= 500 {
+			e.Reason = ""
+		}
+
+	case *codeint.Error:
+		if e.StatusCode() >= 500 {
+			e.Reason = ""
+		}
+
+	case json.Marshaler:
 	default:
-		err = codeint.ErrInternalServerError.WithError(err)
+		err = codeint.ErrInternalServerError.WithError(err).WithReason("")
 	}
 
 	c.JSON(statuscode, err)
@@ -114,7 +124,19 @@ func responderror(c *Context, statuscode int, err error) {
 func responderrorstd(c *Context, err error) {
 	var statuscode int
 	switch e := err.(type) {
-	case codeint.Error, json.Marshaler:
+	case codeint.Error:
+		statuscode = getStatusCodeFromError(err)
+		if statuscode >= 500 {
+			e.Reason = ""
+		}
+
+	case *codeint.Error:
+		statuscode = getStatusCodeFromError(err)
+		if statuscode >= 500 {
+			e.Reason = ""
+		}
+
+	case json.Marshaler:
 		statuscode = getStatusCodeFromError(err)
 
 	case StatusCoder:
