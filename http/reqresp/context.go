@@ -212,27 +212,27 @@ func (c *Context) LocalAddr() net.Addr {
 // RequestID returns the request header "X-Request-Id".
 //
 // DEPRECATED!!! Please use the method RequestId.
-func (c *Context) RequestID() string { return c.Request.Header.Get(header.HeaderXRequestID) }
+func (c *Context) RequestID() string { return c.Request.Header.Get(httpx.HeaderXRequestID) }
 
 // RequestId returns the request header "X-Request-Id".
-func (c *Context) RequestId() string { return c.Request.Header.Get(header.HeaderXRequestID) }
+func (c *Context) RequestId() string { return c.Request.Header.Get(httpx.HeaderXRequestID) }
 
 // IsWebSocket reports whether the request is websocket.
-func (c *Context) IsWebSocket() bool { return header.IsWebSocket(c.Request) }
+func (c *Context) IsWebSocket() bool { return httpx.IsWebSocket(c.Request) }
 
 // ContentType returns the Content-Type of the request without the charset.
-func (c *Context) ContentType() string { return header.ContentType(c.Request.Header) }
+func (c *Context) ContentType() string { return httpx.ContentType(c.Request.Header) }
 
 // Charset returns the charset of the request content.
 //
 // Return "" if there is no charset.
-func (c *Context) Charset() string { return header.Charset(c.Request.Header) }
+func (c *Context) Charset() string { return httpx.Charset(c.Request.Header) }
 
 // Accept returns the accepted Content-Type list from the request header
 // "Accept", which are sorted by the q-factor weight from high to low.
 //
 // If there is no the request header "Accept", return nil.
-func (c *Context) Accept() []string { return header.Accept(c.Request.Header) }
+func (c *Context) Accept() []string { return httpx.Accept(c.Request.Header) }
 
 // Scheme returns the HTTP protocol scheme, `http` or `https`.
 func (c *Context) Scheme() string {
@@ -465,13 +465,13 @@ func (c *Context) SetContentDisposition(dtype, filename string) {
 		disposition = mime.FormatMediaType(dtype, params)
 	}
 
-	c.ResponseWriter.Header().Set(header.HeaderContentDisposition, disposition)
+	c.ResponseWriter.Header().Set(httpx.HeaderContentDisposition, disposition)
 }
 
 // SetConnectionClose sets the response header "Connection: close"
 // to tell the server to close the connection.
 func (c *Context) SetConnectionClose() {
-	c.ResponseWriter.Header().Set(header.HeaderConnection, "close")
+	c.ResponseWriter.Header().Set(httpx.HeaderConnection, "close")
 }
 
 // SetContentType sets the response header "Content-Type" to ct,
@@ -490,7 +490,7 @@ func (c *Context) Redirect(code int, toURL string) {
 		panic(fmt.Errorf("invalid the redirect status code '%d'", code))
 	}
 
-	c.ResponseWriter.Header().Set(header.HeaderLocation, toURL)
+	c.ResponseWriter.Header().Set(httpx.HeaderLocation, toURL)
 	c.WriteHeader(code)
 }
 
@@ -536,12 +536,12 @@ func (c *Context) BlobText(code int, contentType string, text string) {
 
 // Text sends a string response with the status code.
 func (c *Context) Text(code int, text string) {
-	c.BlobText(code, header.MIMETextPlainCharsetUTF8, text)
+	c.BlobText(code, httpx.MIMETextPlainCharsetUTF8, text)
 }
 
 // HTML sends a HTML response with the status code.
 func (c *Context) HTML(code int, text string) {
-	c.BlobText(code, header.MIMETextHTMLCharsetUTF8, text)
+	c.BlobText(code, httpx.MIMETextHTMLCharsetUTF8, text)
 }
 
 // JSON sends a JSON response with the status code.
@@ -574,7 +574,7 @@ func (c *Context) Attachment(filename, filepath string) {
 	if filepath == "" {
 		panic("Context.Attachment: filepath must not be empty")
 	}
-	c.sendfile(filename, filepath, header.Attachment)
+	c.sendfile(filename, filepath, httpx.Attachment)
 }
 
 // Inline sends a file as inline.
@@ -585,7 +585,7 @@ func (c *Context) Inline(filename, filepath string) {
 	if filepath == "" {
 		panic("Context.Inline: filepath must not be empty")
 	}
-	c.sendfile(filename, filepath, header.Inline)
+	c.sendfile(filename, filepath, httpx.Inline)
 }
 
 func (c *Context) sendfile(name, path, dtype string) {

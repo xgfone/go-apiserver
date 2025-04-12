@@ -19,7 +19,7 @@ package requestid
 import (
 	"net/http"
 
-	"github.com/xgfone/go-apiserver/http/header"
+	"github.com/xgfone/go-toolkit/httpx"
 	"github.com/xgfone/go-toolkit/random"
 )
 
@@ -36,8 +36,8 @@ func generate(*http.Request) string {
 // if not set.
 func RequestId(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get(header.HeaderXRequestID) == "" {
-			r.Header.Set(header.HeaderXRequestID, Generate(r))
+		if r.Header.Get(httpx.HeaderXRequestID) == "" {
+			r.Header.Set(httpx.HeaderXRequestID, Generate(r))
 		}
 		next.ServeHTTP(w, r)
 	})

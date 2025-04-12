@@ -20,7 +20,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/http/header"
+	"github.com/xgfone/go-toolkit/httpx"
 )
 
 func TestContextBinder(t *testing.T) {
@@ -34,7 +34,7 @@ func TestContextBinder(t *testing.T) {
 	c := AcquireContext()
 	body := bytes.NewBufferString(`{"Uint":444}`)
 	c.Request, _ = http.NewRequest("GET", "http://localhost", body)
-	c.Request.Header.Set(header.HeaderContentType, header.MIMEApplicationJSON)
+	c.Request.Header.Set(httpx.HeaderContentType, httpx.MIMEApplicationJSON)
 
 	err := c.BindBody(&req)
 	if err != nil {

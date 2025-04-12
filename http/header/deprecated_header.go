@@ -22,14 +22,14 @@ import (
 
 // ContentType is the alias of the function MediaType.
 //
-// DEPRECATED: Use httpx.ContentType instead.
+// DEPRECATED. Please use the package "github.com/xgfone/go-toolkit/httpx" instead.
 func ContentType(header http.Header) string {
 	return httpx.ContentType(header)
 }
 
 // MediaType returns the MIME media type portion of the header "Content-Type".
 //
-// DEPRECATED: Use httpx.ContentType instead.
+// DEPRECATED. Please use the package "github.com/xgfone/go-toolkit/httpx" instead.
 func MediaType(header http.Header) (mime string) {
 	return httpx.ContentType(header)
 }
@@ -38,14 +38,14 @@ func MediaType(header http.Header) (mime string) {
 //
 // Return "" if there is no charset.
 //
-// DEPRECATED: Use httpx.Charset instead.
+// DEPRECATED. Please use the package "github.com/xgfone/go-toolkit/httpx" instead.
 func Charset(header http.Header) string {
 	return httpx.Charset(header)
 }
 
 // IsWebSocket reports whether the request is websocket.
 //
-// DEPRECATED: Use httpx.IsWebSocket instead.
+// DEPRECATED. Please use the package "github.com/xgfone/go-toolkit/httpx" instead.
 func IsWebSocket(req *http.Request) bool {
 	return httpx.IsWebSocket(req)
 }
@@ -60,7 +60,7 @@ func IsWebSocket(req *http.Request) bool {
 //  2. If the value is "<MIME_type>/*", it will be amended as "<MIME_type>/".
 //     So it can be used to match the prefix.
 //
-// DEPRECATED: Use httpx.Accept instead.
+// DEPRECATED. Please use the package "github.com/xgfone/go-toolkit/httpx" instead.
 func Accept(header http.Header) []string {
 	return httpx.Accept(header)
 }
@@ -71,13 +71,13 @@ func Accept(header http.Header) []string {
 func Scheme(header http.Header) (scheme string) {
 	// Can't use `r.Request.URL.Scheme`
 	// See: https://groups.google.com/forum/#!topic/golang-nuts/pMUkBlQBDF0
-	if header.Get(HeaderXForwardedSSL) == "on" {
+	if header.Get(httpx.HeaderXForwardedSSL) == "on" {
 		return "https"
-	} else if scheme = header.Get(HeaderXForwardedProto); scheme != "" {
+	} else if scheme = header.Get(httpx.HeaderXForwardedProto); scheme != "" {
 		return
-	} else if scheme = header.Get(HeaderXForwardedProtocol); scheme != "" {
+	} else if scheme = header.Get(httpx.HeaderXForwardedProtocol); scheme != "" {
 		return
-	} else if scheme = header.Get(HeaderXUrlScheme); scheme != "" {
+	} else if scheme = header.Get(httpx.HeaderXUrlScheme); scheme != "" {
 		return
 	}
 

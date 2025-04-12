@@ -15,25 +15,29 @@
 // Package header provides some header constants and operations.
 package header
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/xgfone/go-toolkit/httpx"
+)
 
 var (
-	mimeTextXML                = []string{MIMETextXML}
-	mimeTextHTML               = []string{MIMETextHTML}
-	mimeTextPlain              = []string{MIMETextPlain}
-	mimeApplicationXML         = []string{MIMEApplicationXML}
-	mimeApplicationJSON        = []string{MIMEApplicationJSON}
-	mimeApplicationForm        = []string{MIMEApplicationForm}
-	mimeApplicationMsgpack     = []string{MIMEApplicationMsgpack}
-	mimeApplicationProtobuf    = []string{MIMEApplicationProtobuf}
-	mimeApplicationOctetStream = []string{MIMEApplicationOctetStream}
-	mimeMultipartForm          = []string{MIMEMultipartForm}
+	mimeTextXML                = []string{httpx.MIMETextXML}
+	mimeTextHTML               = []string{httpx.MIMETextHTML}
+	mimeTextPlain              = []string{httpx.MIMETextPlain}
+	mimeApplicationXML         = []string{httpx.MIMEApplicationXML}
+	mimeApplicationJSON        = []string{httpx.MIMEApplicationJSON}
+	mimeApplicationForm        = []string{httpx.MIMEApplicationForm}
+	mimeApplicationMsgpack     = []string{httpx.MIMEApplicationMsgpack}
+	mimeApplicationProtobuf    = []string{httpx.MIMEApplicationProtobuf}
+	mimeApplicationOctetStream = []string{httpx.MIMEApplicationOctetStream}
+	mimeMultipartForm          = []string{httpx.MIMEMultipartForm}
 
-	mimeTextXMLCharsetUTF8         = []string{MIMETextXMLCharsetUTF8}
-	mimeTextHTMLCharsetUTF8        = []string{MIMETextHTMLCharsetUTF8}
-	mimeTextPlainCharsetUTF8       = []string{MIMETextPlainCharsetUTF8}
-	mimeApplicationXMLCharsetUTF8  = []string{MIMEApplicationXMLCharsetUTF8}
-	mimeApplicationJSONCharsetUTF8 = []string{MIMEApplicationJSONCharsetUTF8}
+	mimeTextXMLCharsetUTF8         = []string{httpx.MIMETextXMLCharsetUTF8}
+	mimeTextHTMLCharsetUTF8        = []string{httpx.MIMETextHTMLCharsetUTF8}
+	mimeTextPlainCharsetUTF8       = []string{httpx.MIMETextPlainCharsetUTF8}
+	mimeApplicationXMLCharsetUTF8  = []string{httpx.MIMEApplicationXMLCharsetUTF8}
+	mimeApplicationJSONCharsetUTF8 = []string{httpx.MIMEApplicationJSONCharsetUTF8}
 )
 
 // SetContentType sets the header "Content-Type" to ct.
@@ -43,52 +47,52 @@ func SetContentType(header http.Header, ct string) {
 	switch ct {
 	case "":
 
-	case MIMETextXML:
-		header[HeaderContentType] = mimeTextXML
+	case httpx.MIMETextXML:
+		header[httpx.HeaderContentType] = mimeTextXML
 
-	case MIMETextHTML:
-		header[HeaderContentType] = mimeTextHTML
+	case httpx.MIMETextHTML:
+		header[httpx.HeaderContentType] = mimeTextHTML
 
-	case MIMETextPlain:
-		header[HeaderContentType] = mimeTextPlain
+	case httpx.MIMETextPlain:
+		header[httpx.HeaderContentType] = mimeTextPlain
 
-	case MIMEApplicationXML:
-		header[HeaderContentType] = mimeApplicationXML
+	case httpx.MIMEApplicationXML:
+		header[httpx.HeaderContentType] = mimeApplicationXML
 
-	case MIMEApplicationJSON:
-		header[HeaderContentType] = mimeApplicationJSON
+	case httpx.MIMEApplicationJSON:
+		header[httpx.HeaderContentType] = mimeApplicationJSON
 
-	case MIMEApplicationForm:
-		header[HeaderContentType] = mimeApplicationForm
+	case httpx.MIMEApplicationForm:
+		header[httpx.HeaderContentType] = mimeApplicationForm
 
-	case MIMEApplicationMsgpack:
-		header[HeaderContentType] = mimeApplicationMsgpack
+	case httpx.MIMEApplicationMsgpack:
+		header[httpx.HeaderContentType] = mimeApplicationMsgpack
 
-	case MIMEApplicationProtobuf:
-		header[HeaderContentType] = mimeApplicationProtobuf
+	case httpx.MIMEApplicationProtobuf:
+		header[httpx.HeaderContentType] = mimeApplicationProtobuf
 
-	case MIMEApplicationOctetStream:
-		header[HeaderContentType] = mimeApplicationOctetStream
+	case httpx.MIMEApplicationOctetStream:
+		header[httpx.HeaderContentType] = mimeApplicationOctetStream
 
-	case MIMEMultipartForm:
-		header[HeaderContentType] = mimeMultipartForm
+	case httpx.MIMEMultipartForm:
+		header[httpx.HeaderContentType] = mimeMultipartForm
 
-	case MIMETextXMLCharsetUTF8:
-		header[HeaderContentType] = mimeTextXMLCharsetUTF8
+	case httpx.MIMETextXMLCharsetUTF8:
+		header[httpx.HeaderContentType] = mimeTextXMLCharsetUTF8
 
-	case MIMETextHTMLCharsetUTF8:
-		header[HeaderContentType] = mimeTextHTMLCharsetUTF8
+	case httpx.MIMETextHTMLCharsetUTF8:
+		header[httpx.HeaderContentType] = mimeTextHTMLCharsetUTF8
 
-	case MIMETextPlainCharsetUTF8:
-		header[HeaderContentType] = mimeTextPlainCharsetUTF8
+	case httpx.MIMETextPlainCharsetUTF8:
+		header[httpx.HeaderContentType] = mimeTextPlainCharsetUTF8
 
-	case MIMEApplicationXMLCharsetUTF8:
-		header[HeaderContentType] = mimeApplicationXMLCharsetUTF8
+	case httpx.MIMEApplicationXMLCharsetUTF8:
+		header[httpx.HeaderContentType] = mimeApplicationXMLCharsetUTF8
 
-	case MIMEApplicationJSONCharsetUTF8:
-		header[HeaderContentType] = mimeApplicationJSONCharsetUTF8
+	case httpx.MIMEApplicationJSONCharsetUTF8:
+		header[httpx.HeaderContentType] = mimeApplicationJSONCharsetUTF8
 
 	default:
-		header.Set(HeaderContentType, ct)
+		header.Set(httpx.HeaderContentType, ct)
 	}
 }

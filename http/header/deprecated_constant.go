@@ -15,12 +15,16 @@
 package header
 
 // Content-Disposition type values
+//
+// DEPRECATED. Please use the package "github.com/xgfone/go-toolkit/httpx" instead.
 const (
 	Inline     = "inline"
 	Attachment = "attachment"
 )
 
 // MIME types
+//
+// DEPRECATED. Please use the package "github.com/xgfone/go-toolkit/httpx" instead.
 const (
 	MIMETextXML                = "text/xml"
 	MIMETextHTML               = "text/html"
@@ -41,6 +45,8 @@ const (
 )
 
 // Headers
+//
+// DEPRECATED. Please use the package "github.com/xgfone/go-toolkit/httpx" instead.
 const (
 	HeaderAccept              = "Accept"              // RFC 7231, 5.3.2
 	HeaderAcceptCharset       = "Accept-Charset"      // RFC 7231, 5.3.3

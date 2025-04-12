@@ -22,6 +22,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/internal/pools"
+	"github.com/xgfone/go-toolkit/httpx"
 	"github.com/xgfone/go-toolkit/jsonx"
 	"github.com/xgfone/go-toolkit/unsafex"
 )
@@ -42,7 +43,7 @@ func JSON(w http.ResponseWriter, code int, v any) (err error) {
 	defer pools.PutBuffer(pool, buf)
 
 	if err = jsonx.Marshal(buf, v); err == nil {
-		header.SetContentType(w.Header(), header.MIMEApplicationJSONCharsetUTF8)
+		header.SetContentType(w.Header(), httpx.MIMEApplicationJSONCharsetUTF8)
 		w.WriteHeader(code)
 		err = write(w, buf)
 	}
@@ -62,7 +63,7 @@ func XML(w http.ResponseWriter, code int, v any) (err error) {
 
 	_, _ = buf.WriteString(xml.Header)
 	if err = xml.NewEncoder(buf).Encode(v); err == nil {
-		header.SetContentType(w.Header(), header.MIMEApplicationXMLCharsetUTF8)
+		header.SetContentType(w.Header(), httpx.MIMEApplicationXMLCharsetUTF8)
 		w.WriteHeader(code)
 		err = write(w, buf)
 	}

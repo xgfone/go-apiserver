@@ -17,6 +17,8 @@ package header
 import (
 	"net/http"
 	"testing"
+
+	"github.com/xgfone/go-toolkit/httpx"
 )
 
 func TestContentType(t *testing.T) {
@@ -82,7 +84,7 @@ func TestAccept(t *testing.T) {
 	}
 
 	header := make(http.Header)
-	header.Set(HeaderAccept, "text/html, application/*;q=0.9, image/webp, */*;q=0.8")
+	header.Set(httpx.HeaderAccept, "text/html, application/*;q=0.9, image/webp, */*;q=0.8")
 	accepts := Accept(header)
 
 	if len(expects) != len(accepts) {
