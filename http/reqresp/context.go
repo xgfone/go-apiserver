@@ -35,6 +35,7 @@ import (
 	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-binder"
 	"github.com/xgfone/go-defaults"
+	"github.com/xgfone/go-toolkit/httpx"
 	"github.com/xgfone/go-toolkit/unsafex"
 )
 
@@ -125,7 +126,7 @@ type Context struct {
 	// Translator is used to translate the template string by the Accept languages.
 	//
 	// Default: nil
-	Translator func(accepts []string, tmplorid string, args ...any) string
+	Translator func(langs []string, tmplorid string, args ...any) string
 
 	// Query and Cookies are used to cache the parsed request query and cookies.
 	Cookies []*http.Cookie
@@ -423,10 +424,11 @@ func (c *Context) T(tmplorid string, args ...any) string {
 //
 // If c.Translator is nil, use DefaultTranslate instead.
 func (c *Context) Translate(tmplorid string, args ...any) string {
+	langs := httpx.AcceptLanguage(c.Request.Header)
 	if c.Translator != nil {
-		return c.Translator(c.Accept(), tmplorid, args...)
+		return c.Translator(langs, tmplorid, args...)
 	}
-	return DefaultTranslate(c.Accept(), tmplorid, args...)
+	return DefaultTranslate(langs, tmplorid, args...)
 }
 
 // AppendError appends the error err into c.Err.
@@ -638,7 +640,7 @@ var (
 	// DefaultTranslate is the default translation function.
 	//
 	// For the default implementation, it uses fmt.Sprintf to format the template.
-	DefaultTranslate func(accepts []string, tmplorid string, args ...any) string = defaultTranslate
+	DefaultTranslate func(langs []string, tmplorid string, args ...any) string = defaultTranslate
 )
 
 func defaultRespond(w http.ResponseWriter, r *http.Request, response result.Response) {
