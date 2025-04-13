@@ -81,12 +81,12 @@ func (r *Response) Decode(decode func(any) error) error {
 
 // DecodeJSON uses json decoder to decode from the reader into the response.
 func (r *Response) DecodeJSON(reader io.Reader) error {
-	return jsonx.Unmarshal(r, reader)
+	return jsonx.UnmarshalReader(r, reader)
 }
 
 // DecodeJSONBytes uses json decoder to decode the []byte data into the response.
 func (r *Response) DecodeJSONBytes(data []byte) error {
-	return jsonx.Unmarshal(r, bytes.NewReader(data))
+	return jsonx.UnmarshalReader(r, bytes.NewReader(data))
 }
 
 // Respond sends the response by the responder,

@@ -192,10 +192,10 @@ func (e *Error) Decode(decode func(any) error) error {
 
 // DecodeJSON uses json decoder to decode from the reader into the error.
 func (e *Error) DecodeJSON(reader io.Reader) error {
-	return jsonx.Unmarshal(e, reader)
+	return jsonx.UnmarshalReader(e, reader)
 }
 
 // DecodeJSONBytes uses json decoder to decode the []byte data into the error.
 func (e *Error) DecodeJSONBytes(data []byte) error {
-	return jsonx.Unmarshal(e, bytes.NewReader(data))
+	return jsonx.UnmarshalReader(e, bytes.NewReader(data))
 }

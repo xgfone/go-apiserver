@@ -42,7 +42,7 @@ func JSON(w http.ResponseWriter, code int, v any) (err error) {
 	pool, buf := pools.GetBuffer(64 * 1024) // 64KB
 	defer pools.PutBuffer(pool, buf)
 
-	if err = jsonx.Marshal(buf, v); err == nil {
+	if err = jsonx.MarshalWriter(buf, v); err == nil {
 		header.SetContentType(w.Header(), httpx.MIMEApplicationJSONCharsetUTF8)
 		w.WriteHeader(code)
 		err = write(w, buf)
