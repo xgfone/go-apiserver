@@ -105,7 +105,7 @@ func responderror(c *Context, statuscode int, err error) {
 	switch e := err.(type) {
 	case codeint.Error:
 		if e.StatusCode() >= 500 {
-			e.Reason = ""
+			err = e.WithReason("")
 		}
 
 	case *codeint.Error:
@@ -125,13 +125,13 @@ func responderrorstd(c *Context, err error) {
 	var statuscode int
 	switch e := err.(type) {
 	case codeint.Error:
-		statuscode = getStatusCodeFromError(err)
+		statuscode = e.StatusCode()
 		if statuscode >= 500 {
-			e.Reason = ""
+			err = e.WithReason("")
 		}
 
 	case *codeint.Error:
-		statuscode = getStatusCodeFromError(err)
+		statuscode = e.StatusCode()
 		if statuscode >= 500 {
 			e.Reason = ""
 		}

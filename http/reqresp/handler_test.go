@@ -18,6 +18,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
@@ -111,5 +112,19 @@ func TestHandlerWithError(t *testing.T) {
 	}).ServeHTTP(c.ResponseWriter, c.Request)
 	if rec.Code != 204 {
 		t.Errorf("expect status code %d, but got %d", 204, rec.Code)
+	}
+}
+
+func TestRespondErrorWithContextByCode(t *testing.T) {
+	c := reqresp.AcquireContext()
+	defer reqresp.ReleaseContext(c)
+
+	rec := httptest.NewRecorder()
+	c.ResponseWriter = reqresp.AcquireResponseWriter(rec)
+	reqresp.RespondErrorWithContextByCode(c, "", codeint.ErrInternalServerError.WithReason("reason"))
+
+	expect := `{"Code":500,"Message":"Internal Server Error"}`
+	if s := strings.TrimSpace(rec.Body.String()); s != expect {
+		t.Errorf("expect response body '%s', but got '%s'", expect, s)
 	}
 }
