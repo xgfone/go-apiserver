@@ -90,6 +90,9 @@ type Context struct {
 	ResponseWriter
 	*http.Request
 
+	// Default: nil
+	Ctx context.Context
+
 	// As a general rule, the data keys starting with "_" are private.
 	Data map[string]any // A set of any key-value pairs
 	Reg1 any            // The register to save the temporary context value.
@@ -149,6 +152,20 @@ func (c *Context) Reset() {
 		HeaderDecoder: c.HeaderDecoder,
 		Translator:    c.Translator,
 		Responder:     c.Responder,
+	}
+}
+
+// Context returns the context.
+func (c *Context) Context() context.Context {
+	switch {
+	case c.Ctx != nil:
+		return c.Ctx
+
+	case c.Request != nil:
+		return c.Request.Context()
+
+	default:
+		return context.Background()
 	}
 }
 
