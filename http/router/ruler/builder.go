@@ -1,4 +1,4 @@
-// Copyright 2023~2024 xgfone
+// Copyright 2023~2025 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -139,6 +139,12 @@ func (b RouteBuilder) Priority(priority int) RouteBuilder {
 // Desc sets the description of the route.
 func (b RouteBuilder) Desc(desc string) RouteBuilder {
 	b.route.Desc = desc
+	return b
+}
+
+// Deprecated marks the route deprecated.
+func (b RouteBuilder) Deprecated(deprecated bool) RouteBuilder {
+	b.route.Deprecated = deprecated
 	return b
 }
 

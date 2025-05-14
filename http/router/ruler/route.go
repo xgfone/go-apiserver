@@ -1,4 +1,4 @@
-// Copyright 2023 xgfone
+// Copyright 2023~2025 xgfone
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,10 +28,12 @@ type Matcher interface {
 
 // Route is a http request route.
 type Route struct {
+	handler http.Handler
+
 	// Priority is the priority of the route.
 	//
 	// The bigger the value, the higher the priority.
-	Priority int `json:"priority" yaml:"priority" xml:"priority"`
+	Priority int
 
 	// Matcher is used to match the request.
 	Matcher Matcher `json:"-"`
@@ -40,12 +42,13 @@ type Route struct {
 	Handler http.Handler `json:"-"`
 
 	// Extra is the extra data of the route.
-	Extra any `json:"extra,omitempty" yaml:"extra,omitempty" xml:"extra,omitempty"`
+	Extra any `json:",omitempty"`
 
 	// Desc is the description of the route, which may be matcher string.
-	Desc string `json:"desc,omitempty" yaml:"desc,omitempty" xml:"desc,omitempty"`
+	Desc string `json:",omitempty"`
 
-	handler http.Handler
+	// Deprecated represents whether the route has been deprecated.
+	Deprecated bool `json:",omitempty"`
 }
 
 // NewRoute returns a new Route.
