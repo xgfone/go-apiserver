@@ -33,7 +33,7 @@ func (b RouteBuilder) DebugVars() RouteBuilder {
 func (b RouteBuilder) DebugRuleRoutes(router *Router) RouteBuilder {
 	return b.Path("/debug/router/rule/routes").GETContext(func(c *reqresp.Context) {
 		var response struct {
-			Routes []Route `json:"routes"`
+			Routes []Route
 		}
 		if router == nil {
 			response.Routes = DefaultRouter.Routes()
