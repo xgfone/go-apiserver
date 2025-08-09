@@ -1,0 +1,56 @@
+// Copyright 2025 xgfone
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package codeint
+
+var (
+	ErrInvalid      = ErrConflict.WithCode(400000).WithMessage("invalid")
+	ErrUnavailable  = ErrConflict.WithCode(400001).WithMessage("unavailable")
+	ErrInconsistent = ErrConflict.WithCode(400002).WithMessage("inconsistent")
+
+	ErrExist    = ErrConflict.WithCode(400003).WithMessage("has existed")
+	ErrNotExist = ErrConflict.WithCode(400004).WithMessage("not exist")
+	ErrFull     = ErrConflict.WithCode(400005).WithMessage("full")
+	ErrNotFull  = ErrConflict.WithCode(400006).WithMessage("not full")
+	ErrUsed     = ErrConflict.WithCode(400007).WithMessage("has used")
+	ErrNotUsed  = ErrConflict.WithCode(400008).WithMessage("not used")
+	ErrDone     = ErrConflict.WithCode(400009).WithMessage("has done")
+	ErrUndone   = ErrConflict.WithCode(400010).WithMessage("has not done")
+	ErrPaid     = ErrConflict.WithCode(400011).WithMessage("has paid")
+	ErrNotPaid  = ErrConflict.WithCode(400012).WithMessage("has not paid")
+
+	ErrDoing = ErrConflict.WithCode(400031).WithMessage("is doing")
+	ErrInUse = ErrConflict.WithCode(400032).WithMessage("in use")
+
+	ErrIllegal      = ErrConflict.WithCode(400040).WithMessage("illegal")
+	ErrIllegalText  = ErrConflict.WithCode(400041).WithMessage("illegal text")
+	ErrIllegalImage = ErrConflict.WithCode(400042).WithMessage("illegal image")
+	ErrIllegalVideo = ErrConflict.WithCode(400043).WithMessage("illegal video")
+
+	ErrInsufficient         = ErrConflict.WithCode(400050).WithMessage("insufficient")
+	ErrInsufficientBalance  = ErrConflict.WithCode(400051).WithMessage("balance is insufficient")
+	ErrInsufficientResource = ErrConflict.WithCode(400052).WithMessage("resource is insufficient")
+	ErrInsufficientNumber   = ErrConflict.WithCode(400053).WithMessage("number is insufficient")
+	ErrInsufficientToken    = ErrConflict.WithCode(400054).WithMessage("token is insufficient")
+)
+
+var (
+	ErrNotRegistered = ErrConflict.WithCode(401001).WithMessage("not registered")
+)
+
+var (
+	ErrForbiddenMissing  = ErrConflict.WithCode(403001).WithMessage("auth is missing")
+	ErrForbiddenDisabled = ErrConflict.WithCode(403002).WithMessage("auth is disabled")
+	ErrForbiddenInvalid  = ErrConflict.WithCode(403010).WithMessage("auth is invalid")
+)
