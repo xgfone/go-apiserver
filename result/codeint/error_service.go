@@ -16,6 +16,7 @@ package codeint
 
 var (
 	ErrInvalid      = ErrConflict.WithCode(400000).WithMessage("invalid")
+	ErrNothing      = ErrConflict.WithCode(400001).WithMessage("nothing")
 	ErrUnavailable  = ErrConflict.WithCode(400001).WithMessage("unavailable")
 	ErrInconsistent = ErrConflict.WithCode(400002).WithMessage("inconsistent")
 
@@ -30,8 +31,11 @@ var (
 	ErrPaid     = ErrConflict.WithCode(400011).WithMessage("has paid")
 	ErrNotPaid  = ErrConflict.WithCode(400012).WithMessage("has not paid")
 
-	ErrDoing = ErrConflict.WithCode(400031).WithMessage("is doing")
-	ErrInUse = ErrConflict.WithCode(400032).WithMessage("in use")
+	ErrInUse      = ErrConflict.WithCode(400032).WithMessage("in use")
+	ErrProcessing = ErrConflict.WithCode(400033).WithMessage("processing")  // Doing
+	ErrInProgress = ErrConflict.WithCode(400033).WithMessage("in progress") // Doing
+	ErrNotStarted = ErrConflict.WithCode(400034).WithMessage("not started")
+	ErrHasEnded   = ErrConflict.WithCode(400035).WithMessage("has ended")
 
 	ErrIllegal      = ErrConflict.WithCode(400040).WithMessage("illegal")
 	ErrIllegalText  = ErrConflict.WithCode(400041).WithMessage("illegal text")
@@ -43,6 +47,7 @@ var (
 	ErrInsufficientResource = ErrConflict.WithCode(400052).WithMessage("resource is insufficient")
 	ErrInsufficientNumber   = ErrConflict.WithCode(400053).WithMessage("number is insufficient")
 	ErrInsufficientToken    = ErrConflict.WithCode(400054).WithMessage("token is insufficient")
+	ErrInsufficientPrize    = ErrConflict.WithCode(400055).WithMessage("prize is insufficient")
 )
 
 var (
