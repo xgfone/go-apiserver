@@ -48,6 +48,8 @@ var (
 	ErrInsufficientNumber   = ErrConflict.WithCode(400053).WithMessage("number is insufficient")
 	ErrInsufficientToken    = ErrConflict.WithCode(400054).WithMessage("token is insufficient")
 	ErrInsufficientPrize    = ErrConflict.WithCode(400055).WithMessage("prize is insufficient")
+
+	ErrUnallowed = ErrConflict.WithCode(400300).WithMessage("unallowed")
 )
 
 var (
