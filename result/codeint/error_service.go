@@ -31,6 +31,7 @@ var (
 	ErrPaid     = ErrConflict.WithCode(400011).WithMessage("has paid")
 	ErrNotPaid  = ErrConflict.WithCode(400012).WithMessage("has not paid")
 
+	ErrUnallowed  = ErrConflict.WithCode(400030).WithMessage("unallowed")
 	ErrInUse      = ErrConflict.WithCode(400032).WithMessage("in use")
 	ErrProcessing = ErrConflict.WithCode(400033).WithMessage("processing")  // Doing
 	ErrInProgress = ErrConflict.WithCode(400033).WithMessage("in progress") // Doing
@@ -48,8 +49,6 @@ var (
 	ErrInsufficientNumber   = ErrConflict.WithCode(400053).WithMessage("number is insufficient")
 	ErrInsufficientToken    = ErrConflict.WithCode(400054).WithMessage("token is insufficient")
 	ErrInsufficientPrize    = ErrConflict.WithCode(400055).WithMessage("prize is insufficient")
-
-	ErrUnallowed = ErrConflict.WithCode(400300).WithMessage("unallowed")
 )
 
 var (
