@@ -17,6 +17,7 @@ package codeint
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -47,6 +48,25 @@ func NewError(code int) Error { return Error{Code: code}.WithStatus(code) }
 // IsZero reports whether e is ZERO.
 func (e Error) IsZero() bool {
 	return e.Code == 0 && e.Message == ""
+}
+
+// Is reports whether e matches the target.
+func (e Error) Is(target error) bool {
+	switch err := target.(type) {
+	case Error:
+		return e.Code == err.Code
+
+	case interface{ GetCode() int }:
+		return e.Code == err.GetCode()
+
+	default:
+		return errors.Is(e.Err, target)
+	}
+}
+
+// GetCode returns the internal error code.
+func (e Error) GetCode() int {
+	return e.Code
 }
 
 // Unwrap returns the wrapped error.
