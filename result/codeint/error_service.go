@@ -30,6 +30,8 @@ var (
 	ErrUndone   = ErrConflict.WithCode(400010).WithMessage("has not done")
 	ErrPaid     = ErrConflict.WithCode(400011).WithMessage("has paid")
 	ErrNotPaid  = ErrConflict.WithCode(400012).WithMessage("has not paid")
+	ErrRefunded = ErrConflict.WithCode(400013).WithMessage("has refunded")
+	ErrReturned = ErrConflict.WithCode(400013).WithMessage("has returned")
 
 	ErrUnallowed  = ErrConflict.WithCode(400030).WithMessage("unallowed")
 	ErrInUse      = ErrConflict.WithCode(400032).WithMessage("in use")
