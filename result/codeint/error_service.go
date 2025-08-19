@@ -33,7 +33,9 @@ var (
 	ErrRefunded = ErrConflict.WithCode(400013).WithMessage("has refunded")
 	ErrReturned = ErrConflict.WithCode(400013).WithMessage("has returned")
 
-	ErrUnallowed  = ErrConflict.WithCode(400030).WithMessage("unallowed")
+	ErrUnallowed   = ErrConflict.WithCode(400030).WithMessage("unallowed")
+	ErrUnsupported = ErrConflict.WithCode(400031).WithMessage("unsupported")
+
 	ErrInUse      = ErrConflict.WithCode(400032).WithMessage("in use")
 	ErrProcessing = ErrConflict.WithCode(400033).WithMessage("processing")  // Doing
 	ErrInProgress = ErrConflict.WithCode(400033).WithMessage("in progress") // Doing
