@@ -24,14 +24,14 @@ import (
 
 // DebugVars registers the vars route with the path "/debug/vars".
 func (b RouteBuilder) DebugVars() RouteBuilder {
-	return b.Path("/debug/vars").GET(expvar.Handler())
+	return b.Path("/debug/vars").Priority(1).GET(expvar.Handler())
 }
 
 // DebugRuleRoutes registers the rule-routes route with the path "/debug/router/rule/routes".
 //
 // If router is nil, use DefaultRouter instead.
 func (b RouteBuilder) DebugRuleRoutes(router *Router) RouteBuilder {
-	return b.Path("/debug/router/rule/routes").GETContext(func(c *reqresp.Context) {
+	return b.Path("/debug/router/rule/routes").Priority(3).GETContext(func(c *reqresp.Context) {
 		var response struct {
 			Routes []Route
 		}
@@ -46,7 +46,7 @@ func (b RouteBuilder) DebugRuleRoutes(router *Router) RouteBuilder {
 
 // DebugProfiles registers the pprof routes with the path prefix "/debug/pprof/".
 func (b RouteBuilder) DebugProfiles() RouteBuilder {
-	router := b.Group("/debug/pprof")
+	router := b.Group("/debug/pprof").Priority(2)
 	router.Path("/profile").GETFunc(pprof.Profile)
 	router.Path("/cmdline").GETFunc(pprof.Cmdline)
 	router.Path("/symbol").GETFunc(pprof.Symbol)
