@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xgfone/go-apiserver/http/handler"
+	"github.com/xgfone/go-toolkit/httpx"
 )
 
 func TestForwarder(t *testing.T) {
@@ -30,7 +30,7 @@ func TestForwarder(t *testing.T) {
 	defer func() { close(exit) }()
 
 	go func() {
-		server := &http.Server{Addr: host, Handler: handler.Handler204}
+		server := &http.Server{Addr: host, Handler: httpx.Handler204}
 		go func() {
 			<-exit
 			_ = server.Shutdown(context.Background())

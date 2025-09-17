@@ -20,9 +20,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
+	"github.com/xgfone/go-toolkit/httpx"
 )
 
 func TestRouteBuilder(t *testing.T) {
@@ -50,21 +50,21 @@ func TestRouteBuilder(t *testing.T) {
 		t.Errorf("expec group prefix '%s', but got '%s'", "/prefix", b.Prefix())
 	}
 
-	b.Extra(http.MethodGet).GET(handler.Handler204)
-	b.Extra(http.MethodPut).PUT(handler.Handler204)
-	b.Extra(http.MethodPost).POST(handler.Handler204)
-	b.Extra(http.MethodDelete).DELETE(handler.Handler204)
-	b.Extra(http.MethodPatch).PATCH(handler.Handler204)
-	b.Extra(http.MethodHead).HEAD(handler.Handler204)
-	b.Extra(http.MethodOptions).OPTIONS(handler.Handler204)
+	b.Extra(http.MethodGet).GET(httpx.Handler204)
+	b.Extra(http.MethodPut).PUT(httpx.Handler204)
+	b.Extra(http.MethodPost).POST(httpx.Handler204)
+	b.Extra(http.MethodDelete).DELETE(httpx.Handler204)
+	b.Extra(http.MethodPatch).PATCH(httpx.Handler204)
+	b.Extra(http.MethodHead).HEAD(httpx.Handler204)
+	b.Extra(http.MethodOptions).OPTIONS(httpx.Handler204)
 
-	b.Extra(http.MethodGet).GETFunc(handler.Handler204.(http.HandlerFunc))
-	b.Extra(http.MethodPut).PUTFunc(handler.Handler204.(http.HandlerFunc))
-	b.Extra(http.MethodPost).POSTFunc(handler.Handler204.(http.HandlerFunc))
-	b.Extra(http.MethodHead).HEADFunc(handler.Handler204.(http.HandlerFunc))
-	b.Extra(http.MethodPatch).PATCHFunc(handler.Handler204.(http.HandlerFunc))
-	b.Extra(http.MethodDelete).DELETEFunc(handler.Handler204.(http.HandlerFunc))
-	b.Extra(http.MethodOptions).OPTIONSFunc(handler.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodGet).GETFunc(httpx.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodPut).PUTFunc(httpx.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodPost).POSTFunc(httpx.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodHead).HEADFunc(httpx.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodPatch).PATCHFunc(httpx.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodDelete).DELETEFunc(httpx.Handler204.(http.HandlerFunc))
+	b.Extra(http.MethodOptions).OPTIONSFunc(httpx.Handler204.(http.HandlerFunc))
 
 	chandler := func(c *reqresp.Context) {}
 	b.Extra(http.MethodGet).GETContext(reqresp.Handler(chandler))

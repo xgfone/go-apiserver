@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-toolkit/jsonx"
 )
 
@@ -117,7 +116,7 @@ type Responder interface {
 // which will try to assert responder to the types as follows, and call it:
 //
 //	Responder
-//	handler.JSONResponder
+//	interface{ JSON(code int, value any) }
 //
 // For other types, it will panic.
 func DefaultRespond(responder any, response Response) {
@@ -125,7 +124,7 @@ func DefaultRespond(responder any, response Response) {
 	case Responder:
 		resp.Respond(response)
 
-	case handler.JSONResponder:
+	case interface{ JSON(code int, value any) }:
 		if response.IsZero() {
 			resp.JSON(response.StatusCode(), nil)
 		} else {

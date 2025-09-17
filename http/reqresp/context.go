@@ -29,7 +29,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/internal/pools"
 	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-binder"
@@ -556,12 +555,12 @@ func (c *Context) HTML(code int, text string) {
 
 // JSON sends a JSON response with the status code.
 func (c *Context) JSON(code int, v any) {
-	c.AppendError(handler.JSON(c.ResponseWriter, code, v))
+	c.AppendError(httpx.JSON(c.ResponseWriter, code, v))
 }
 
 // XML sends a XML response with the status code.
 func (c *Context) XML(code int, v any) {
-	c.AppendError(handler.XML(c.ResponseWriter, code, v))
+	c.AppendError(httpx.XML(c.ResponseWriter, code, v))
 }
 
 // Stream sends a streaming response with the status code and the content type.

@@ -4,7 +4,7 @@ require (
 	github.com/xgfone/go-binder v0.8.2
 	github.com/xgfone/go-defaults v0.21.0
 	github.com/xgfone/go-http-matcher v0.2.0
-	github.com/xgfone/go-toolkit v0.9.0
+	github.com/xgfone/go-toolkit v0.10.0
 )
 
 require (

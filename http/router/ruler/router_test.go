@@ -20,15 +20,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/http/handler"
+	"github.com/xgfone/go-toolkit/httpx"
 )
 
 func TestRouter(t *testing.T) {
 	r := NewRouter()
 	group := r.Group("/prefix")
-	group.Path("/path").Host("localhost").GET(handler.Handler204)
-	group.PathPrefix("/path").Host("localhost").GET(handler.Handler400)
-	group.Host("localhost").Path("/path").GET(handler.Handler500)
+	group.Path("/path").Host("localhost").GET(httpx.Handler204)
+	group.PathPrefix("/path").Host("localhost").GET(httpx.Handler400)
+	group.Host("localhost").Path("/path").GET(httpx.Handler500)
 
 	expect1 := "(Host(`localhost`) && Path(`/prefix/path`) && Method(`GET`))"
 	expect2 := "(Host(`localhost`) && PathPrefix(`/prefix/path`) && Method(`GET`))"

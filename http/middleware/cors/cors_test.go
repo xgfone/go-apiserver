@@ -20,11 +20,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/xgfone/go-apiserver/http/handler"
+	"github.com/xgfone/go-toolkit/httpx"
 )
 
 func TestCORS(t *testing.T) {
-	handler := CORS(Config{}).Handler(handler.Handler204)
+	handler := CORS(Config{}).Handler(httpx.Handler204)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "http://localhost", nil)

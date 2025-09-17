@@ -19,8 +19,8 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/xgfone/go-apiserver/http/handler"
 	"github.com/xgfone/go-apiserver/http/middleware"
+	"github.com/xgfone/go-toolkit/httpx"
 )
 
 // DefaultRouter is the default router.
@@ -31,7 +31,7 @@ type Router struct {
 	// NotFound is used when the manager is used as http.Handler
 	// and does not find the route.
 	//
-	// Default: handler.Handler404
+	// Default: httpx.Handler404
 	NotFound http.Handler
 
 	// Middlewares is used to manage the middlewares and applied to each route
@@ -60,7 +60,7 @@ func (r *Router) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if r.NotFound != nil {
 		r.NotFound.ServeHTTP(rw, req)
 	} else {
-		handler.Handler404.ServeHTTP(rw, req)
+		httpx.Handler404.ServeHTTP(rw, req)
 	}
 }
 
