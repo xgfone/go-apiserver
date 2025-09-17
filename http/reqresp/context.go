@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/http/handler"
-	"github.com/xgfone/go-apiserver/http/header"
 	"github.com/xgfone/go-apiserver/internal/pools"
 	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-binder"
@@ -250,14 +249,6 @@ func (c *Context) Charset() string { return httpx.Charset(c.Request.Header) }
 //
 // If there is no the request header "Accept", return nil.
 func (c *Context) Accept() []string { return httpx.Accept(c.Request.Header) }
-
-// Scheme returns the HTTP protocol scheme, `http` or `https`.
-func (c *Context) Scheme() string {
-	if c.Request.TLS != nil {
-		return "https"
-	}
-	return header.Scheme(c.Request.Header)
-}
 
 // ---------------------------------------------------------------------------
 // Data
@@ -495,7 +486,9 @@ func (c *Context) SetConnectionClose() {
 //
 // If ct is "", do nothing.
 func (c *Context) SetContentType(ct string) {
-	header.SetContentType(c.ResponseWriter.Header(), ct)
+	if ct != "" {
+		c.ResponseWriter.Header().Set(httpx.HeaderContentType, ct)
+	}
 }
 
 // NoContent is the alias of WriteHeader.
