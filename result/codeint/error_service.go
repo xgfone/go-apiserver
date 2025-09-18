@@ -54,10 +54,12 @@ var (
 	ErrInsufficientToken    = ErrConflict.WithCode(400054).WithMessage("token is insufficient")
 	ErrInsufficientPrize    = ErrConflict.WithCode(400055).WithMessage("prize is insufficient")
 	ErrInsufficientPaper    = ErrConflict.WithCode(400056).WithMessage("paper is insufficient")
+	ErrInsufficientPoint    = ErrConflict.WithCode(400057).WithMessage("point is insufficient")
 )
 
 var (
 	ErrNotRegistered = ErrConflict.WithCode(401001).WithMessage("not registered")
+	ErrUserDisabled  = ErrConflict.WithCode(401002).WithMessage("user is disabled")
 )
 
 var (
