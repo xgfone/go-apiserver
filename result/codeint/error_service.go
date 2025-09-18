@@ -60,10 +60,8 @@ var (
 var (
 	ErrNotRegistered = ErrConflict.WithCode(401001).WithMessage("not registered")
 	ErrUserDisabled  = ErrConflict.WithCode(401002).WithMessage("user is disabled")
-)
 
-var (
-	ErrForbiddenMissing  = ErrConflict.WithCode(403001).WithMessage("auth is missing")
-	ErrForbiddenDisabled = ErrConflict.WithCode(403002).WithMessage("auth is disabled")
-	ErrForbiddenInvalid  = ErrConflict.WithCode(403010).WithMessage("auth is invalid")
+	ErrAuthMissing = ErrConflict.WithCode(401010).WithMessage("auth is missing")
+	ErrAuthInvalid = ErrConflict.WithCode(401011).WithMessage("auth is invalid")
+	ErrAuthExpired = ErrConflict.WithCode(401012).WithMessage("auth is expired")
 )
