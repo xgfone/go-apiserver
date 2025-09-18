@@ -53,6 +53,7 @@ var (
 	ErrInsufficientNumber   = ErrConflict.WithCode(400053).WithMessage("number is insufficient")
 	ErrInsufficientToken    = ErrConflict.WithCode(400054).WithMessage("token is insufficient")
 	ErrInsufficientPrize    = ErrConflict.WithCode(400055).WithMessage("prize is insufficient")
+	ErrInsufficientPaper    = ErrConflict.WithCode(400056).WithMessage("paper is insufficient")
 )
 
 var (
