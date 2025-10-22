@@ -20,6 +20,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/xgfone/go-apiserver/http/router"
@@ -54,10 +56,20 @@ func New(addr string, handler http.Handler) *http.Server {
 
 // Serve starts the http server with server.Addr until it is stopped.
 func Serve(server *http.Server) {
-	ln, err := net.Listen("tcp", server.Addr)
+	addr := server.Addr
+	proto := "tcp"
+
+	if strings.Contains(server.Addr, "://") {
+		if u, err := url.Parse(server.Addr); err == nil && u.Scheme != "" {
+			proto = u.Scheme
+			addr = u.Host
+		}
+	}
+
+	ln, err := net.Listen(proto, addr)
 	if err != nil {
 		slog.Error("fail to open the listener on the address",
-			"protocol", "tcp", "addr", server.Addr, "err", err)
+			"protocol", proto, "addr", addr, "err", err)
 		return
 	}
 
