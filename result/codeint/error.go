@@ -21,3 +21,8 @@ import "github.com/xgfone/go-toolkit/codeint"
 
 // Error is used to stand for an error based the integer code.
 type Error = codeint.Error
+
+// NewError returns a new Error with the code.
+func NewError(code int) Error {
+	return codeint.NewError(code)
+}
