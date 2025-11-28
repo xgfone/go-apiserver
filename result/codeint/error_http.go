@@ -14,45 +14,21 @@
 
 package codeint
 
-import (
-	"net/http"
-
-	"github.com/xgfone/go-toolkit/httpx"
-)
+import "github.com/xgfone/go-toolkit/codeint"
 
 // Pre-define some errors with the status code.
 var (
-	ErrMissingContentType = NewError(http.StatusBadRequest).WithMessage("missing the header Content-Type")
+	ErrBadRequest           = codeint.ErrBadRequest           // 400
+	ErrUnauthorized         = codeint.ErrUnauthorized         // 401
+	ErrForbidden            = codeint.ErrForbidden            // 403
+	ErrNotFound             = codeint.ErrNotFound             // 404
+	ErrConflict             = codeint.ErrConflict             // 409
+	ErrUnsupportedMediaType = codeint.ErrUnsupportedMediaType // 415
+	ErrTooManyRequests      = codeint.ErrTooManyRequests      // 429
+	ErrInternalServerError  = codeint.ErrInternalServerError  // 500
+	ErrBadGateway           = codeint.ErrBadGateway           // 502
+	ErrServiceUnavailable   = codeint.ErrServiceUnavailable   // 503
+	ErrGatewayTimeout       = codeint.ErrGatewayTimeout       // 504
 
-	ErrBadRequest           = NewError(http.StatusBadRequest)           // 400
-	ErrUnauthorized         = NewError(http.StatusUnauthorized)         // 401
-	ErrForbidden            = NewError(http.StatusForbidden)            // 403
-	ErrNotFound             = NewError(http.StatusNotFound)             // 404
-	ErrConflict             = NewError(http.StatusConflict)             // 409
-	ErrUnsupportedMediaType = NewError(http.StatusUnsupportedMediaType) // 415
-	ErrTooManyRequests      = NewError(http.StatusTooManyRequests)      // 429
-	ErrInternalServerError  = NewError(http.StatusInternalServerError)  // 500
-	ErrBadGateway           = NewError(http.StatusBadGateway)           // 502
-	ErrServiceUnavailable   = NewError(http.StatusServiceUnavailable)   // 503
-	ErrGatewayTimeout       = NewError(http.StatusGatewayTimeout)       // 504
+	ErrMissingContentType = codeint.ErrMissingContentType
 )
-
-// StatusCode returns the http status code.
-//
-// If Status is not equal to 0, return it.
-// Or, return Code if it is in [100, 599].
-// Or, return 500.
-func (e Error) StatusCode() int {
-	if e.Status != 0 {
-		return e.Status
-	}
-	if 100 <= e.Code && e.Code < 600 {
-		return e.Code
-	}
-	return 500
-}
-
-// ServeHTTP implements the interface http.Handler.
-func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	_ = httpx.JSON(w, e.StatusCode(), e)
-}

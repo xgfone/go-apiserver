@@ -22,7 +22,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/result"
-	"github.com/xgfone/go-apiserver/result/codeint"
+	"github.com/xgfone/go-toolkit/codeint"
 	"github.com/xgfone/go-toolkit/runtimex"
 )
 

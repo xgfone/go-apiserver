@@ -20,7 +20,7 @@ import (
 	"strconv"
 
 	"github.com/xgfone/go-apiserver/result"
-	"github.com/xgfone/go-apiserver/result/codeint"
+	"github.com/xgfone/go-toolkit/codeint"
 )
 
 // Handler is a handler based on Context to handle the http request.

@@ -23,7 +23,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
 	"github.com/xgfone/go-apiserver/result"
-	"github.com/xgfone/go-apiserver/result/codeint"
+	"github.com/xgfone/go-toolkit/codeint"
 )
 
 func TestHandlerWithError(t *testing.T) {
