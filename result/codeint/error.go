@@ -13,6 +13,8 @@
 // limitations under the License.
 
 // Package codeint provides an error based on the integer code.
+//
+// DEPRECATED: Use github.com/xgfone/go-toolkit/codeint instead.
 package codeint
 
 import "github.com/xgfone/go-toolkit/codeint"
