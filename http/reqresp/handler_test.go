@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-toolkit/codeint"
+	"github.com/xgfone/go-toolkit/result"
 )
 
 func TestHandlerWithError(t *testing.T) {
@@ -99,11 +99,11 @@ func TestHandlerWithError(t *testing.T) {
 		t.Errorf("expect status code %d, but got %d", 400, rec.Code)
 	}
 
-	_respond := result.Respond
-	defer func() { result.Respond = _respond }()
-	result.Respond = func(responder any, _ result.Response) {
+	_respond := result.GetRespondFunc()
+	defer func() { result.SetRespondFunc(_respond) }()
+	result.SetRespondFunc(func(responder any, _ result.Response) {
 		responder.(*reqresp.Context).ResponseWriter.WriteHeader(204)
-	}
+	})
 
 	rec = httptest.NewRecorder()
 	resetContextResponse(rec)

@@ -20,8 +20,8 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-apiserver/result"
 	"github.com/xgfone/go-toolkit/codeint"
+	"github.com/xgfone/go-toolkit/result"
 )
 
 // HeaderAction is the http header to store the action method.
