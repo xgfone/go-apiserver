@@ -31,10 +31,10 @@ import (
 
 	"github.com/xgfone/go-apiserver/internal/pools"
 	"github.com/xgfone/go-binder"
-	"github.com/xgfone/go-defaults"
 	"github.com/xgfone/go-toolkit/httpx"
 	"github.com/xgfone/go-toolkit/result"
 	"github.com/xgfone/go-toolkit/unsafex"
+	"github.com/xgfone/go-toolkit/validation"
 )
 
 func init() {
@@ -49,7 +49,7 @@ func init() {
 
 			err := binder.BindStructToURLValues(dst, "query", queries)
 			if err == nil {
-				err = defaults.ValidateStruct(dst)
+				err = validation.Validate(context.Background(), dst)
 			}
 
 			return err

@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/http/router"
-	"github.com/xgfone/go-defaults"
 )
 
 // ServeWithListener is used to start the http server with listener
@@ -92,12 +91,6 @@ func Stop(server *http.Server) {
 
 // DefaultServeWithListener is the default implementation to start the http server.
 func DefaultServeWithListener(server *http.Server, ln net.Listener) {
-	defaults.OnExit(func() { Stop(server) })
-	serve(server, ln)
-	defaults.Exit(0)
-}
-
-func serve(server *http.Server, ln net.Listener) {
 	slog.Info("start the http server", "addr", server.Addr)
 	defer slog.Info("stop the http server", "addr", server.Addr)
 	_ = server.Serve(ln)

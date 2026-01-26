@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/xgfone/go-apiserver/http/reqresp"
-	"github.com/xgfone/go-defaults"
 	"github.com/xgfone/go-toolkit/runtimex"
 )
 
@@ -69,12 +68,15 @@ func Logger(next http.Handler) http.Handler {
 		defer putattrs(attrs)
 
 		attrs.Append(
-			slog.String("reqid", defaults.GetRequestID(ctx, r)),
 			slog.String("raddr", r.RemoteAddr),
 			slog.String("method", r.Method),
 			slog.String("host", r.Host),
 			slog.String("path", r.URL.Path),
 		)
+
+		if reqid := r.Header.Get("X-Request-Id"); reqid != "" {
+			attrs.Append(slog.String("reqid", reqid))
+		}
 
 		if action != "" {
 			attrs.Append(slog.String("action", action))

@@ -25,9 +25,9 @@ import (
 
 func TestContextBinder(t *testing.T) {
 	var req struct {
-		Int    int    `default:"222"`
-		Uint   int    `default:"333"`
-		String string `default:"abc"`
+		Int    int
+		Uint   int
+		String string
 	}
 	req.Int = 111
 
@@ -47,8 +47,8 @@ func TestContextBinder(t *testing.T) {
 	if req.Uint != 444 {
 		t.Errorf("expect Uint is equal to %d, but got %d", 444, req.Uint)
 	}
-	if req.String != "abc" {
-		t.Errorf("expect String is equal to '%s', but '%s'", "abc", req.String)
+	if req.String != "" {
+		t.Errorf("expect String is equal to '%s', but '%s'", "", req.String)
 	}
 }
 
