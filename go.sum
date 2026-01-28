@@ -1,5 +1,5 @@
-github.com/xgfone/go-binder v0.9.0 h1:hf58AdWxeaT4BSy4EyouWCsPc3xQRLvJ4pAAXMHW9eg=
-github.com/xgfone/go-binder v0.9.0/go.mod h1:Fw3DcuV3vkdKJ/rS+ULeTRiTETksbMVp/KiKrG3QawE=
+github.com/xgfone/go-binder v0.9.1 h1:bqj5R545Br/DeHZ3+doNF0phh3lE8gBY7uCpdie/4x4=
+github.com/xgfone/go-binder v0.9.1/go.mod h1:Fw3DcuV3vkdKJ/rS+ULeTRiTETksbMVp/KiKrG3QawE=
 github.com/xgfone/go-cast v0.10.0 h1:ugkGKoeps3u4Zb3/RLvTip94T0NRDetuw3GQKaFO/M0=
 github.com/xgfone/go-cast v0.10.0/go.mod h1:b+oRunHDgaYsEIELAEIgoWjcI1jawrttujVFgJzc1x0=
 github.com/xgfone/go-http-matcher v0.2.0 h1:PJ0MKKfwJyX0WzrgVL6n3OrErZcNIIX2a9A16eF7enU=
