@@ -19,6 +19,7 @@ import (
 
 	"github.com/xgfone/go-apiserver/http/middleware"
 	"github.com/xgfone/go-apiserver/http/reqresp"
+	"github.com/xgfone/go-toolkit/result"
 )
 
 // Matcher is used to check whether the route matches the request.
@@ -70,7 +71,8 @@ func (r Route) WithExtra(extra any) Route {
 
 // ServeHTTP implements the interface http.Handler.
 func (r *Route) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if c := reqresp.GetContext(req.Context()); c != nil {
+	c := reqresp.GetContext(req.Context())
+	if c != nil {
 		c.Route = r
 	}
 
@@ -78,6 +80,10 @@ func (r *Route) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		r.handler.ServeHTTP(rw, req)
 	} else {
 		r.Handler.ServeHTTP(rw, req)
+	}
+
+	if c != nil && !c.ResponseWriter.WroteHeader() {
+		result.Err(c.Err).Respond(c)
 	}
 }
 
