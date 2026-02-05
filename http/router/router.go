@@ -58,9 +58,13 @@ func (r *Router) Use(ms ...middleware.Middleware) *Router {
 
 // UseFunc appends a set of function middlewares into the middleware manager.
 func (r *Router) UseFunc(ms ...middleware.MiddlewareFunc) *Router {
-	for _, m := range ms {
-		r.Middlewares.Append(m)
-	}
+	r.Middlewares.AppendFunc(ms...)
+	return r
+}
+
+// UseContextHandler appends the context handler middlewares that act on the later handler.
+func (r *Router) UseContextHandler(handlers ...middleware.ContextHandler) *Router {
+	r.Middlewares.AppendContextHandler(handlers...)
 	return r
 }
 

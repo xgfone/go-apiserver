@@ -24,6 +24,7 @@ import (
 	"github.com/xgfone/go-apiserver/http/middleware/path"
 	"github.com/xgfone/go-apiserver/http/middleware/recover"
 	"github.com/xgfone/go-apiserver/http/middleware/requestid"
+	"github.com/xgfone/go-toolkit/slicex"
 )
 
 var (
@@ -74,6 +75,25 @@ func (ms Middlewares) Clone() Middlewares {
 // Sort sorts itself by the priority from high to low.
 func (ms Middlewares) Sort() {
 	Sort(ms)
+}
+
+type _AddFunc func(...Middleware) Middlewares
+
+func addMiddlewares[M Middleware](olds Middlewares, f _AddFunc, news []M) Middlewares {
+	switch _len := len(news); _len {
+	case 0:
+		return olds
+
+	case 1:
+		return f(news[0])
+
+	case 2:
+		return f(news[0], news[1])
+
+	default:
+		_ms := slicex.To(news, func(h M) Middleware { return h })
+		return f(_ms...)
+	}
 }
 
 // InsertFunc inserts a set of function middlewares into the front

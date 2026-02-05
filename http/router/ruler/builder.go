@@ -95,6 +95,12 @@ func (b RouteBuilder) UseFunc(middlewares ...middleware.MiddlewareFunc) RouteBui
 	return b
 }
 
+// UseContextHandler appends the context handler middlewares that act on the later handler.
+func (b RouteBuilder) UseContextHandler(handlers ...middleware.ContextHandler) RouteBuilder {
+	b.mdws = b.mdws.AppendContextHandler(handlers...)
+	return b
+}
+
 // Auth resets the auth middleware and return the a new route builder.
 func (b RouteBuilder) Auth(auth middleware.Middleware) RouteBuilder {
 	b.auth = auth

@@ -42,6 +42,28 @@ func (ch ContextHandler) Handler(next http.Handler) http.Handler {
 	})
 }
 
+// InsertContextHandler inserts a set of context handlers as middlewares
+// into the front and return a new middleware slice.
+func (ms Middlewares) InsertContextHandler(hs ...ContextHandler) Middlewares {
+	return addMiddlewares(ms, ms.Insert, hs)
+}
+
+// AppendContextHandler appends a set of context handlers as middlewares
+// and return a new middleware slice.
+func (ms Middlewares) AppendContextHandler(hs ...ContextHandler) Middlewares {
+	return addMiddlewares(ms, ms.Append, hs)
+}
+
+// InsertContextHandler inserts a set of context handlers as middlewares into the front.
+func (m *Manager) InsertContextHandler(hs ...ContextHandler) {
+	managerAddMiddlewares(m, m.mdws.Insert, hs)
+}
+
+// AppendContextHandler appends a set of context handlers as middlewares.
+func (m *Manager) AppendContextHandler(hs ...ContextHandler) {
+	managerAddMiddlewares(m, m.mdws.Append, hs)
+}
+
 // Or creates a middleware that executes the given ContextHandlers in order
 // and stops at the first handler that returns nil error (logical OR).
 //
