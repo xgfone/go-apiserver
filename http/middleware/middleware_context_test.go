@@ -491,3 +491,294 @@ func TestMiddlewareIntegration(t *testing.T) {
 		t.Error("expected next to be called when all handlers succeed")
 	}
 }
+
+func TestContextHandlerHandler(t *testing.T) {
+	tests := []struct {
+		name        string
+		handler     ContextHandler
+		expectError bool
+		expectNext  bool
+	}{
+		{
+			name: "handler returns nil error",
+			handler: func(c *reqresp.Context) error {
+				c.Data = map[string]any{"test": "success"}
+				return nil
+			},
+			expectError: false,
+			expectNext:  true,
+		},
+		{
+			name: "handler returns error",
+			handler: func(c *reqresp.Context) error {
+				return errors.New("handler error")
+			},
+			expectError: true,
+			expectNext:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a ContextHandler
+			ch := tt.handler
+
+			// Test that it implements Middleware interface
+			var m Middleware = ch
+			_ = m // Use the variable to avoid unused variable warning
+
+			nextCalled := false
+			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				nextCalled = true
+			})
+
+			// Get the handler from the middleware
+			handler := ch.Handler(next)
+
+			req := httptest.NewRequest("GET", "/test", nil)
+			ctx := &reqresp.Context{
+				Request: req,
+			}
+			req = req.WithContext(reqresp.SetContext(req.Context(), ctx))
+
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+
+			// Check if next was called
+			if nextCalled != tt.expectNext {
+				t.Errorf("next called = %v, want %v", nextCalled, tt.expectNext)
+			}
+
+			// Check if error was set
+			if tt.expectError && ctx.Err == nil {
+				t.Error("expected error in context, got nil")
+			} else if !tt.expectError && ctx.Err != nil {
+				t.Errorf("unexpected error in context: %v", ctx.Err)
+			}
+
+			// For the success case, check if data was set
+			if !tt.expectError && tt.name == "handler returns nil error" {
+				if ctx.Data == nil {
+					t.Error("expected data to be set by handler")
+				} else if val, ok := ctx.Data["test"]; !ok || val != "success" {
+					t.Errorf("expected test='success', got %v", val)
+				}
+			}
+		})
+	}
+}
+
+func TestContextHandlerHandlerMissingContext(t *testing.T) {
+	// Test ContextHandler.Handler when context is missing
+	ch := ContextHandler(func(c *reqresp.Context) error {
+		return nil
+	})
+
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("next should not be called when context is missing")
+	})
+
+	handler := ch.Handler(next)
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	// Don't add context to request
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, rec.Code)
+	}
+
+	expectedBody := "missing reqresp.Context"
+	if body := rec.Body.String(); body != expectedBody {
+		t.Errorf("expected body %q, got %q", expectedBody, body)
+	}
+}
+
+func TestContextHandlerAsMiddleware(t *testing.T) {
+	// Test that ContextHandler can be used as a Middleware in a chain
+	var calls []string
+
+	// Create ContextHandlers
+	ch1 := ContextHandler(func(c *reqresp.Context) error {
+		calls = append(calls, "ch1")
+		return nil
+	})
+
+	ch2 := ContextHandler(func(c *reqresp.Context) error {
+		calls = append(calls, "ch2")
+		return errors.New("ch2 error")
+	})
+
+	ch3 := ContextHandler(func(c *reqresp.Context) error {
+		calls = append(calls, "ch3")
+		return nil
+	})
+
+	// Create middlewares from ContextHandlers
+	m1 := ch1
+	m2 := ch2
+	m3 := ch3
+
+	// Create a chain of middlewares
+	chain := Middlewares{m1, m2, m3}
+
+	nextCalled := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nextCalled = true
+		calls = append(calls, "next")
+	})
+
+	handler := chain.Handler(next)
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	ctx := &reqresp.Context{
+		Request: req,
+	}
+	req = req.WithContext(reqresp.SetContext(req.Context(), ctx))
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	// ch1 should succeed and call ch2
+	// ch2 should fail and stop the chain
+	// ch3 should not be called
+	// next should not be called
+	expectedCalls := []string{"ch1", "ch2"}
+	if len(calls) != len(expectedCalls) {
+		t.Errorf("expected %d calls, got %d: %v", len(expectedCalls), len(calls), calls)
+	} else {
+		for i, expected := range expectedCalls {
+			if calls[i] != expected {
+				t.Errorf("call %d: expected %s, got %s", i, expected, calls[i])
+			}
+		}
+	}
+
+	if nextCalled {
+		t.Error("expected next NOT to be called when ch2 fails")
+	}
+
+	if ctx.Err == nil {
+		t.Error("expected error in context from ch2")
+	} else if ctx.Err.Error() != "ch2 error" {
+		t.Errorf("expected error 'ch2 error', got %v", ctx.Err)
+	}
+}
+
+func TestContextHandlerWithOrMiddleware(t *testing.T) {
+	// Test that ContextHandler works correctly with Or middleware
+	var calls []int
+
+	ch1 := ContextHandler(func(c *reqresp.Context) error {
+		calls = append(calls, 1)
+		return errors.New("ch1 error")
+	})
+
+	ch2 := ContextHandler(func(c *reqresp.Context) error {
+		calls = append(calls, 2)
+		return nil // Success
+	})
+
+	// Create Or middleware using ContextHandlers
+	orMiddleware := Or("test-or", 10, ch1, ch2)
+
+	nextCalled := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nextCalled = true
+		calls = append(calls, 3)
+	})
+
+	handler := orMiddleware.Handler(next)
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	ctx := &reqresp.Context{
+		Request: req,
+	}
+	req = req.WithContext(reqresp.SetContext(req.Context(), ctx))
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	// ch1 should be called and fail
+	// ch2 should be called and succeed
+	// next should be called
+	expectedCalls := []int{1, 2, 3}
+	if len(calls) != len(expectedCalls) {
+		t.Errorf("expected %d calls, got %d: %v", len(expectedCalls), len(calls), calls)
+	} else {
+		for i, expected := range expectedCalls {
+			if calls[i] != expected {
+				t.Errorf("call %d: expected %d, got %d", i, expected, calls[i])
+			}
+		}
+	}
+
+	if !nextCalled {
+		t.Error("expected next to be called when ch2 succeeds")
+	}
+
+	if ctx.Err != nil {
+		t.Errorf("unexpected error in context: %v", ctx.Err)
+	}
+}
+
+func TestContextHandlerWithAndMiddleware(t *testing.T) {
+	// Test that ContextHandler works correctly with And middleware
+	var calls []int
+
+	ch1 := ContextHandler(func(c *reqresp.Context) error {
+		calls = append(calls, 1)
+		return nil // Success
+	})
+
+	ch2 := ContextHandler(func(c *reqresp.Context) error {
+		calls = append(calls, 2)
+		return errors.New("ch2 error") // Fail
+	})
+
+	// Create And middleware using ContextHandlers
+	andMiddleware := And("test-and", 10, ch1, ch2)
+
+	nextCalled := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nextCalled = true
+		calls = append(calls, 3)
+	})
+
+	handler := andMiddleware.Handler(next)
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	ctx := &reqresp.Context{
+		Request: req,
+	}
+	req = req.WithContext(reqresp.SetContext(req.Context(), ctx))
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	// ch1 should be called and succeed
+	// ch2 should be called and fail
+	// next should NOT be called
+	expectedCalls := []int{1, 2}
+	if len(calls) != len(expectedCalls) {
+		t.Errorf("expected %d calls, got %d: %v", len(expectedCalls), len(calls), calls)
+	} else {
+		for i, expected := range expectedCalls {
+			if calls[i] != expected {
+				t.Errorf("call %d: expected %d, got %d", i, expected, calls[i])
+			}
+		}
+	}
+
+	if nextCalled {
+		t.Error("expected next NOT to be called when ch2 fails")
+	}
+
+	if ctx.Err == nil {
+		t.Error("expected error in context from ch2")
+	} else if ctx.Err.Error() != "ch2 error" {
+		t.Errorf("expected error 'ch2 error', got %v", ctx.Err)
+	}
+}

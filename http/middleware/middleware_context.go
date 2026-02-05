@@ -21,10 +21,26 @@ import (
 	"github.com/xgfone/go-apiserver/http/reqresp"
 )
 
+var _ Middleware = ContextHandler(nil)
+
 // ContextHandler is a handler function that processes an HTTP request
 // using the reqresp.Context object. It returns an error if the request
 // cannot be processed successfully.
-type ContextHandler = reqresp.HandlerWithError
+type ContextHandler reqresp.HandlerWithError
+
+// Handler implements the Middleware interface.
+func (ch ContextHandler) Handler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if c := reqresp.GetContext(r.Context()); c == nil {
+			w.WriteHeader(500)
+			_, _ = io.WriteString(w, "missing reqresp.Context")
+		} else if err := ch(c); err != nil {
+			c.AppendError(err)
+		} else {
+			next.ServeHTTP(w, r)
+		}
+	})
+}
 
 // Or creates a middleware that executes the given ContextHandlers in order
 // and stops at the first handler that returns nil error (logical OR).
@@ -114,7 +130,7 @@ func convertContextHandlers(handlers []ContextHandler, next http.Handler, fast b
 		c := reqresp.GetContext(r.Context())
 		if c == nil {
 			w.WriteHeader(500)
-			io.WriteString(w, "missing reqresp.Context")
+			_, _ = io.WriteString(w, "missing reqresp.Context")
 			return
 		}
 
