@@ -6,5 +6,5 @@ github.com/xgfone/go-http-matcher v0.2.0 h1:PJ0MKKfwJyX0WzrgVL6n3OrErZcNIIX2a9A1
 github.com/xgfone/go-http-matcher v0.2.0/go.mod h1:fyihMHUrUF1Oq+FVktlF0k+CQo0FtitsmE7aGtpuyCM=
 github.com/xgfone/go-structs v0.5.0 h1:tcztXqkd6CfOiJo9SdKY67PZYP4BpGXF7YYzCzLkPwo=
 github.com/xgfone/go-structs v0.5.0/go.mod h1:WUnlvkgHfm0MdCjz5++ri699kyt4uTZLATJNZ5+OYQI=
-github.com/xgfone/go-toolkit v0.15.0 h1:0xS3h8X1UhnbIbCo8niTpUeI3edjLQKzWWIMyM6a718=
-github.com/xgfone/go-toolkit v0.15.0/go.mod h1:eOWnIK/acAJOoqEOtWnvuY0Pbn6cZ0DP/Oeoyn17QHw=
+github.com/xgfone/go-toolkit v0.16.0 h1:NtTghBcdfSvZTD+Ky+5Tzo75MzEoPRSdCaIYDLanc/Y=
+github.com/xgfone/go-toolkit v0.16.0/go.mod h1:eOWnIK/acAJOoqEOtWnvuY0Pbn6cZ0DP/Oeoyn17QHw=
