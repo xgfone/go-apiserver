@@ -52,18 +52,6 @@ type MiddlewareFunc func(next http.Handler) http.Handler
 // Handler implements the interface Middleware.
 func (f MiddlewareFunc) Handler(next http.Handler) http.Handler { return f(next) }
 
-func funcs2mws(fs []MiddlewareFunc) Middlewares {
-	if len(fs) == 0 {
-		return nil
-	}
-
-	ms := make(Middlewares, len(fs))
-	for i, f := range fs {
-		ms[i] = f
-	}
-	return ms
-}
-
 // Middlewares is a set of middlewares.
 type Middlewares []Middleware
 
@@ -99,37 +87,13 @@ func addMiddlewares[M Middleware](olds Middlewares, f _AddFunc, news []M) Middle
 // InsertFunc inserts a set of function middlewares into the front
 // and return a new middleware slice.
 func (ms Middlewares) InsertFunc(m ...MiddlewareFunc) Middlewares {
-	switch _len := len(m); _len {
-	case 0:
-		return ms
-
-	case 1:
-		return ms.Insert(m[0])
-
-	case 2:
-		return ms.Insert(m[0], m[1])
-
-	default:
-		return ms.Insert(funcs2mws(m)...)
-	}
+	return addMiddlewares(ms, ms.Insert, m)
 }
 
 // AppendFunc appends a set of function middlewares
 // and return a new middleware slice.
 func (ms Middlewares) AppendFunc(m ...MiddlewareFunc) Middlewares {
-	switch _len := len(m); _len {
-	case 0:
-		return ms
-
-	case 1:
-		return ms.Append(m[0])
-
-	case 2:
-		return ms.Append(m[0], m[1])
-
-	default:
-		return ms.Append(funcs2mws(m)...)
-	}
+	return addMiddlewares(ms, ms.Append, m)
 }
 
 // Insert inserts a set of middlewares into the front
