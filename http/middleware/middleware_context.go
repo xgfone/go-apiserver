@@ -82,8 +82,16 @@ func (m *Manager) AppendContextHandler(hs ...ContextHandler) {
 //     and the request does not proceed to the next handler.
 //   - If no handlers are provided, the middleware acts as a pass-through
 //     and the next handler is called directly.
+//   - If exactly one handler is provided, it's optimized to directly use
+//     the handler's Handler method without additional wrapping.
 //   - If any handler is nil, the function panics.
 func Or(name string, priority int, handlers ...ContextHandler) Middleware {
+	if len(handlers) == 1 {
+		if handlers[0] == nil {
+			panic("middleware: ContextHandler must not be nil")
+		}
+		return New(name, priority, handlers[0].Handler)
+	}
 	return New(name, priority, contextHandlersToMiddlewareFunc(handlers, false))
 }
 
@@ -106,12 +114,35 @@ func Or(name string, priority int, handlers ...ContextHandler) Middleware {
 //     is appended to the context, and the request does not proceed to the next handler.
 //   - If no handlers are provided, the middleware acts as a pass-through
 //     and the next handler is called directly.
+//   - If exactly one handler is provided, it's optimized to directly use
+//     the handler's Handler method without additional wrapping.
 //   - If any handler is nil, the function panics.
 func And(name string, priority int, handlers ...ContextHandler) Middleware {
+	if len(handlers) == 1 {
+		if handlers[0] == nil {
+			panic("middleware: ContextHandler must not be nil")
+		}
+		return New(name, priority, handlers[0].Handler)
+	}
 	return New(name, priority, contextHandlersToMiddlewareFunc(handlers, true))
 }
 
-// If any handler in the slice is nil, it will panic.
+// contextHandlersToMiddlewareFunc converts a slice of ContextHandlers into a MiddlewareFunc
+// with the specified execution strategy.
+//
+// Parameters:
+//   - handlers: The ContextHandlers to execute.
+//   - fast: If true, uses AND mode (stops on first error).
+//     If false, uses OR mode (stops on first success).
+//
+// Returns:
+//   - A MiddlewareFunc that wraps the handlers with the specified execution strategy.
+//
+// Behavior:
+//   - If any handler in the slice is nil, the function panics.
+//   - If no handlers are provided, returns a middleware function that passes through
+//     to the next handler without any processing.
+//   - For non-empty handler lists, delegates to convertContextHandlers for execution.
 func contextHandlersToMiddlewareFunc(handlers []ContextHandler, fast bool) MiddlewareFunc {
 	for _, h := range handlers {
 		if h == nil {

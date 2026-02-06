@@ -1063,3 +1063,119 @@ func TestContextHandlerNilSafety(t *testing.T) {
 		t.Errorf("expected 0 middlewares in manager after empty operations, got %d", len(m.Middlewares()))
 	}
 }
+
+func TestSingleHandlerOptimization(t *testing.T) {
+	// Test that single handler optimization works correctly for both Or and And
+	tests := []struct {
+		name        string
+		createFunc  func(string, int, ...ContextHandler) Middleware
+		handler     ContextHandler
+		expectError bool
+		expectNext  bool
+	}{
+		{
+			name:       "Or single handler success",
+			createFunc: Or,
+			handler: func(c *reqresp.Context) error {
+				c.Data = map[string]any{"test": "or-success"}
+				return nil
+			},
+			expectError: false,
+			expectNext:  true,
+		},
+		{
+			name:       "Or single handler error",
+			createFunc: Or,
+			handler: func(c *reqresp.Context) error {
+				return errors.New("or-error")
+			},
+			expectError: true,
+			expectNext:  false,
+		},
+		{
+			name:       "And single handler success",
+			createFunc: And,
+			handler: func(c *reqresp.Context) error {
+				c.Data = map[string]any{"test": "and-success"}
+				return nil
+			},
+			expectError: false,
+			expectNext:  true,
+		},
+		{
+			name:       "And single handler error",
+			createFunc: And,
+			handler: func(c *reqresp.Context) error {
+				return errors.New("and-error")
+			},
+			expectError: true,
+			expectNext:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create middleware with single handler
+			middleware := tt.createFunc("test-single", 10, tt.handler)
+
+			// Verify it implements the expected interfaces
+			if m, ok := middleware.(interface{ Priority() int }); !ok {
+				t.Error("middleware should implement Priority() method")
+			} else if priority := m.Priority(); priority != 10 {
+				t.Errorf("expected priority 10, got %d", priority)
+			}
+
+			if m, ok := middleware.(interface{ Name() string }); !ok {
+				t.Error("middleware should implement Name() method")
+			} else if name := m.Name(); name != "test-single" {
+				t.Errorf("expected name 'test-single', got %s", name)
+			}
+
+			// Test the handler
+			nextCalled := false
+			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				nextCalled = true
+			})
+
+			handler := middleware.Handler(next)
+
+			req := httptest.NewRequest("GET", "/test", nil)
+			ctx := &reqresp.Context{
+				Request: req,
+			}
+			req = req.WithContext(reqresp.SetContext(req.Context(), ctx))
+
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+
+			// Check if next was called
+			if nextCalled != tt.expectNext {
+				t.Errorf("next called = %v, want %v", nextCalled, tt.expectNext)
+			}
+
+			// Check if error was set
+			if tt.expectError && ctx.Err == nil {
+				t.Error("expected error in context, got nil")
+			} else if !tt.expectError && ctx.Err != nil {
+				t.Errorf("unexpected error in context: %v", ctx.Err)
+			}
+
+			// For success cases, check if data was set
+			if !tt.expectError {
+				if tt.name == "Or single handler success" {
+					if ctx.Data == nil {
+						t.Error("expected data to be set by Or handler")
+					} else if val, ok := ctx.Data["test"]; !ok || val != "or-success" {
+						t.Errorf("expected test='or-success', got %v", val)
+					}
+				} else if tt.name == "And single handler success" {
+					if ctx.Data == nil {
+						t.Error("expected data to be set by And handler")
+					} else if val, ok := ctx.Data["test"]; !ok || val != "and-success" {
+						t.Errorf("expected test='and-success', got %v", val)
+					}
+				}
+			}
+		})
+	}
+}
