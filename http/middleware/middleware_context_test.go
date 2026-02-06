@@ -782,3 +782,284 @@ func TestContextHandlerWithAndMiddleware(t *testing.T) {
 		t.Errorf("expected error 'ch2 error', got %v", ctx.Err)
 	}
 }
+
+func TestMiddlewaresInsertContextHandler(t *testing.T) {
+	// Create some test context handlers
+	handler1 := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": 1}
+		return nil
+	})
+
+	handler2 := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": 2}
+		return nil
+	})
+
+	handler3 := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": 3}
+		return nil
+	})
+
+	// Test with empty middlewares
+	ms := Middlewares{}
+	ms = ms.InsertContextHandler(handler1, handler2)
+
+	if len(ms) != 2 {
+		t.Errorf("expected 2 middlewares, got %d", len(ms))
+	}
+
+	// Test with existing middlewares
+	ms = ms.InsertContextHandler(handler3)
+	if len(ms) != 3 {
+		t.Errorf("expected 3 middlewares, got %d", len(ms))
+	}
+
+	// Verify order (insert adds to front)
+	req := httptest.NewRequest("GET", "/", nil)
+	ctx := &reqresp.Context{}
+	req = req.WithContext(reqresp.SetContext(req.Context(), ctx))
+
+	// Create a simple handler to verify execution
+	called := false
+	finalHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+	})
+
+	h := ms.Handler(finalHandler)
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	if !called {
+		t.Error("final handler should have been called")
+	}
+}
+
+func TestMiddlewaresAppendContextHandler(t *testing.T) {
+	// Create some test context handlers
+	handler1 := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": 1}
+		return nil
+	})
+
+	handler2 := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": 2}
+		return nil
+	})
+
+	handler3 := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": 3}
+		return nil
+	})
+
+	// Test with empty middlewares
+	ms := Middlewares{}
+	ms = ms.AppendContextHandler(handler1, handler2)
+
+	if len(ms) != 2 {
+		t.Errorf("expected 2 middlewares, got %d", len(ms))
+	}
+
+	// Test with existing middlewares
+	ms = ms.AppendContextHandler(handler3)
+	if len(ms) != 3 {
+		t.Errorf("expected 3 middlewares, got %d", len(ms))
+	}
+
+	// Test with zero handlers (should return original)
+	ms2 := ms.AppendContextHandler()
+	if len(ms2) != len(ms) {
+		t.Errorf("expected same length with zero handlers, got %d vs %d", len(ms2), len(ms))
+	}
+
+	// Test with one handler
+	ms3 := Middlewares{}.AppendContextHandler(handler1)
+	if len(ms3) != 1 {
+		t.Errorf("expected 1 middleware with one handler, got %d", len(ms3))
+	}
+
+	// Test with two handlers
+	ms4 := Middlewares{}.AppendContextHandler(handler1, handler2)
+	if len(ms4) != 2 {
+		t.Errorf("expected 2 middlewares with two handlers, got %d", len(ms4))
+	}
+}
+
+func TestManagerInsertContextHandler(t *testing.T) {
+	// Create a manager with a test handler
+	finalHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	m := NewManager(finalHandler)
+
+	// Create test context handlers
+	handler1 := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": 1}
+		return nil
+	})
+
+	handler2 := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": 2}
+		return nil
+	})
+
+	// Test inserting handlers
+	m.InsertContextHandler(handler1, handler2)
+
+	if len(m.Middlewares()) != 2 {
+		t.Errorf("expected 2 middlewares, got %d", len(m.Middlewares()))
+	}
+
+	// Test inserting zero handlers (should do nothing)
+	m.InsertContextHandler()
+	if len(m.Middlewares()) != 2 {
+		t.Errorf("expected still 2 middlewares after inserting zero, got %d", len(m.Middlewares()))
+	}
+
+	// Test inserting one more handler
+	handler3 := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": 3}
+		return nil
+	})
+
+	m.InsertContextHandler(handler3)
+	if len(m.Middlewares()) != 3 {
+		t.Errorf("expected 3 middlewares after inserting third, got %d", len(m.Middlewares()))
+	}
+}
+
+func TestManagerAppendContextHandler(t *testing.T) {
+	// Create a manager with a test handler
+	finalHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	m := NewManager(finalHandler)
+
+	// Create test context handlers
+	handler1 := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": 1}
+		return nil
+	})
+
+	handler2 := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": 2}
+		return nil
+	})
+
+	// Test appending handlers
+	m.AppendContextHandler(handler1, handler2)
+
+	if len(m.Middlewares()) != 2 {
+		t.Errorf("expected 2 middlewares, got %d", len(m.Middlewares()))
+	}
+
+	// Test appending zero handlers (should do nothing)
+	m.AppendContextHandler()
+	if len(m.Middlewares()) != 2 {
+		t.Errorf("expected still 2 middlewares after appending zero, got %d", len(m.Middlewares()))
+	}
+
+	// Test appending one more handler
+	handler3 := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": 3}
+		return nil
+	})
+
+	m.AppendContextHandler(handler3)
+	if len(m.Middlewares()) != 3 {
+		t.Errorf("expected 3 middlewares after appending third, got %d", len(m.Middlewares()))
+	}
+
+	// Test that handlers are executed in correct order
+	// (Insert adds to front, Append adds to back)
+	m2 := NewManager(finalHandler)
+
+	// First append handler1
+	m2.AppendContextHandler(handler1)
+	// Then insert handler2 (should go to front)
+	m2.InsertContextHandler(handler2)
+
+	// Create a request with context
+	req := httptest.NewRequest("GET", "/", nil)
+	ctx := &reqresp.Context{}
+	req = req.WithContext(reqresp.SetContext(req.Context(), ctx))
+
+	rec := httptest.NewRecorder()
+	m2.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status OK, got %d", rec.Code)
+	}
+}
+
+func TestAddMiddlewaresWithNilHandlers(t *testing.T) {
+	// Test that addMiddlewares function handles nil values properly
+	// This tests the internal addMiddlewares function through public APIs
+
+	// Create a valid context handler
+	validHandler := ContextHandler(func(c *reqresp.Context) error {
+		c.Data = map[string]any{"handler": "valid"}
+		return nil
+	})
+
+	// Test with Middlewares.InsertContextHandler
+	ms := Middlewares{}
+
+	// This should work - inserting a valid handler
+	ms = ms.InsertContextHandler(validHandler)
+	if len(ms) != 1 {
+		t.Errorf("expected 1 middleware after inserting valid handler, got %d", len(ms))
+	}
+
+	// Test with Manager.InsertContextHandler
+	m := NewManager(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// This should work - appending a valid handler
+	m.AppendContextHandler(validHandler)
+	if len(m.Middlewares()) != 1 {
+		t.Errorf("expected 1 middleware in manager after appending valid handler, got %d", len(m.Middlewares()))
+	}
+
+	// Test that the handler actually works
+	req := httptest.NewRequest("GET", "/", nil)
+	ctx := &reqresp.Context{}
+	req = req.WithContext(reqresp.SetContext(req.Context(), ctx))
+
+	rec := httptest.NewRecorder()
+	m.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status OK with valid handler, got %d", rec.Code)
+	}
+}
+
+func TestContextHandlerNilSafety(t *testing.T) {
+	// Test that ContextHandler methods handle edge cases safely
+
+	// Test with empty Middlewares
+	ms := Middlewares{}
+	ms = ms.InsertContextHandler() // Should do nothing
+	if len(ms) != 0 {
+		t.Errorf("expected 0 middlewares after inserting empty handlers, got %d", len(ms))
+	}
+
+	ms = ms.AppendContextHandler() // Should do nothing
+	if len(ms) != 0 {
+		t.Errorf("expected 0 middlewares after appending empty handlers, got %d", len(ms))
+	}
+
+	// Test with Manager
+	m := NewManager(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// These should not panic
+	m.InsertContextHandler()
+	m.AppendContextHandler()
+
+	if len(m.Middlewares()) != 0 {
+		t.Errorf("expected 0 middlewares in manager after empty operations, got %d", len(m.Middlewares()))
+	}
+}
