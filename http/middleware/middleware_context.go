@@ -64,6 +64,11 @@ func (m *Manager) AppendContextHandler(hs ...ContextHandler) {
 	managerAddMiddlewares(m, m.mdws.Append, hs)
 }
 
+// NewWithContextHandler returns a new middleware that executes the given ContextHandler.
+func NewWithContextHandler(name string, priority int, handler ContextHandler) Middleware {
+	return New(name, priority, handler.Handler)
+}
+
 // Or creates a middleware that executes the given ContextHandlers in order
 // and stops at the first handler that returns nil error (logical OR).
 //
@@ -90,7 +95,7 @@ func Or(name string, priority int, handlers ...ContextHandler) Middleware {
 		if handlers[0] == nil {
 			panic("middleware: ContextHandler must not be nil")
 		}
-		return New(name, priority, handlers[0].Handler)
+		return NewWithContextHandler(name, priority, handlers[0])
 	}
 	return New(name, priority, contextHandlersToMiddlewareFunc(handlers, false))
 }
@@ -122,7 +127,7 @@ func And(name string, priority int, handlers ...ContextHandler) Middleware {
 		if handlers[0] == nil {
 			panic("middleware: ContextHandler must not be nil")
 		}
-		return New(name, priority, handlers[0].Handler)
+		return NewWithContextHandler(name, priority, handlers[0])
 	}
 	return New(name, priority, contextHandlersToMiddlewareFunc(handlers, true))
 }
