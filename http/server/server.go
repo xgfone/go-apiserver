@@ -13,85 +13,17 @@
 // limitations under the License.
 
 // Package server provides a simple common http server starter.
+//
+// Deprecated
 package server
 
 import (
-	"context"
-	"log/slog"
-	"net"
 	"net/http"
-	"net/url"
-	"strings"
-	"time"
 
-	"github.com/xgfone/go-apiserver/http/router"
+	"github.com/xgfone/go-toolkit/httpx"
 )
-
-// ServeWithListener is used to start the http server with listener
-// until it is stopped.
-var ServeWithListener func(server *http.Server, ln net.Listener)
-
-// New returns a new http server with the handler.
-//
-// If handler is nil, use router.DefaultRouter instead.
-func New(addr string, handler http.Handler) *http.Server {
-	if handler == nil {
-		handler = router.DefaultRouter
-	}
-
-	return &http.Server{
-		Addr:    addr,
-		Handler: handler,
-
-		ReadTimeout:  0,
-		WriteTimeout: 0,
-
-		IdleTimeout:       time.Minute * 3,
-		ReadHeaderTimeout: time.Second * 3,
-
-		ErrorLog: slog.NewLogLogger(slog.Default().Handler(), slog.LevelError),
-	}
-}
-
-// Serve starts the http server with server.Addr until it is stopped.
-func Serve(server *http.Server) {
-	addr := server.Addr
-	proto := "tcp"
-
-	if strings.Contains(server.Addr, "://") {
-		if u, err := url.Parse(server.Addr); err == nil && u.Scheme != "" {
-			proto = u.Scheme
-			addr = u.Host
-		}
-	}
-
-	ln, err := net.Listen(proto, addr)
-	if err != nil {
-		slog.Error("fail to open the listener on the address",
-			"protocol", proto, "addr", addr, "err", err)
-		return
-	}
-
-	if ServeWithListener != nil {
-		ServeWithListener(server, ln)
-	} else {
-		DefaultServeWithListener(server, ln)
-	}
-}
 
 // Start is a convenient function to start the http server with addr and handler.
 func Start(addr string, handler http.Handler) {
-	Serve(New(addr, handler))
-}
-
-// Stop is a convenient function to stop the http server.
-func Stop(server *http.Server) {
-	_ = server.Shutdown(context.Background())
-}
-
-// DefaultServeWithListener is the default implementation to start the http server.
-func DefaultServeWithListener(server *http.Server, ln net.Listener) {
-	slog.Info("start the http server", "addr", server.Addr)
-	defer slog.Info("stop the http server", "addr", server.Addr)
-	_ = server.Serve(ln)
+	httpx.StartServer(addr, handler)
 }
